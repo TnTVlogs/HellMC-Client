@@ -1,20 +1,20 @@
 # Custom Language File for Launcher Customizer
 
 [ejs.app]
-title = "MineSy Client"
+title = "HellMC Client"
 
 [ejs.landing]
-mediaGitHubURL = "https://minesy.net"
-mediaTwitterURL = "https://minesy.net/twitter"
-mediaInstagramURL = "https://minesy.net/instagram"
-mediaYouTubeURL = "https://minesy.net/youtube"
-mediaDiscordURL = "https://discord.minesy.net"
+mediaGitHubURL = "https://github.com/TnTVlogs/HellMC-Client"
+mediaTwitterURL = "https://github.com/TnTVlogs/HellMC-Client"
+mediaInstagramURL = "https://github.com/TnTVlogs/HellMC-Client"
+mediaYouTubeURL = "https://github.com/TnTVlogs/HellMC-Client"
+mediaDiscordURL = "https://discord.gg/yScnSw7cFt"
 
 [ejs.settings]
-sourceGithubLink = "https://github.com/TnTVlogs/MineSy-Client"
-supportLink = "https://github.com/TnTVlogs/MineSy-Client/issues"
+sourceGithubLink = "https://github.com/TnTVlogs/HellMC-Client"
+supportLink = "https://github.com/TnTVlogs/HellMC-Client/issues"
 
 [ejs.welcome]
-welcomeHeader = "Bienvenido al MineSy Client"
+welcomeHeader = "Bienvenido al HellMC Client"
 welcomeDescription = "Con este cliente podrás disfrutar de una experiencia totalmente única de Minecraft, además de disfrutar de uno de los mejores servidores actuales de Minecraft."
-welcomeDescCTA = "© 2024 MineSy Network"
+welcomeDescCTA = "© 2025 HellMC Network"

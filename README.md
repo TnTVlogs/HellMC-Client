@@ -1,6 +1,6 @@
 <p align="center"><img src="./app/assets/images/SealCircle.png" width="150px" height="150px" alt="aventium softworks"></p>
 
-<h1 align="center">MineSy Client</h1>
+<h1 align="center">HellMC Client</h1>
 
 <em><h5 align="center">by TnTVlogs</h5></em>
 
@@ -31,23 +31,23 @@
 
 This is not an exhaustive list. Download and install the launcher to gauge all it can do!
 
-#### Necesitas ayuda? [Contáctanos en discord](https://discord.minesy.net)
+#### Necesitas ayuda? [Contáctanos en discord](https://discord.gg/yScnSw7cFt)
 
 #### Te gusta el proyecto? Deja tu ⭐ estrella!
 
 ## Descargas
 
-You can download from [GitHub Releases](https://github.com/TnTVlogs/MineSy-Client/releases)
+You can download from [GitHub Releases](https://github.com/TnTVlogs/HellMC-Client/releases)
 
 **Plataformas acetadas**
 
-If you download from the [Releases](https://github.com/TnTVlogs/MineSy-Client/releases) tab, select the installer for your system.
+If you download from the [Releases](https://github.com/TnTVlogs/HellMC-Client/releases) tab, select the installer for your system.
 
 | Plataforma | Archivo |
 | ---------- | ------- |
-| Windows x64 | `MineSy-Client-Setup.exe` |
+| Windows x64 | `HellMC-Client-Setup.exe` |
 | macOS x64 | `Proximamente` |
 | macOS arm64 | `Proximamente` |
 | Linux x64 | `Proximamente` |
 
-[discord]: https://discord.minesy.net 'Discord'
+[discord]: https://discord.gg/yScnSw7cFt 'Discord'

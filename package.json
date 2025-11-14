@@ -1,13 +1,13 @@
 {
-  "name": "minesyclient",
-  "version": "1.0.5",
-  "productName": "MineSy Client",
-  "description": "MineSy Client (by MineSy Network)",
+  "name": "hellmcclient",
+  "version": "1.0.0",
+  "productName": "HellMC Client",
+  "description": "HellMC Client (by TnTVlogs)",
   "author": "TnTVlogs (https://github.com/TnTVlogs/)",
   "license": "MIT",
-  "homepage": "https://github.com/TnTVlogs/MineSy-Client",
+  "homepage": "https://github.com/TnTVlogs/HellMC-Client",
   "bugs": {
-    "url": "https://github.com/TnTVlogs/MineSy-Client/issues"
+    "url": "https://github.com/TnTVlogs/HellMC-Client/issues"
   },
   "private": true,
   "main": "index.js",
@@ -47,6 +47,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TnTVlogs/MineSy-Client.git"
+    "url": "git+https://github.com/TnTVlogs/HellMC-Client.git"
   }
 }

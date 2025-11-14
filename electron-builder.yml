@@ -1,8 +1,8 @@
-appId: 'minesyclient'
-productName: 'MineSy Client'
+appId: 'hellmcclient'
+productName: 'HellMC Client'
 artifactName: '${productName}-setup.${ext}'
 
-copyright: 'Copyright © 2025 MineSy Network'
+copyright: 'Copyright © 2025 TnTVlogs'
 
 asar: true
 compression: 'maximum'

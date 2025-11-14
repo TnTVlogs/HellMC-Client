@@ -3,11 +3,11 @@ updateAvailableTooltip = "Actualización Disponible"
 usernamePlaceholder = "Nombre de Usuario"
 usernameEditButton = "Editar"
 settingsTooltip = "Configuración"
-urlTooltip = "minesy.net"
+urlTooltip = "hellmc.sytes.net"
 discordTooltip = "Discord"
-youtubeTooltip = "@MineSyNetwork"
-instagramTooltip = "@MineSyNetwork"
-twitterTooltip = "@MineSyNTW"
+youtubeTooltip = "Próximamente"
+instagramTooltip = "Próximamente"
+twitterTooltip = "Próximamente"
 serverStatus = "SERVIDOR"
 serverStatusPlaceholder = "OFFLINE"
 mojangStatus = "MOJANG"
@@ -25,7 +25,7 @@ newsErrorNoneSpan = "No Hay Noticias"
 
 [js.landing.discord]
 loading = "Cargando..."
-joining = "Jugando en play.minesy.net"
+joining = "Jugando a HellMC Client"
 joined = "Explorando"
 
 [ejs.login]
@@ -41,7 +41,7 @@ loginRememberMeText = "¿recordarme?"
 loginButtonText = "INICIAR SESIÓN"
 loginNeedAccountLink = "https://minecraft.net/es-es/store/minecraft-java-edition/"
 loginNeedAccountText = "¿Necesitas una cuenta?"
-loginPasswordDisclaimer1 = "MineSy Client no almacena ningún tipo de datos."
+loginPasswordDisclaimer1 = "HellMC Client no almacena ningún tipo de datos."
 loginPasswordDisclaimer2 = "{appName} no está afiliado con Mojang AB, Minecraft o Microsoft."
 
 [js.discord]
@@ -64,8 +64,8 @@ accountSelectConfirm = "Seleccionar"
 accountSelectCancel = "Cancelar"
 
 [settings]
-supportLink = "http://discord.minesy.net"
-sourceGithubLink = "https://github.com/TnTVlogs/MineSy-Client"
+supportLink = "https://discord.gg/yScnSw7cFt"
+sourceGithubLink = "https://github.com/TnTVlogs/HellMC-Client"
 
 [ejs.settings]
 navHeaderText = "Configuración"
@@ -195,7 +195,7 @@ javaDownloadPrepare = "Preparando descarga de Java.."
 javaDownloadFailureTitle = "Error durante la descarga de Java"
 javaDownloadFailureText = "Consulta nuestro discord para obtener más detalles."
 javaRequired = "Se requiere Java para iniciar"
-javaRequiredMessage = 'Se requiere una instalación válida de Java {major} x64 para iniciar. Consulta nuestra <a href="https://github.com/TnTVlogs/MineSy-Client/wiki/Java-Management#manually-installing-a-valid-version-of-java">Guía de Gestión de Java</a> para obtener instrucciones sobre cómo instalar Java manualmente.'
+javaRequiredMessage = 'Se requiere una instalación válida de Java {major} x64 para iniciar. Consulta nuestra <a href="https://github.com/TnTVlogs/HellMC-Client/wiki/Java-Management#manually-installing-a-valid-version-of-java">Guía de Gestión de Java</a> para obtener instrucciones sobre cómo instalar Java manualmente.'
 javaRequiredDismiss = "Entiendo"
 javaRequiredCancel = "Volver atrás"
 
@@ -218,7 +218,7 @@ downloadingFiles = "Descargando..."
 errorDuringFileDownloadTitle = "Error durante la descarga del archivo"
 preparingToLaunch = "Preparando..."
 launchingGame = "Iniciando..."
-launchWrapperNotDownloaded = "El archivo principal, LaunchWrapper, no se descargó correctamente. Como resultado, el juego no puede iniciarse. Para solucionar este problema, desactiva temporalmente tu software antivirus y vuelve a iniciar el juego. Si tienes tiempo, por favor <a href=\"https://github.com/TnTVlogs/MineSy-Client/issues\">envía un problema</a> y háznoslo saber qué software antivirus usas. Nos pondremos en contacto con ellos e intentaremos solucionar las cosas."
+launchWrapperNotDownloaded = "El archivo principal, LaunchWrapper, no se descargó correctamente. Como resultado, el juego no puede iniciarse. Para solucionar este problema, desactiva temporalmente tu software antivirus y vuelve a iniciar el juego. Si tienes tiempo, por favor <a href=\"https://github.com/TnTVlogs/HellMC-Client/issues\">envía un problema</a> y háznoslo saber qué software antivirus usas. Nos pondremos en contacto con ellos e intentaremos solucionar las cosas."
 doneEnjoyServer = "Listo. ¡Disfruta del juego!"
 checkConsoleForDetails = "Consulta nuestro discord para obtener más detalles."
 
@@ -288,7 +288,7 @@ checkingForUpdatesButton = "Buscando actualizaciones..."
 
 [js.uibinder.startup]
 fatalErrorTitle = "Error fatal: No se pudo cargar el índice de distribución"
-fatalErrorMessage = "No se pudo establecer una conexión con nuestros servidores para descargar el índice de distribución.<br><br>Asegúrate de estar conectado a internet y vuelve a iniciar la aplicación. Si crees que no es un problema de conexión, contáctanos en nuestro discord: discord.minesy.net"
+fatalErrorMessage = "No se pudo establecer una conexión con nuestros servidores para descargar el índice de distribución.<br><br>Asegúrate de estar conectado a internet y vuelve a iniciar la aplicación. Si crees que no es un problema de conexión, contáctanos en nuestro discord: discord.gg/yScnSw7cFt"
 closeButton = "Cerrar"
 
 [js.uibinder.validateAccount]
