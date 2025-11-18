@@ -13,21 +13,18 @@ files:
 extraResources:
   - 'libraries'
 
-# Windows Configuration
 win: 
   target: 
     - target: 'nsis'
       arch: 'x64'
   icon: 'app/assets/images/SealCircle.ico'
 
-# Windows Installer Configuration
 nsis:
   oneClick: false
   perMachine: false
   allowElevation: true
   allowToChangeInstallationDirectory: true
 
-# macOS Configuration
 mac:
   target:
     - target: 'dmg'
@@ -36,8 +33,8 @@ mac:
         - 'arm64'
   artifactName: '${productName}-setup-${version}-${arch}.${ext}'
   category: 'public.app-category.games'
+  icon: 'app/assets/images/SealCircle.icns'
 
-# Linux Configuration
 linux: 
   target: 'AppImage'
   maintainer: 'TnTVlogs'
@@ -45,7 +42,7 @@ linux:
   synopsis: 'Modded Minecraft Launcher'
   description: 'Custom launcher which allows users to join modded servers. All mods, configurations, and updates are handled automatically.'
   category: 'Game'
-
+  icon: 'app/assets/images/logo_linux.png'
 
 directories:
   buildResources: 'build'
