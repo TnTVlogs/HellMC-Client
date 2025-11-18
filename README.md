@@ -3,7 +3,7 @@
 <h1 align="center">HellMC Client</h1>
 
 <em><h5 align="center">by TnTVlogs</h5></em>
-<p align="center">[![Build](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml/badge.svg)](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml)</p>
+[Build](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml/badge.svg)](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml)
 <p align="center">Join modded servers without worrying about installing Java, Forge, or other mods. We'll handle that for you.</p>
 
 ![Screenshot 1](https://i.imgur.com/6o7SmH6.png)
