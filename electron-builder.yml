@@ -6,9 +6,11 @@ publish:
   provider: github
   owner: TnTVlogs
   repo: HellMC-Client
+  releaseType: release
 
 
-copyright: 'Copyright © 2018-2026 Daniel Scalzi, TnTVlogs'
+
+copyright: 'Copyright © 2026 TnTVlogs'
 
 
 asar: true
