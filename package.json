@@ -1,6 +1,6 @@
 {
   "name": "hellmcclient",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "productName": "HellMC Client",
   "description": "HellMC Client (by TnTVlogs)",
   "author": "TnTVlogs (https://github.com/TnTVlogs/)",
@@ -38,7 +38,7 @@
     "lodash.merge": "^4.6.2",
     "semver": "^7.6.3",
     "toml": "^3.0.0",
-	"uuid": "^9.0.1"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "electron": "^33.2.1",

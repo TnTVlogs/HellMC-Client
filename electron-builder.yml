@@ -1,6 +1,12 @@
 appId: 'hellmcclient'
-productName: 'HellMC Client'
+productName: 'HellMC-Client'
 artifactName: '${productName}-setup.${ext}'
+
+publish:
+  provider: github
+  owner: TnTVlogs
+  repo: HellMC-Client
+
 
 copyright: 'Copyright © 2025 TnTVlogs'
 
