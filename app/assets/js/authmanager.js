@@ -380,8 +380,8 @@ async function validateSelectedMicrosoftAccount() {
             )
             ConfigManager.save()
             return true
-        } catch (err) {
-            log.error('Error during MS_REFRESH:', err)
+        } catch (_err) {
+            log.error('Error during MS_REFRESH:', _err)
             return false
         }
     } else {
@@ -400,8 +400,8 @@ async function validateSelectedMicrosoftAccount() {
             ConfigManager.save()
             return true
         }
-        catch (err) {
-            log.error('Error during MC_REFRESH:', err)
+        catch (_err) {
+            log.error('Error during MC_REFRESH:', _err)
             return false
         }
     }

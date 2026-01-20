@@ -19,11 +19,14 @@
   * Receive client updates as soon as we release them.
   * Files are validated before launch. Corrupt or incorrect files will be redownloaded.
 * ☕ **Automatic Java validation.**
-  * If you have an incompatible version of Java installed, we'll install the right one *for you*.
   * You do not need to have Java installed to run the launcher.
 * 📰 News feed natively built into the launcher.
 * ⚙️ Intuitive settings management, including a Java control panel.
 * Supports all of our servers.
+
+**Requirements**
+* [Node.js](https://nodejs.org/) v22 (for development)
+
   * Switch between server configurations with ease.
   * View the player count of the selected server.
 * Automatic updates. That's right, the launcher updates itself.
