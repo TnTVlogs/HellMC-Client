@@ -5,7 +5,8 @@ on:
     branches:
       - main
     tags:
-      - 'v*'
+      - '*'
+
 
 jobs:
   release:
@@ -43,8 +44,9 @@ jobs:
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
+          TAG="$VERSION"
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git tag "$TAG"
