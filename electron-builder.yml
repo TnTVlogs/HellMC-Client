@@ -1,5 +1,5 @@
 appId: 'hellmcclient'
-productName: 'HellMC-Client'
+productName: 'HellMC Client'
 artifactName: '${productName}-setup.${ext}'
 
 publish:
