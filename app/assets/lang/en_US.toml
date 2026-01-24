@@ -3,6 +3,11 @@ updateAvailableTooltip = "Update Available"
 usernamePlaceholder = "Username"
 usernameEditButton = "Edit"
 settingsTooltip = "Settings"
+urlTooltip = "hellmc.sergidalmau.dev"
+discordTooltip = "Discord"
+youtubeTooltip = "Coming Soon"
+instagramTooltip = "Coming Soon"
+twitterTooltip = "Coming Soon"
 serverStatus = "SERVER"
 serverStatusPlaceholder = "OFFLINE"
 mojangStatus = "MOJANG STATUS"
@@ -119,6 +124,11 @@ noReleaseNotes = "No Release Notes"
 viewReleaseNotes = "View Release Notes on GitHub"
 launcherUpdatesHeaderText = "Launcher Updates"
 launcherUpdatesHeaderDesc = "Download, install, and review updates for the launcher."
+languageTitle = "Launcher Language"
+languageDesc = "Select your preferred language for the launcher."
+languageLockedTooltip = "The language can only be changed when the game is closed."
+languageLockedStatus = "Locked"
+languageLockedStatusReason = "The language cannot be changed while the game is open."
 checkForUpdates = "Check for Updates"
 whatsNew = "What's New"
 updateReleaseNotes = "Update Release Notes"
@@ -129,14 +139,22 @@ waitingText = "Waiting for Microsoft.."
 [ejs.welcome]
 continueButton = "CONTINUE"
 
+[js.index]
+microsoftLoginTitle = "Microsoft Login"
+microsoftLogoutTitle = "Microsoft Logout"
 
 [js.discord]
 waiting = "Waiting for Client.."
 state = "Server: {shortId}"
 
-[js.index]
-microsoftLoginTitle = "Microsoft Login"
-microsoftLogoutTitle = "Microsoft Logout"
+[js.landing.discord]
+loading = "Loading..."
+joining = "Joining server.."
+joined = "Playing on HellMC"
+idle = "In the main menu"
+playingAt = "Playing on {ip}"
+singleplayer = "Playing singleplayer"
+localServer = "Local server"
 
 [js.login]
 login = "LOGIN"
@@ -156,6 +174,7 @@ desc = "An unknown error has occurred. Please see the console for details."
 pleaseWait = "Please wait.."
 failureTitle = "Error During Launch"
 failureText = "See console (CTRL + Shift + i) for more details."
+alreadyRunning = "Game is already running!"
 okay = "Okay"
 
 [js.landing.selectedAccount]
@@ -209,14 +228,6 @@ checkConsoleForDetails = "Please check the console (CTRL + Shift + i) for more d
 
 [js.landing.news]
 checking = "Checking for News"
-
-[js.landing.discord]
-loading = "Loading game.."
-joining = "Sailing to Westeros!"
-joined = "Exploring the Realm!"
-
-[js.overlay]
-dismiss = "Dismiss"
 
 [js.settings.fileSelectors]
 executables = "Executables"
@@ -295,6 +306,12 @@ failedMessage = "We were unable to refresh the login for <strong>{account}</stro
 failedMessageSelectAnotherAccount = "We were unable to refresh the login for <strong>{account}</strong>. Please login again."
 loginButton = "Login"
 selectAnotherAccountButton = "Select Another Account"
+
+[js.overlay]
+closeWarningTitle = "Wait!"
+closeWarningMessage = "The launcher cannot be closed while the game is running. This is necessary to maintain Discord status and launcher functions."
+closeWarningOkButton = "Got it"
+dismiss = "Dismiss"
 
 [js.uicore.autoUpdate]
 checkingForUpdateButton = "Checking for Updates..."

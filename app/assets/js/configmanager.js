@@ -9,39 +9,29 @@ const sysRoot = process.env.APPDATA || (process.platform == 'darwin' ? process.e
 
 const dataPath = path.join(sysRoot, '.hellmcclient')
 
-const launcherDir = require('@electron/remote').app.getPath('userData')
+const electron = require('electron')
 
-/**
- * Retrieve the absolute path of the launcher directory.
- * 
- * @returns {string} The absolute path of the launcher directory.
- */
-exports.getLauncherDirectory = function () {
-    return launcherDir
+function getApp() {
+    return process.type === 'renderer' ? require('@electron/remote').app : electron.app
 }
 
-/**
- * Get the launcher's data directory. This is where all files related
- * to game launch are installed (common, instances, java, etc).
- * 
- * @returns {string} The absolute path of the launcher's data directory.
- */
+exports.getLauncherDirectory = function () {
+    return getApp().getPath('userData')
+}
+
 exports.getDataDirectory = function (def = false) {
     return !def ? config.settings.launcher.dataDirectory : DEFAULT_CONFIG.settings.launcher.dataDirectory
 }
 
-/**
- * Set the new data directory.
- * 
- * @param {string} dataDirectory The new data directory.
- */
 exports.setDataDirectory = function (dataDirectory) {
     config.settings.launcher.dataDirectory = dataDirectory
 }
 
-const configPath = path.join(exports.getLauncherDirectory(), 'config.json')
+function getConfigPath() {
+    return path.join(exports.getLauncherDirectory(), 'config.json')
+}
+
 const configPathLEGACY = path.join(dataPath, 'config.json')
-const firstLaunch = !fs.existsSync(configPath) && !fs.existsSync(configPathLEGACY)
 
 exports.getAbsoluteMinRAM = function (ram) {
     if (ram?.minimum != null) {
@@ -49,7 +39,7 @@ exports.getAbsoluteMinRAM = function (ram) {
     } else {
         // Legacy behavior
         const mem = os.totalmem()
-        return mem >= (6 * 1073741824) ? 3 : 2
+        return 2
     }
 }
 
@@ -87,7 +77,8 @@ const DEFAULT_CONFIG = {
         },
         launcher: {
             allowPrerelease: false,
-            dataDirectory: dataPath
+            dataDirectory: dataPath,
+            language: 'es_ES'
         }
     },
     newsCache: {
@@ -111,7 +102,7 @@ let config = null
  * Save the current configuration to a file.
  */
 exports.save = function () {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'UTF-8')
+    fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 4), 'UTF-8')
 }
 
 /**
@@ -122,6 +113,7 @@ exports.save = function () {
  */
 exports.load = function () {
     let doLoad = true
+    const configPath = getConfigPath()
 
     if (!fs.existsSync(configPath)) {
         // Create all parent directories.
@@ -193,7 +185,7 @@ function validateKeySet(srcObj, destObj) {
  * @returns {boolean} True if this is the first launch, otherwise false.
  */
 exports.isFirstLaunch = function () {
-    return firstLaunch
+    return !fs.existsSync(getConfigPath()) && !fs.existsSync(configPathLEGACY)
 }
 
 /**
@@ -792,4 +784,22 @@ exports.getAllowPrerelease = function (def = false) {
  */
 exports.setAllowPrerelease = function (allowPrerelease) {
     config.settings.launcher.allowPrerelease = allowPrerelease
+}
+
+/**
+ * Retrieve the current language.
+ * 
+ * @returns {string} The current language.
+ */
+exports.getLanguage = function () {
+    return config.settings.launcher.language
+}
+
+/**
+ * Set the current language.
+ * 
+ * @param {string} language The new language.
+ */
+exports.setLanguage = function (language) {
+    config.settings.launcher.language = language
 }

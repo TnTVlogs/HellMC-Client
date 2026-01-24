@@ -85,8 +85,45 @@ ipcMain.on('autoUpdateAction', (event, arg, data) => {
     }
 })
 // Redirect distribution index event from preloader to renderer.
+let distroIndexDone = false
+let distroIndexSuccess = false
 ipcMain.on('distributionIndexDone', (event, res) => {
+    distroIndexDone = true
+    distroIndexSuccess = res
     event.sender.send('distributionIndexDone', res)
+})
+ipcMain.on('requestDistributionIndexStatus', (event) => {
+    if (distroIndexDone) {
+        event.sender.send('distributionIndexDone', distroIndexSuccess)
+    }
+})
+
+// Language-aware reload
+const ConfigManager = require('./app/assets/js/configmanager')
+ipcMain.on('reload-renderer', (event) => {
+    if (isGameRunning) {
+        console.warn('Skipping renderer reload because a game is currently running.')
+        return
+    }
+    console.log('Refreshing language and reloading renderer.')
+    ConfigManager.load()
+    LangLoader.setupLanguage()
+    updateEJSData()
+    win.reload()
+})
+
+// Track game status for close prevention
+let isGameRunning = false
+ipcMain.on('request-game-status', (event) => {
+    event.reply('game-status-response', isGameRunning)
+})
+ipcMain.on('game-status-changed', (event, running) => {
+    isGameRunning = running
+    console.log(`[MAIN] Game running status changed to: ${isGameRunning}`)
+    // Broadcast to all windows
+    if (win) {
+        win.webContents.send('game-status-changed', isGameRunning)
+    }
 })
 
 // Handle trash item.
@@ -222,6 +259,15 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGOUT, (ipcEvent, uuid, isLastAccount) => {
 // be closed automatically when the JavaScript object is garbage collected.
 let win
 
+function updateEJSData() {
+    console.log('Updating EJS data..')
+    const data = {
+        bkid: Math.floor((Math.random() * fs.readdirSync(path.join(__dirname, 'app', 'assets', 'images', 'backgrounds')).length)),
+        lang: (str, placeHolders) => LangLoader.queryEJS(str, placeHolders)
+    }
+    Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
+}
+
 function createWindow() {
 
     win = new BrowserWindow({
@@ -240,11 +286,7 @@ function createWindow() {
     })
     remoteMain.enable(win.webContents)
 
-    const data = {
-        bkid: Math.floor((Math.random() * fs.readdirSync(path.join(__dirname, 'app', 'assets', 'images', 'backgrounds')).length)),
-        lang: (str, placeHolders) => LangLoader.queryEJS(str, placeHolders)
-    }
-    Object.entries(data).forEach(([key, val]) => ejse.data(key, val))
+    updateEJSData()
 
     win.loadURL(pathToFileURL(path.join(__dirname, 'app', 'app.ejs')).toString())
 
@@ -259,6 +301,18 @@ function createWindow() {
     win.removeMenu()
 
     win.resizable = true
+
+    win.on('close', (e) => {
+        if (isGameRunning) {
+            console.log('[MAIN] Close attempt denied: game is running.')
+            e.preventDefault()
+            win.show()
+            win.focus()
+            win.webContents.send('show-close-warning')
+        } else {
+            console.log('[MAIN] Close attempt allowed: game is NOT running.')
+        }
+    })
 
     win.on('closed', () => {
         win = null

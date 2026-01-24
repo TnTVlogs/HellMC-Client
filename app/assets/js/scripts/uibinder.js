@@ -76,7 +76,7 @@ async function showMainUI(data) {
 
         // If this is enabled in a development environment we'll get ratelimited.
         // The relaunch frequency is usually far too high.
-        if (!isDev && isLoggedIn) {
+        if (isLoggedIn) {
             await validateSelectedAccount()
             // Re-calculate logged in status as validation might have removed the account.
             isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
@@ -466,3 +466,6 @@ async function devModeToggle() {
     updateSelectedServer(data.servers[0])
     syncModConfigurations(data)
 }
+
+// Global request for initial status
+ipcRenderer.send('requestDistributionIndexStatus')

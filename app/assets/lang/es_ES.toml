@@ -23,11 +23,6 @@ newsErrorFailedSpan = "Error al Cargar Noticias"
 newsErrorRetryButton = "Intentar de Nuevo"
 newsErrorNoneSpan = "No Hay Noticias"
 
-[js.landing.discord]
-loading = "Cargando..."
-joining = "Jugando a HellMC Client"
-joined = "Explorando"
-
 [ejs.login]
 loginCancelText = "Cancelar"
 loginSubheader = "INICIO DE SESIÓN OFFLINE"
@@ -44,11 +39,6 @@ loginNeedAccountText = "¿Necesitas una cuenta?"
 loginPasswordDisclaimer1 = "HellMC Client no almacena ningún tipo de datos."
 loginPasswordDisclaimer2 = "{appName} no está afiliado con Mojang AB, Minecraft o Microsoft."
 
-[js.discord]
-starting = "Iniciando el cliente..."
-waiting = "Esperando al cliente..."
-state = "Servidor: {shortId}"
-
 [ejs.loginOptions]
 loginOptionsTitle = "Opciones de inicio de sesión"
 loginWithMicrosoft = "Iniciar sesión con Microsoft"
@@ -62,10 +52,6 @@ serverSelectCancel = "Cancelar"
 accountSelectHeader = "Seleccionar una cuenta"
 accountSelectConfirm = "Seleccionar"
 accountSelectCancel = "Cancelar"
-
-[settings]
-supportLink = "https://discord.gg/yScnSw7cFt"
-sourceGithubLink = "https://github.com/TnTVlogs/HellMC-Client"
 
 [ejs.settings]
 navHeaderText = "Configuración"
@@ -139,6 +125,11 @@ noReleaseNotes = "No hay notas de lanzamiento"
 viewReleaseNotes = "Ver notas de lanzamiento en GitHub"
 launcherUpdatesHeaderText = "Actualizaciones del cliente"
 launcherUpdatesHeaderDesc = "Descarga, instala y revisa las actualizaciones para el cliente."
+languageTitle = "Idioma del Cliente"
+languageDesc = "Selecciona el idioma que prefieras para el cliente."
+languageLockedTooltip = "El idioma solo se pot cambiar quan el joc està tancat."
+languageLockedStatus = "Bloqueado"
+languageLockedStatusReason = "No se puede cambiar el idioma mientras el juego está en ejecución."
 checkForUpdates = "Buscar actualizaciones"
 whatsNew = "¿Qué hay de nuevo?"
 updateReleaseNotes = "Notas de lanzamiento de la actualización"
@@ -149,15 +140,33 @@ waitingText = "Esperando a Microsoft.."
 [ejs.welcome]
 continueButton = "CONTINUAR"
 
+[settings]
+supportLink = "https://discord.gg/yScnSw7cFt"
+sourceGithubLink = "https://github.com/TnTVlogs/HellMC-Client"
+
+[js.index]
+microsoftLoginTitle = "Microsoft login"
+microsoftLogoutTitle = "Microsoft logout"
+
+[js.discord]
+starting = "Iniciando el cliente..."
+waiting = "Esperando al cliente..."
+state = "Servidor: {shortId}"
+
+[js.landing.discord]
+loading = "Cargando..."
+joining = "Entrando al servidor.."
+joined = "Jugando en HellMC"
+idle = "En el menú principal"
+playingAt = "Jugando en {ip}"
+singleplayer = "Jugando solo"
+localServer = "Servidor local"
+
 [js.login]
 login = "INICIAR SESIÓN"
 loggingIn = "INICIANDO SESIÓN"
 success = "ÉXITO"
 tryAgain = "Intentar de nuevo"
-
-[js.index]
-microsoftLoginTitle = "Microsoft login"
-microsoftLogoutTitle = "Microsoft logout"
 
 [js.login.error]
 invalidValue = "* Tu nombre de usuario debe tener al menos 4 caracteres"
@@ -171,6 +180,7 @@ desc = "Se ha producido un error desconocido. Consulta nuestro discord para obte
 pleaseWait = "Por favor espera..."
 failureTitle = "Error durante el lanzamiento"
 failureText = "Consulta nuestro discord para obtener más detalles."
+alreadyRunning = "¡El juego ya está en ejecución!"
 okay = "Aceptar"
 
 [js.landing.selectedAccount]
@@ -245,7 +255,7 @@ selectedButton = "Cuenta seleccionada ✓"
 
 [js.settings.authAccountLogout]
 lastAccountWarningTitle = "Advertencia esta es tu última cuenta"
-lastAccountWarningMessage = "Para usar el cliente debes estar conectado al menos a una cuenta. Deberás iniciar sesión nuevamente después. ¿Estás seguro de que deseas cerrar sesión?"
+lastAccountWarningMessage = "Para usar el client debes estar conectado al menos a una cuenta. Deberás iniciar sesión nuevamente después. ¿Estás seguro de que deseas cerrar sesión?"
 confirmButton = "Estoy seguro"
 cancelButton = "Cancelar"
 
@@ -297,6 +307,12 @@ failedMessage = "No pudimos actualizar el inicio de sesión para <strong>{accoun
 failedMessageSelectAnotherAccount = "No pudimos actualizar el inicio de sesión para <strong>{account}</strong>. Por favor, inicia sesión nuevamente."
 loginButton = "Iniciar Sesión"
 selectAnotherAccountButton = "Seleccionar otra cuenta"
+
+[js.overlay]
+closeWarningTitle = "¡Espera!"
+closeWarningMessage = "No puedes cerrar el cliente mientras el juego está en ejecución. Esto es necesario para mantener el estado de Discord y las funciones del lanzador."
+closeWarningOkButton = "Entendido"
+dismiss = "Cerrar"
 
 [js.uicore.autoUpdate]
 checkingForUpdateButton = "Buscando actualizaciones..."
