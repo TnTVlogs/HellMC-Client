@@ -2,42 +2,79 @@
  * Initialize UI functions which depend on internal modules.
  * Loaded after core UI functions are initialized in uicore.js.
  */
-// Requirements
-const path = require('path')
-const { Type } = require('helios-distribution-types')
 
-const AuthManager = require('./assets/js/authmanager')
-const ConfigManager = require('./assets/js/configmanager')
-const { DistroAPI } = require('./assets/js/distromanager')
+// All Node.js modules come from window.launcherAPI (contextBridge).
+var { ipc, app, win, config: ConfigManager, auth: AuthManager, lang: Lang, logger, distroTypes: Type } = window.launcherAPI
+
+// helios-core distribution classes (HeliosDistribution/HeliosServer/HeliosModule) lose
+// their prototype methods crossing contextBridge — structured-clone only keeps own data
+// properties (rawServer, rawModule, required, mavenComponents, subModules, ...). These
+// methods are pure derivations of that data, so reattach them here rather than editing
+// every call site across the renderer scripts.
+function _rehydrateModule(mdl) {
+    mdl.getRequired = function () { return this.required }
+    mdl.getPath = function () { return this.localPath }
+    mdl.hasMavenComponents = function () { return this.mavenComponents != null }
+    mdl.getMavenComponents = function () { return this.mavenComponents }
+    mdl.getMavenIdentifier = function () {
+        const c = this.mavenComponents
+        return `${c.group}:${c.artifact}:${c.version}${c.classifier != null ? ':' + c.classifier : ''}${c.extension != null ? '@' + c.extension : ''}`
+    }
+    mdl.getExtensionlessMavenIdentifier = function () {
+        const c = this.mavenComponents
+        return `${c.group}:${c.artifact}:${c.version}${c.classifier != null ? ':' + c.classifier : ''}`
+    }
+    mdl.getVersionlessMavenIdentifier = function () {
+        const c = this.mavenComponents
+        return `${c.group}:${c.artifact}${c.classifier ? ':' + c.classifier : ''}`
+    }
+    mdl.hasSubModules = function () { return this.subModules.length > 0 }
+    if (mdl.subModules) mdl.subModules.forEach(_rehydrateModule)
+    return mdl
+}
+
+function _rehydrateDistribution(distro) {
+    if (distro == null) return distro
+    if (distro.servers) {
+        distro.servers.forEach(serv => {
+            if (serv.modules) serv.modules.forEach(_rehydrateModule)
+        })
+    }
+    distro.getMainServer = function () {
+        return this.mainServerIndex < this.servers.length ? this.servers[this.mainServerIndex] : null
+    }
+    distro.getServerById = function (id) {
+        return this.servers.find(s => s.rawServer.id === id) || null
+    }
+    return distro
+}
+
+// window.launcherAPI.distro is deep-frozen by contextBridge, so it can't be
+// monkey-patched in place. Wrap it instead — every renderer script shares this
+// same global var (uibinder.js loads first).
+var DistroAPI = {
+    getDistribution:               async () => _rehydrateDistribution(await window.launcherAPI.distro.getDistribution()),
+    refreshDistributionOrFallback: async () => _rehydrateDistribution(await window.launcherAPI.distro.refreshDistributionOrFallback()),
+    toggleDevMode:                 (val) => window.launcherAPI.distro.toggleDevMode(val),
+    isDevMode:                     ()    => window.launcherAPI.distro.isDevMode()
+}
+
+const loggerBinder = logger.getLogger('UIBinder')
 
 let rscShouldLoad = false
 let fatalStartupError = false
 
-// Mapping of each view to their container IDs.
 const VIEWS = {
-    landing: '#landingContainer',
+    landing:      '#landingContainer',
     loginOptions: '#loginOptionsContainer',
-    login: '#loginContainer',
-    settings: '#settingsContainer',
-    welcome: '#welcomeContainer',
-    waiting: '#waitingContainer'
+    login:        '#loginContainer',
+    settings:     '#settingsContainer',
+    welcome:      '#welcomeContainer',
+    waiting:      '#waitingContainer'
 }
 
-// The currently shown view container.
 let currentView
 
-/**
- * Switch launcher views.
- * 
- * @param {string} current The ID of the current view container. 
- * @param {*} next The ID of the next view container.
- * @param {*} currentFadeTime Optional. The fade out time for the current view.
- * @param {*} nextFadeTime Optional. The fade in time for the next view.
- * @param {*} onCurrentFade Optional. Callback function to execute when the current
- * view fades out.
- * @param {*} onNextFade Optional. Callback function to execute when the next view
- * fades in.
- */
 function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, onCurrentFade = () => { }, onNextFade = () => { }) {
     currentView = next
     $(`${current}`).fadeOut(currentFadeTime, async () => {
@@ -48,20 +85,15 @@ function switchView(current, next, currentFadeTime = 500, nextFadeTime = 500, on
     })
 }
 
-/**
- * Get the currently shown view container.
- * 
- * @returns {string} The currently shown view container.
- */
 function getCurrentView() {
     return currentView
 }
 
 async function showMainUI(data) {
 
-    if (!isDev) {
+    if (!app.isDev) {
         loggerAutoUpdater.info('Initializing..')
-        ipcRenderer.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
+        ipc.send('autoUpdateAction', 'initAutoUpdater', ConfigManager.getAllowPrerelease())
     }
 
     await prepareSettings(true)
@@ -74,11 +106,8 @@ async function showMainUI(data) {
 
         let isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
 
-        // If this is enabled in a development environment we'll get ratelimited.
-        // The relaunch frequency is usually far too high.
         if (isLoggedIn) {
             await validateSelectedAccount()
-            // Re-calculate logged in status as validation might have removed the account.
             isLoggedIn = Object.keys(ConfigManager.getAuthAccounts()).length > 0
         }
 
@@ -105,7 +134,6 @@ async function showMainUI(data) {
         }, 250)
 
     }, 750)
-    // Disable tabbing to the news container.
     initNews().then(() => {
         $('#newsContainer *').attr('tabindex', '-1')
     })
@@ -121,19 +149,13 @@ function showFatalStartupError() {
                 Lang.queryJS('uibinder.startup.closeButton')
             )
             setOverlayHandler(() => {
-                const window = remote.getCurrentWindow()
-                window.close()
+                win.close()
             })
             toggleOverlay(true)
         })
     }, 750)
 }
 
-/**
- * Common functions to perform after refreshing the distro index.
- * 
- * @param {Object} data The distro index object.
- */
 function onDistroRefresh(data) {
     updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
     refreshServerStatus()
@@ -142,25 +164,20 @@ function onDistroRefresh(data) {
     ensureJavaSettings(data)
 }
 
-/**
- * Sync the mod configurations with the distro index.
- * 
- * @param {Object} data The distro index object.
- */
 function syncModConfigurations(data) {
 
     const syncedCfgs = []
 
     for (let serv of data.servers) {
 
-        const id = serv.rawServer.id
+        const id   = serv.rawServer.id
         const mdls = serv.modules
-        const cfg = ConfigManager.getModConfiguration(id)
+        const cfg  = ConfigManager.getModConfiguration(id)
 
         if (cfg != null) {
 
             const modsOld = cfg.mods
-            const mods = {}
+            const mods    = {}
 
             for (let mdl of mdls) {
                 const type = mdl.rawModule.type
@@ -189,10 +206,7 @@ function syncModConfigurations(data) {
                 }
             }
 
-            syncedCfgs.push({
-                id,
-                mods
-            })
+            syncedCfgs.push({ id, mods })
 
         } else {
 
@@ -214,11 +228,7 @@ function syncModConfigurations(data) {
                 }
             }
 
-            syncedCfgs.push({
-                id,
-                mods
-            })
-
+            syncedCfgs.push({ id, mods })
         }
     }
 
@@ -226,37 +236,20 @@ function syncModConfigurations(data) {
     ConfigManager.save()
 }
 
-/**
- * Ensure java configurations are present for the available servers.
- * 
- * @param {Object} data The distro index object.
- */
 function ensureJavaSettings(data) {
-
-    // Nothing too fancy for now.
     for (const serv of data.servers) {
         ConfigManager.ensureJavaConfig(serv.rawServer.id, serv.effectiveJavaOptions, serv.rawServer.javaOptions?.ram)
     }
-
     ConfigManager.save()
 }
 
-/**
- * Recursively scan for optional sub modules. If none are found,
- * this function returns a boolean. If optional sub modules do exist,
- * a recursive configuration object is returned.
- * 
- * @returns {boolean | Object} The resolved mod configuration.
- */
 function scanOptionalSubModules(mdls, origin) {
     if (mdls != null) {
         const mods = {}
 
         for (let mdl of mdls) {
             const type = mdl.rawModule.type
-            // Optional types.
             if (type === Type.ForgeMod || type === Type.LiteMod || type === Type.LiteLoader || type === Type.FabricMod) {
-                // It is optional.
                 if (!mdl.getRequired().value) {
                     mods[mdl.getVersionlessMavenIdentifier()] = scanOptionalSubModules(mdl.subModules, mdl)
                 } else {
@@ -271,9 +264,7 @@ function scanOptionalSubModules(mdls, origin) {
         }
 
         if (Object.keys(mods).length > 0) {
-            const ret = {
-                mods
-            }
+            const ret = { mods }
             if (!origin.getRequired().value) {
                 ret.value = origin.getRequired().def
             }
@@ -283,45 +274,27 @@ function scanOptionalSubModules(mdls, origin) {
     return origin.getRequired().def
 }
 
-/**
- * Recursively merge an old configuration into a new configuration.
- * 
- * @param {boolean | Object} o The old configuration value.
- * @param {boolean | Object} n The new configuration value.
- * @param {boolean} nReq If the new value is a required mod.
- * 
- * @returns {boolean | Object} The merged configuration.
- */
 function mergeModConfiguration(o, n, nReq = false) {
     if (typeof o === 'boolean') {
         if (typeof n === 'boolean') return o
         else if (typeof n === 'object') {
-            if (!nReq) {
-                n.value = o
-            }
+            if (!nReq) n.value = o
             return n
         }
     } else if (typeof o === 'object') {
         if (typeof n === 'boolean') return typeof o.value !== 'undefined' ? o.value : true
         else if (typeof n === 'object') {
-            if (!nReq) {
-                n.value = typeof o.value !== 'undefined' ? o.value : true
-            }
-
+            if (!nReq) n.value = typeof o.value !== 'undefined' ? o.value : true
             const newMods = Object.keys(n.mods)
             for (let i = 0; i < newMods.length; i++) {
-
                 const mod = newMods[i]
                 if (o.mods[mod] != null) {
                     n.mods[mod] = mergeModConfiguration(o.mods[mod], n.mods[mod])
                 }
             }
-
             return n
         }
     }
-    // If for some reason we haven't been able to merge,
-    // wipe the old value and use the new one. Just to be safe
     return n
 }
 
@@ -345,17 +318,13 @@ async function validateSelectedAccount() {
 
                 const isMicrosoft = selectedAcc.type === 'microsoft'
 
-                if (isMicrosoft) {
-                    // Empty for now
-                } else {
-                    // Mojang
-                    // For convenience, pre-populate the username of the account.
+                if (!isMicrosoft) {
                     document.getElementById('loginUsername').value = selectedAcc.username
                     validateEmail(selectedAcc.username)
                 }
 
                 loginOptionsViewOnLoginSuccess = getCurrentView()
-                loginOptionsViewOnLoginCancel = VIEWS.loginOptions
+                loginOptionsViewOnLoginCancel  = VIEWS.loginOptions
 
                 if (accLen > 0) {
                     loginOptionsViewOnCancel = getCurrentView()
@@ -392,8 +361,7 @@ async function validateSelectedAccount() {
                     })
                 } else {
                     const accountsObj = ConfigManager.getAuthAccounts()
-                    const accounts = Array.from(Object.keys(accountsObj), v => accountsObj[v])
-                    // This function validates the account switch.
+                    const accounts    = Array.from(Object.keys(accountsObj), v => accountsObj[v])
                     setSelectedAccount(accounts[0].uuid)
                     toggleOverlay(false)
                 }
@@ -407,12 +375,6 @@ async function validateSelectedAccount() {
     }
 }
 
-/**
- * Temporary function to update the selected account along
- * with the relevent UI elements.
- * 
- * @param {string} uuid The UUID of the account.
- */
 async function setSelectedAccount(uuid) {
     const authAcc = ConfigManager.setSelectedAccount(uuid)
     ConfigManager.save()
@@ -420,7 +382,6 @@ async function setSelectedAccount(uuid) {
     await validateSelectedAccount()
 }
 
-// Synchronous Listener
 document.addEventListener('readystatechange', async () => {
 
     if (document.readyState === 'interactive' || document.readyState === 'complete') {
@@ -437,8 +398,7 @@ document.addEventListener('readystatechange', async () => {
 
 }, false)
 
-// Actions that must be performed after the distribution index is downloaded.
-ipcRenderer.on('distributionIndexDone', async (event, res) => {
+ipc.on('distributionIndexDone', async (res) => {
     if (res) {
         const data = await DistroAPI.getDistribution()
         syncModConfigurations(data)
@@ -458,7 +418,6 @@ ipcRenderer.on('distributionIndexDone', async (event, res) => {
     }
 })
 
-// Util for development
 async function devModeToggle() {
     DistroAPI.toggleDevMode(true)
     const data = await DistroAPI.refreshDistributionOrFallback()
@@ -467,5 +426,4 @@ async function devModeToggle() {
     syncModConfigurations(data)
 }
 
-// Global request for initial status
-ipcRenderer.send('requestDistributionIndexStatus')
+ipc.send('requestDistributionIndexStatus')

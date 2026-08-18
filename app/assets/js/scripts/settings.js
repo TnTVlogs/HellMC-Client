@@ -1,9 +1,8 @@
-// Requirements
-const os = require('os')
-const semver = require('semver')
-
-// const DropinModUtil  = require('./assets/js/dropinmodutil')
-const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('./assets/js/ipcconstants')
+// All Node.js APIs come from the contextBridge (window.launcherAPI).
+// ConfigManager, AuthManager, Lang, ipc, app, win, logger, Type (distroTypes) are
+// available from uibinder.js which loads before this file in the same global scope.
+var { system, semver: SemverUtils, ipcConstants, dialog, java: JavaUtils } = window.launcherAPI
+var { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = ipcConstants
 
 const settingsState = {
     invalid: new Set()
@@ -57,14 +56,14 @@ function bindFileSelectors() {
                 options.title = ele.getAttribute('dialogTitle')
             }
 
-            if (isJavaExecSel && process.platform === 'win32') {
+            if (isJavaExecSel && system.platform === 'win32') {
                 options.filters = [
                     { name: Lang.queryJS('settings.fileSelectors.executables'), extensions: ['exe'] },
                     { name: Lang.queryJS('settings.fileSelectors.allFiles'), extensions: ['*'] }
                 ]
             }
 
-            const res = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), options)
+            const res = await dialog.showOpenDialog(options)
             if (!res.canceled) {
                 ele.previousElementSibling.value = res.filePaths[0]
                 if (isJavaExecSel) {
@@ -92,13 +91,13 @@ bindFileSelectors()
 function initSettingsValidators() {
     const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
-        const vFn = ConfigManager['validate' + v.getAttribute('cValue')]
-        if (typeof vFn === 'function') {
+        const cValue = v.getAttribute('cValue')
+        if (ConfigManager.hasValidator(cValue)) {
             if (v.tagName === 'INPUT') {
                 if (v.type === 'number' || v.type === 'text') {
                     v.addEventListener('keyup', (e) => {
                         const v = e.target
-                        if (!vFn(v.value)) {
+                        if (!ConfigManager.dynamicValidate(cValue, v.value)) {
                             settingsState.invalid.add(v.id)
                             v.setAttribute('error', '')
                             settingsSaveDisabled(true)
@@ -128,33 +127,32 @@ async function initSettingsValues() {
     for (const v of sEls) {
         const cVal = v.getAttribute('cValue')
         const serverDependent = v.hasAttribute('serverDependent') // Means the first argument is the server id.
-        const gFn = ConfigManager['get' + cVal]
         const gFnOpts = []
         if (serverDependent) {
             gFnOpts.push(ConfigManager.getSelectedServer())
         }
-        if (typeof gFn === 'function') {
+        if (ConfigManager.hasGetter(cVal)) {
             if (v.tagName === 'INPUT') {
                 if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
                     if (cVal === 'JavaExecutable') {
-                        v.value = gFn.apply(null, gFnOpts)
+                        v.value = ConfigManager.dynamicGet(cVal, ...gFnOpts)
                         await populateJavaExecDetails(v.value)
                     } else if (cVal === 'DataDirectory') {
-                        v.value = gFn.apply(null, gFnOpts)
+                        v.value = ConfigManager.dynamicGet(cVal, ...gFnOpts)
                     } else if (cVal === 'JVMOptions') {
-                        v.value = gFn.apply(null, gFnOpts).join(' ')
+                        v.value = ConfigManager.dynamicGet(cVal, ...gFnOpts).join(' ')
                     } else {
-                        v.value = gFn.apply(null, gFnOpts)
+                        v.value = ConfigManager.dynamicGet(cVal, ...gFnOpts)
                     }
                 } else if (v.type === 'checkbox') {
-                    v.checked = gFn.apply(null, gFnOpts)
+                    v.checked = ConfigManager.dynamicGet(cVal, ...gFnOpts)
                 }
             } else if (v.tagName === 'DIV') {
                 if (v.classList.contains('rangeSlider')) {
                     // Special Conditions
                     if (cVal === 'MinRAM' || cVal === 'MaxRAM') {
-                        let val = gFn.apply(null, gFnOpts)
+                        let val = ConfigManager.dynamicGet(cVal, ...gFnOpts)
                         if (val.endsWith('M')) {
                             val = Number(val.substring(0, val.length - 1)) / 1024
                         } else {
@@ -163,7 +161,7 @@ async function initSettingsValues() {
 
                         v.setAttribute('value', val)
                     } else {
-                        v.setAttribute('value', Number.parseFloat(gFn.apply(null, gFnOpts)))
+                        v.setAttribute('value', Number.parseFloat(ConfigManager.dynamicGet(cVal, ...gFnOpts)))
                     }
                 }
             }
@@ -180,30 +178,25 @@ function saveSettingsValues() {
     Array.from(sEls).map((v, index, arr) => {
         const cVal = v.getAttribute('cValue')
         const serverDependent = v.hasAttribute('serverDependent') // Means the first argument is the server id.
-        const sFn = ConfigManager['set' + cVal]
         const sFnOpts = []
         if (serverDependent) {
             sFnOpts.push(ConfigManager.getSelectedServer())
         }
-        if (typeof sFn === 'function') {
+        if (ConfigManager.hasSetter(cVal)) {
             if (v.tagName === 'INPUT') {
                 if (v.type === 'number' || v.type === 'text') {
                     // Special Conditions
                     if (cVal === 'JVMOptions') {
                         if (!v.value.trim()) {
-                            sFnOpts.push([])
-                            sFn.apply(null, sFnOpts)
+                            ConfigManager.dynamicSet(cVal, ...sFnOpts, [])
                         } else {
-                            sFnOpts.push(v.value.trim().split(/\s+/))
-                            sFn.apply(null, sFnOpts)
+                            ConfigManager.dynamicSet(cVal, ...sFnOpts, v.value.trim().split(/\s+/))
                         }
                     } else {
-                        sFnOpts.push(v.value)
-                        sFn.apply(null, sFnOpts)
+                        ConfigManager.dynamicSet(cVal, ...sFnOpts, v.value)
                     }
                 } else if (v.type === 'checkbox') {
-                    sFnOpts.push(v.checked)
-                    sFn.apply(null, sFnOpts)
+                    ConfigManager.dynamicSet(cVal, ...sFnOpts, v.checked)
                     // Special Conditions
                     if (cVal === 'AllowPrerelease') {
                         changeAllowPrerelease(v.checked)
@@ -220,11 +213,9 @@ function saveSettingsValues() {
                             val = val + 'G'
                         }
 
-                        sFnOpts.push(val)
-                        sFn.apply(null, sFnOpts)
+                        ConfigManager.dynamicSet(cVal, ...sFnOpts, val)
                     } else {
-                        sFnOpts.push(v.getAttribute('value'))
-                        sFn.apply(null, sFnOpts)
+                        ConfigManager.dynamicSet(cVal, ...sFnOpts, v.getAttribute('value'))
                     }
                 }
             }
@@ -333,7 +324,7 @@ settingsNavDone.onclick = () => {
     fullSettingsSave()
     if (langChanged) {
         langChanged = false
-        ipcRenderer.send('reload-renderer')
+        ipc.send('reload-renderer')
     } else {
         switchView(getCurrentView(), VIEWS.landing)
     }
@@ -343,8 +334,8 @@ settingsNavDone.onclick = () => {
  * Account Management Tab
  */
 
-const msftLoginLogger = LoggerUtil.getLogger('Microsoft Login')
-const msftLogoutLogger = LoggerUtil.getLogger('Microsoft Logout')
+const msftLoginLogger = logger.getLogger('Microsoft Login')
+const msftLogoutLogger = logger.getLogger('Microsoft Logout')
 
 // Bind the add mojang account button.
 document.getElementById('settingsAddMojangAccount').onclick = (e) => {
@@ -358,12 +349,12 @@ document.getElementById('settingsAddMojangAccount').onclick = (e) => {
 // Bind the add microsoft account button.
 document.getElementById('settingsAddMicrosoftAccount').onclick = (e) => {
     switchView(getCurrentView(), VIEWS.waiting, 500, 500, () => {
-        ipcRenderer.send(MSFT_OPCODE.OPEN_LOGIN, VIEWS.settings, VIEWS.settings)
+        ipc.send(MSFT_OPCODE.OPEN_LOGIN, VIEWS.settings, VIEWS.settings)
     })
 }
 
 // Bind reply for Microsoft Login.
-ipcRenderer.on(MSFT_OPCODE.REPLY_LOGIN, (_, ...arguments_) => {
+ipc.on(MSFT_OPCODE.REPLY_LOGIN, (...arguments_) => {
     if (arguments_[0] === MSFT_REPLY_TYPE.ERROR) {
 
         const viewOnClose = arguments_[2]
@@ -427,7 +418,7 @@ ipcRenderer.on(MSFT_OPCODE.REPLY_LOGIN, (_, ...arguments_) => {
                 .catch((displayableError) => {
 
                     let actualDisplayableError
-                    if (isDisplayableError(displayableError)) {
+                    if (AuthManager.isDisplayableError(displayableError)) {
                         msftLoginLogger.error('Error while logging in.', displayableError)
                         actualDisplayableError = displayableError
                     } else {
@@ -520,7 +511,7 @@ function processLogOut(val, isLastAccount) {
     if (targetAcc.type === 'microsoft') {
         msAccDomElementCache = parent
         switchView(getCurrentView(), VIEWS.waiting, 500, 500, () => {
-            ipcRenderer.send(MSFT_OPCODE.OPEN_LOGOUT, uuid, isLastAccount)
+            ipc.send(MSFT_OPCODE.OPEN_LOGOUT, uuid, isLastAccount)
         })
     } else {
         AuthManager.removeMojangAccount(uuid).then(() => {
@@ -544,7 +535,7 @@ function processLogOut(val, isLastAccount) {
 }
 
 // Bind reply for Microsoft Logout.
-ipcRenderer.on(MSFT_OPCODE.REPLY_LOGOUT, (_, ...arguments_) => {
+ipc.on(MSFT_OPCODE.REPLY_LOGOUT, (...arguments_) => {
     if (arguments_[0] === MSFT_REPLY_TYPE.ERROR) {
         switchView(getCurrentView(), VIEWS.settings, 500, 500, () => {
 
@@ -943,7 +934,7 @@ settingsMinRAMRange.onchange = (e) => {
     // Get reference to range bar.
     const bar = e.target.getElementsByClassName('rangeSliderBar')[0]
     // Calculate effective total memory.
-    const max = os.totalmem() / 1073741824
+    const max = system.totalmem() / 1073741824
 
     // Change range bar color based on the selected value.
     if (sMinV >= max / 2) {
@@ -975,7 +966,7 @@ settingsMaxRAMRange.onchange = (e) => {
     // Get reference to range bar.
     const bar = e.target.getElementsByClassName('rangeSliderBar')[0]
     // Calculate effective total memory.
-    const max = os.totalmem() / 1073741824
+    const max = system.totalmem() / 1073741824
 
     // Change range bar color based on the selected value.
     if (sMaxV >= max / 2) {
@@ -1103,8 +1094,8 @@ function updateRangedSlider(element, value, notch) {
  * Display the total and available RAM.
  */
 function populateMemoryStatus() {
-    settingsMemoryTotal.innerHTML = Number((os.totalmem() - 1073741824) / 1073741824).toFixed(1) + 'G'
-    settingsMemoryAvail.innerHTML = Number(os.freemem() / 1073741824).toFixed(1) + 'G'
+    settingsMemoryTotal.innerHTML = Number((system.totalmem() - 1073741824) / 1073741824).toFixed(1) + 'G'
+    settingsMemoryAvail.innerHTML = Number(system.freemem() / 1073741824).toFixed(1) + 'G'
 }
 
 /**
@@ -1116,7 +1107,7 @@ function populateMemoryStatus() {
 async function populateJavaExecDetails(execPath) {
     const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
 
-    const details = await validateSelectedJvm(ensureJavaDirIsRoot(execPath), server.effectiveJavaOptions.supported)
+    const details = await JavaUtils.validateSelectedJvm(execPath, server.effectiveJavaOptions.supported)
 
     if (details != null) {
         settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.selectedJava', { version: details.semverStr, vendor: details.vendor })
@@ -1142,7 +1133,7 @@ function populateJvmOptsLink(server) {
         settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/tools/java.htm`
     }
     else {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/docs/technotes/tools/${process.platform === 'win32' ? 'windows' : 'unix'}/java.html`
+        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/docs/technotes/tools/${system.platform === 'win32' ? 'windows' : 'unix'}/java.html`
     }
 }
 
@@ -1186,7 +1177,7 @@ const settingsAboutChangelogButton = settingsTabAbout.getElementsByClassName('se
  * @returns {boolean} True if the version is a prerelease, otherwise false.
  */
 function isPrerelease(version) {
-    const preRelComp = semver.prerelease(version)
+    const preRelComp = SemverUtils.prerelease(version)
     return preRelComp != null && preRelComp.length > 0
 }
 
@@ -1216,7 +1207,7 @@ function populateVersionInformation(version, valueElement, titleElement, checkEl
  * Retrieve the version information and display it on the UI.
  */
 function populateAboutVersionInformation() {
-    populateVersionInformation(remote.app.getVersion(), document.getElementById('settingsAboutCurrentVersionValue'), document.getElementById('settingsAboutCurrentVersionTitle'), document.getElementById('settingsAboutCurrentVersionCheck'))
+    populateVersionInformation(app.getVersion(), document.getElementById('settingsAboutCurrentVersionValue'), document.getElementById('settingsAboutCurrentVersionTitle'), document.getElementById('settingsAboutCurrentVersionCheck'))
 }
 
 /**
@@ -1227,7 +1218,7 @@ function populateReleaseNotes() {
     $.ajax({
         url: 'https://github.com/TnTVlogs/HellMC-Client/releases.atom',
         success: (data) => {
-            const version = 'v' + remote.app.getVersion()
+            const version = 'v' + app.getVersion()
             const entries = $(data).find('entry')
 
             for (let i = 0; i < entries.length; i++) {
@@ -1299,7 +1290,7 @@ function populateSettingsUpdateInformation(data) {
         settingsUpdateChangelogText.innerHTML = data.releaseNotes
         populateVersionInformation(data.version, settingsUpdateVersionValue, settingsUpdateVersionTitle, settingsUpdateVersionCheck)
 
-        if (process.platform === 'darwin') {
+        if (system.platform === 'darwin') {
             settingsUpdateButtonStatus(Lang.queryJS('settings.updates.downloadButton'), false, () => {
                 shell.openExternal(data.darwindownload)
             })
@@ -1309,10 +1300,10 @@ function populateSettingsUpdateInformation(data) {
     } else {
         settingsUpdateTitle.innerHTML = Lang.queryJS('settings.updates.latestVersionTitle')
         settingsUpdateChangelogCont.style.display = 'none'
-        populateVersionInformation(remote.app.getVersion(), settingsUpdateVersionValue, settingsUpdateVersionTitle, settingsUpdateVersionCheck)
+        populateVersionInformation(app.getVersion(), settingsUpdateVersionValue, settingsUpdateVersionTitle, settingsUpdateVersionCheck)
         settingsUpdateButtonStatus(Lang.queryJS('settings.updates.checkForUpdatesButton'), false, () => {
-            if (!isDev) {
-                ipcRenderer.send('autoUpdateAction', 'checkForUpdate')
+            if (!app.isDev) {
+                ipc.send('autoUpdateAction', 'checkForUpdate')
                 settingsUpdateButtonStatus(Lang.queryJS('settings.updates.checkingForUpdatesButton'), true)
             }
         })
@@ -1379,7 +1370,7 @@ async function prepareSettings(first = false) {
     await prepareJavaTab()
     prepareAboutTab()
     prepareLanguageSelector()
-    ipcRenderer.send('request-game-status')
+    ipc.send('request-game-status')
 }
 
 
@@ -1411,12 +1402,12 @@ function toggleLanguageLock(running) {
 }
 
 // Listen for game status changes to lock/unlock UI
-ipcRenderer.on('game-status-changed', (event, running) => {
+ipc.on('game-status-changed', (running) => {
     toggleLanguageLock(running)
 })
 
 // Initial check when opening settings
-ipcRenderer.on('game-status-response', (event, running) => {
+ipc.on('game-status-response', (running) => {
     toggleLanguageLock(running)
 })
 

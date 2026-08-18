@@ -744,13 +744,18 @@ class ProcessBuilder {
                             }
                         })
 
-                        // Extract the file.
+                        // Extract the file, guarding against zip-slip path traversal.
                         if (!shouldExclude) {
-                            fs.writeFile(path.join(tempNativePath, fileName), zipEntries[i].getData(), (err) => {
-                                if (err) {
-                                    logger.error('Error while extracting native library:', err)
-                                }
-                            })
+                            const destPath = path.join(tempNativePath, fileName)
+                            if (!path.resolve(destPath).startsWith(path.resolve(tempNativePath))) {
+                                logger.warn(`Skipping native entry with unsafe path: ${fileName}`)
+                            } else {
+                                fs.writeFile(destPath, zipEntries[i].getData(), (err) => {
+                                    if (err) {
+                                        logger.error('Error while extracting native library:', err)
+                                    }
+                                })
+                            }
                         }
 
                     }
@@ -846,7 +851,7 @@ class ProcessBuilder {
 
         //Check for any libraries in our mod list.
         for (let i = 0; i < mods.length; i++) {
-            if (mods.sub_modules != null) {
+            if (mods[i].subModules?.length > 0) {
                 const res = this._resolveModuleLibraries(mods[i])
                 libs = { ...libs, ...res }
             }

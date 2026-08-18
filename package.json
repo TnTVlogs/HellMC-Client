@@ -13,6 +13,7 @@
   "main": "index.js",
   "scripts": {
     "start": "electron .",
+    "postinstall": "patch-package",
     "dist": "electron-builder build",
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
@@ -43,7 +44,8 @@
   "devDependencies": {
     "electron": "^39.2.7",
     "electron-builder": "^26.4.0",
-    "eslint": "^8.57.1"
+    "eslint": "^8.57.1",
+    "patch-package": "^8.0.1"
   },
   "repository": {
     "type": "git",

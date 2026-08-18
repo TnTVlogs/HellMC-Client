@@ -5,3 +5,5 @@
 /logs/
 /dist/
 package-lock.json
+.claude/
+/newDocs/

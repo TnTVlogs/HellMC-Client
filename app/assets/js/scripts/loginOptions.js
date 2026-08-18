@@ -20,7 +20,7 @@ function loginOptionsCancelEnabled(val){
 
 loginOptionMicrosoft.onclick = (e) => {
     switchView(getCurrentView(), VIEWS.waiting, 500, 500, () => {
-        ipcRenderer.send(
+        ipc.send(
             MSFT_OPCODE.OPEN_LOGIN,
             loginOptionsViewOnLoginSuccess,
             loginOptionsViewOnLoginCancel

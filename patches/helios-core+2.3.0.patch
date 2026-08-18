@@ -1,0 +1,56 @@
+diff --git a/node_modules/helios-core/dist/common/distribution/DistributionAPI.js b/node_modules/helios-core/dist/common/distribution/DistributionAPI.js
+index 6b18f82..d05a15f 100644
+--- a/node_modules/helios-core/dist/common/distribution/DistributionAPI.js
++++ b/node_modules/helios-core/dist/common/distribution/DistributionAPI.js
+@@ -96,7 +96,17 @@ class DistributionAPI {
+     }
+     async pullRemote() {
+         try {
+-            const res = await got_1.default.get(this.remoteUrl, { responseType: 'json' });
++            const res = await got_1.default.get(this.remoteUrl, {
++                responseType: 'json',
++                timeout: {
++                    lookup: 10000,
++                    connect: 10000,
++                    secureConnect: 10000,
++                    socket: 15000,
++                    send: 10000,
++                    response: 15000
++                }
++            });
+             return {
+                 data: res.body,
+                 responseStatus: RestResponse_1.RestResponseStatus.SUCCESS
+diff --git a/node_modules/helios-core/dist/dl/DownloadEngine.js b/node_modules/helios-core/dist/dl/DownloadEngine.js
+index 922cd1a..5609a22 100644
+--- a/node_modules/helios-core/dist/dl/DownloadEngine.js
++++ b/node_modules/helios-core/dist/dl/DownloadEngine.js
+@@ -82,7 +82,16 @@ async function downloadFile(url, path, onProgress) {
+             log.debug(`Retry attempt #${retryCount} for ${url}.`);
+         }
+         try {
+-            const downloadStream = got_1.default.stream(url);
++            const downloadStream = got_1.default.stream(url, {
++                timeout: {
++                    lookup: 10000,
++                    connect: 10000,
++                    secureConnect: 10000,
++                    socket: 30000,
++                    send: 10000,
++                    response: 10000
++                }
++            });
+             fileWriterStream = (0, fs_1.createWriteStream)(path);
+             if (onProgress) {
+                 downloadStream.on('downloadProgress', (progress) => onProgress(progress));
+@@ -120,6 +129,10 @@ async function downloadFile(url, path, onProgress) {
+     }
+ }
+ function retryableError(error) {
++    if (error instanceof got_1.TimeoutError) {
++        // Stalled/unresponsive connection (no data within the configured timeout).
++        return true;
++    }
+     if (error instanceof got_1.RequestError) {
+         // error.name === 'RequestError' means server did not respond.
+         return error.name === 'RequestError' || error instanceof got_1.ReadError && error.code === 'ECONNRESET';

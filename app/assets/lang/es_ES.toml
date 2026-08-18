@@ -312,6 +312,7 @@ selectAnotherAccountButton = "Seleccionar otra cuenta"
 closeWarningTitle = "¡Espera!"
 closeWarningMessage = "No puedes cerrar el cliente mientras el juego está en ejecución. Esto es necesario para mantener el estado de Discord y las funciones del lanzador."
 closeWarningOkButton = "Entendido"
+closeWarningForceButton = "Forzar cierre del juego"
 dismiss = "Cerrar"
 
 [js.uicore.autoUpdate]

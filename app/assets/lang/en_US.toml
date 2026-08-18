@@ -311,6 +311,7 @@ selectAnotherAccountButton = "Select Another Account"
 closeWarningTitle = "Wait!"
 closeWarningMessage = "The launcher cannot be closed while the game is running. This is necessary to maintain Discord status and launcher functions."
 closeWarningOkButton = "Got it"
+closeWarningForceButton = "Force close game"
 dismiss = "Dismiss"
 
 [js.uicore.autoUpdate]

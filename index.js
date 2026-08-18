@@ -33,6 +33,7 @@ function initAutoUpdater(event, data) {
     if (process.platform === 'darwin') {
         autoUpdater.autoDownload = false
     }
+    autoUpdater.removeAllListeners()
     autoUpdater.on('update-available', (info) => {
         event.sender.send('autoUpdateNotification', 'update-available', info)
     })
@@ -112,15 +113,13 @@ ipcMain.on('reload-renderer', (event) => {
     win.reload()
 })
 
-// Track game status for close prevention
+// Track game status (used to guard renderer reloads and broadcast UI state).
 let isGameRunning = false
 ipcMain.on('request-game-status', (event) => {
     event.reply('game-status-response', isGameRunning)
 })
 ipcMain.on('game-status-changed', (event, running) => {
     isGameRunning = running
-    console.log(`[MAIN] Game running status changed to: ${isGameRunning}`)
-    // Broadcast to all windows
     if (win) {
         win.webContents.send('game-status-changed', isGameRunning)
     }
@@ -278,9 +277,10 @@ function createWindow() {
         icon: getPlatformIcon('SealCircle'),
         frame: false,
         webPreferences: {
-            preload: path.join(__dirname, 'app', 'assets', 'js', 'preloader.js'),
-            nodeIntegration: true,
-            contextIsolation: false
+            preload: path.join(__dirname, 'app', 'assets', 'js', 'preload-bridge.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: false
         },
         backgroundColor: '#171614'
     })
@@ -302,17 +302,6 @@ function createWindow() {
 
     win.resizable = true
 
-    win.on('close', (e) => {
-        if (isGameRunning) {
-            console.log('[MAIN] Close attempt denied: game is running.')
-            e.preventDefault()
-            win.show()
-            win.focus()
-            win.webContents.send('show-close-warning')
-        } else {
-            console.log('[MAIN] Close attempt allowed: game is NOT running.')
-        }
-    })
 
     win.on('closed', () => {
         win = null
@@ -386,7 +375,7 @@ function createMenu() {
 function getPlatformIcon(filename) {
     let ext
     switch (process.platform) {
-        case 'win':
+        case 'win32':
             ext = 'ico'
             break
         case 'darwin':
