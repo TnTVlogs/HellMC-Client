@@ -36,8 +36,12 @@ class ProcessBuilder {
         this.llDir = path.join(this.gameDir, 'liteloaderModList.json')
         this.libPath = path.join(this.commonDir, 'libraries')
 
+        this.modsDir = path.join(this.gameDir, 'mods')
+        this.managedModsFile = path.join(this.gameDir, '.launcher-managed-mods.json')
+
         this.usingLiteLoader = false
         this.usingFabricLoader = false
+        this.usingModsFolder = false
         this.llPath = null
     }
 
@@ -52,6 +56,9 @@ class ProcessBuilder {
         logger.info('Using liteloader:', this.usingLiteLoader)
         this.usingFabricLoader = this.server.modules.some(mdl => mdl.rawModule.type === Type.Fabric)
         logger.info('Using fabric loader:', this.usingFabricLoader)
+        // Forge 1.20.3+ and NeoForge dropped --fml.modLists: they only discover mods in <gameDir>/mods.
+        this.usingModsFolder = !this.usingFabricLoader && mcVersionAtLeast('1.20.3', this.server.rawServer.minecraftVersion)
+        logger.info('Using mods folder:', this.usingModsFolder)
         const modObj = this.resolveModConfiguration(ConfigManager.getModConfiguration(this.server.rawServer.id).mods, this.server.modules)
 
         // Mod list below 1.13
@@ -68,7 +75,11 @@ class ProcessBuilder {
 
         if (mcVersionAtLeast('1.13', this.server.rawServer.minecraftVersion)) {
             //args = args.concat(this.constructModArguments(modObj.fMods))
-            args = args.concat(this.constructModList(modObj.fMods))
+            if (this.usingModsFolder) {
+                this.syncModsFolder(modObj.fMods)
+            } else {
+                args = args.concat(this.constructModList(modObj.fMods))
+            }
         }
 
         logger.info('Launch Arguments:', args)
@@ -319,6 +330,45 @@ class ProcessBuilder {
             return []
         }
 
+    }
+
+    /**
+     * Make the enabled mods available in <gameDir>/mods (Forge 1.20.3+ / NeoForge, which cannot
+     * be given a mod list). Mods placed by the launcher on a previous launch are removed first, so
+     * disabled or removed mods disappear; files the player added by hand are left alone.
+     * Mods are hard-linked from the common mod store when possible, otherwise copied.
+     *
+     * @param {Array.<Object>} mods An array of enabled mods which will be launched with this process.
+     */
+    syncModsFolder(mods) {
+        fs.ensureDirSync(this.modsDir)
+
+        let previous = []
+        try {
+            previous = fs.readJsonSync(this.managedModsFile)
+        } catch (err) {
+            // First launch, or unreadable state: nothing to clean.
+        }
+        for (const name of previous) {
+            fs.removeSync(path.join(this.modsDir, name))
+        }
+
+        const placed = []
+        for (const mod of mods) {
+            const source = mod.getPath()
+            const name = path.basename(source)
+            const dest = path.join(this.modsDir, name)
+            fs.removeSync(dest)
+            try {
+                fs.linkSync(source, dest)
+            } catch (err) {
+                fs.copySync(source, dest)
+            }
+            placed.push(name)
+        }
+
+        fs.writeJsonSync(this.managedModsFile, placed)
+        logger.info(`Placed ${placed.length} mods in ${this.modsDir}.`)
     }
 
     _processAutoConnectArg(args) {
