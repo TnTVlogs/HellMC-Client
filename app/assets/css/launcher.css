@@ -1779,6 +1779,24 @@ input:checked + .toggleSwitchSlider:before {
     pointer-events: none;
 }
 
+/* Toggle blocked because an enabled mod needs this one. Still clickable to show why. */
+.toggleSwitch[blocked] {
+    filter: grayscale(49%) brightness(70%);
+}
+.toggleSwitch[blocked] .toggleSwitchSlider {
+    cursor: not-allowed;
+}
+
+/* One-line explanation under the mod version (dependency groups). The list stays flat. */
+.settingsModNote {
+    display: none;
+    color: #e6b800;
+    font-size: 12px;
+}
+.settingsModNote[visible] {
+    display: block;
+}
+
 /* Set the status color of an enabled mod. */
 .settingsBaseMod[enabled] > .settingsModContent > .settingsModMainWrapper > .settingsModStatus {
     background-color: rgb(165, 195, 37);

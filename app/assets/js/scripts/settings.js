@@ -715,6 +715,102 @@ async function resolveModsForUI() {
 
     document.getElementById('settingsReqModsContent').innerHTML = modStr.reqMods
     document.getElementById('settingsOptModsContent').innerHTML = modStr.optMods
+
+    initModGroups(distro.getServerById(serv).modules)
+}
+
+/**
+ * Mod dependency groups (see modgroups.js). Only top level mod modules take part; the list stays flat.
+ * `Module.dependencies` holds full module ids, the DOM and the saved config use the versionless id.
+ */
+let modGroups = null // { mods, byId, byKey, graph }
+
+function initModGroups(modules) {
+    const isMod = t => t === Type.ForgeMod || t === Type.LiteMod || t === Type.LiteLoader || t === Type.FabricMod
+    const mods = modules
+        .filter(m => isMod(m.rawModule.type))
+        .map(m => ({
+            id: m.rawModule.id,
+            key: m.getVersionlessMavenIdentifier(),
+            name: m.rawModule.name,
+            required: !!m.getRequired().value,
+            dependencies: m.rawModule.dependencies || []
+        }))
+    modGroups = {
+        mods,
+        byId: new Map(mods.map(m => [m.id, m])),
+        byKey: new Map(mods.map(m => [m.key, m])),
+        graph: ModGroups.build(mods)
+    }
+}
+
+function modToggleInput(key) {
+    return settingsModsContainer.querySelector(`[formod='${key}']`)
+}
+
+/** Enabled flag of every optional mod, read from the toggles. */
+function readModState() {
+    const state = new Map()
+    for (const m of modGroups.mods) {
+        if (m.required) continue
+        const el = modToggleInput(m.key)
+        if (el != null) state.set(m.id, el.checked)
+    }
+    return state
+}
+
+/** Write the state to the toggles/rows and refresh which toggles are blocked. */
+function applyModState(state) {
+    for (const m of modGroups.mods) {
+        if (m.required) continue
+        const el = modToggleInput(m.key)
+        if (el == null) continue
+        const on = state.get(m.id) === true
+        el.checked = on
+        const row = document.getElementById(m.key)
+        if (row != null) {
+            if (on) row.setAttribute('enabled', '')
+            else row.removeAttribute('enabled')
+        }
+    }
+    refreshBlockedToggles(state)
+}
+
+function nameList(ids, max = 3) {
+    const names = ids.map(id => modGroups.byId.get(id).name)
+    if (names.length <= max) return names.join(', ')
+    return `${names.slice(0, max).join(', ')} ${Lang.queryJS('settings.modDependencies.andMore', { count: names.length - max })}`
+}
+
+function blockedMessage(blockerIds) {
+    return Lang.queryJS('settings.modDependencies.blocked', { list: nameList(blockerIds) })
+}
+
+/** An enabled mod that another enabled mod needs cannot be switched off. */
+function refreshBlockedToggles(state) {
+    for (const m of modGroups.mods) {
+        if (m.required) continue
+        const label = modToggleInput(m.key)?.closest('.toggleSwitch')
+        if (label == null) continue
+        const blockers = state.get(m.id) === true ? modGroups.graph.blockers(state, m.id) : []
+        if (blockers.length > 0) {
+            label.setAttribute('blocked', '')
+            label.title = blockedMessage(blockers)
+        } else {
+            label.removeAttribute('blocked')
+            label.removeAttribute('title')
+        }
+    }
+}
+
+let modNoteTimer = null
+function showModNote(key, text) {
+    const note = document.getElementById(key)?.querySelector('.settingsModNote')
+    if (note == null) return
+    note.textContent = text
+    note.setAttribute('visible', '')
+    clearTimeout(modNoteTimer)
+    modNoteTimer = setTimeout(() => note.removeAttribute('visible'), 6000)
 }
 
 /**
@@ -742,6 +838,7 @@ function parseModulesForUI(mdls, submodules, servConf) {
                             <div class="settingsModDetails">
                                 <span class="settingsModName">${mdl.rawModule.name}</span>
                                 <span class="settingsModVersion">v${mdl.mavenComponents.version}</span>
+                                <span class="settingsModNote"></span>
                             </div>
                         </div>
                         <label class="toggleSwitch" reqmod>
@@ -766,6 +863,7 @@ function parseModulesForUI(mdls, submodules, servConf) {
                             <div class="settingsModDetails">
                                 <span class="settingsModName">${mdl.rawModule.name}</span>
                                 <span class="settingsModVersion">v${mdl.mavenComponents.version}</span>
+                                <span class="settingsModNote"></span>
                             </div>
                         </div>
                         <label class="toggleSwitch">
@@ -795,12 +893,31 @@ function parseModulesForUI(mdls, submodules, servConf) {
  */
 function bindModsToggleSwitch() {
     const sEls = settingsModsContainer.querySelectorAll('[formod]')
-    Array.from(sEls).map((v, index, arr) => {
+    Array.from(sEls).forEach(v => {
+        const key = v.getAttribute('formod')
+        const label = v.closest('.toggleSwitch')
+
+        // Blocked toggle: nothing changes, the user is told why.
+        label.onclick = (e) => {
+            if (!label.hasAttribute('blocked')) return
+            e.preventDefault()
+            const mod = modGroups.byKey.get(key)
+            showModNote(key, blockedMessage(modGroups.graph.blockers(readModState(), mod.id)))
+        }
+
         v.onchange = () => {
-            if (v.checked) {
-                document.getElementById(v.getAttribute('formod')).setAttribute('enabled', '')
-            } else {
-                document.getElementById(v.getAttribute('formod')).removeAttribute('enabled')
+            const mod = modGroups.byKey.get(key)
+            const state = readModState()
+            state.set(mod.id, !v.checked) // state before the click
+            const changed = v.checked ? modGroups.graph.enable(state, mod.id) : modGroups.graph.disable(state, mod.id)
+            if (changed == null) { // safety net: the toggle is blocked in this case
+                v.checked = true
+                return
+            }
+            applyModState(state)
+            const others = changed.filter(id => id !== mod.id)
+            if (others.length > 0) {
+                showModNote(key, Lang.queryJS(v.checked ? 'settings.modDependencies.alsoEnabled' : 'settings.modDependencies.alsoDisabled', { list: nameList(others) }))
             }
         }
     })
@@ -906,6 +1023,12 @@ function animateSettingsTabRefresh() {
 async function prepareModsTab(first) {
     await resolveModsForUI()
     bindModsToggleSwitch()
+
+    // Older config or a new distribution: an enabled mod must not keep a disabled dependency.
+    const state = readModState()
+    const forced = modGroups.graph.normalize(state)
+    applyModState(state)
+    if (forced.length > 0) console.warn('Dependencies force-enabled:', forced)
     await loadSelectedServerOnModsTab()
 }
 

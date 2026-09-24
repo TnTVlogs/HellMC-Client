@@ -266,6 +266,12 @@ selectAccount = "Seleccionar cuenta"
 selectedAccount = "Cuenta seleccionada ✓"
 logout = "Cerrar sesión"
 
+[js.settings.modDependencies]
+blocked = "No se puede desactivar: lo necesitan {list}."
+alsoEnabled = "También se han activado (los necesita): {list}."
+alsoDisabled = "También se han desactivado (ya no los necesita nadie): {list}."
+andMore = "y {count} más"
+
 [js.settings.dropinMods]
 removeButton = "Eliminar"
 deleteFailedTitle = "Error al eliminar mod adicional {fullName}"

@@ -326,6 +326,12 @@ The type of the module.
 
 If the module is of type `Library`, whether the library should be added to the classpath. Defaults to true.
 
+### `Module.dependencies: string[]`
+
+**OPTIONAL**
+
+HellMC extension (not part of upstream Helios). The `id` of every module this module requires in order to load. Only meaningful on mod modules (`ForgeMod`, `FabricMod`, `LiteMod`). The launcher uses it to toggle optional mods as a group: enabling a mod enables its dependencies, a dependency cannot be disabled while an enabled mod needs it, and disabling a mod disables the dependencies nothing else needs. Unknown ids are ignored.
+
 ### `Module.required: Required`
 
 **OPTIONAL**

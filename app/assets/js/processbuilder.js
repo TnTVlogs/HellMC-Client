@@ -9,6 +9,7 @@ const os = require('os')
 const path = require('path')
 
 const ConfigManager = require('./configmanager')
+const ModGroups = require('./modgroups')
 
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
@@ -59,7 +60,9 @@ class ProcessBuilder {
         // Forge 1.20.3+ and NeoForge dropped --fml.modLists: they only discover mods in <gameDir>/mods.
         this.usingModsFolder = !this.usingFabricLoader && mcVersionAtLeast('1.20.3', this.server.rawServer.minecraftVersion)
         logger.info('Using mods folder:', this.usingModsFolder)
-        const modObj = this.resolveModConfiguration(ConfigManager.getModConfiguration(this.server.rawServer.id).mods, this.server.modules)
+        const modCfg = ConfigManager.getModConfiguration(this.server.rawServer.id).mods
+        this.enforceModDependencies(modCfg, this.server.modules)
+        const modObj = this.resolveModConfiguration(modCfg, this.server.modules)
 
         // Mod list below 1.13
         // Fabric only supports 1.14+
@@ -172,6 +175,36 @@ class ProcessBuilder {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Force-enables the dependencies of every enabled optional mod (see modgroups.js). Mutates modCfg
+     * in memory only; the launcher UI persists the same normalization when the mods tab is opened.
+     *
+     * @param {Object} modCfg The mod configuration object.
+     * @param {Array.<Object>} mdls An array of modules to parse.
+     */
+    enforceModDependencies(modCfg, mdls) {
+        const isMod = t => t === Type.ForgeMod || t === Type.LiteMod || t === Type.LiteLoader || t === Type.FabricMod
+        const entries = mdls.filter(m => isMod(m.rawModule.type)).map(m => ({
+            mdl: m,
+            id: m.rawModule.id,
+            key: m.getVersionlessMavenIdentifier(),
+            required: !!m.getRequired().value,
+            dependencies: m.rawModule.dependencies || []
+        }))
+        const graph = ModGroups.build(entries)
+        const state = new Map()
+        for (const e of entries) {
+            if (!e.required) state.set(e.id, !!ProcessBuilder.isModEnabled(modCfg[e.key], e.mdl.getRequired()))
+        }
+        const byId = new Map(entries.map(e => [e.id, e]))
+        for (const id of graph.normalize(state)) {
+            const e = byId.get(id)
+            const cur = modCfg[e.key]
+            modCfg[e.key] = cur != null && typeof cur === 'object' ? { ...cur, value: true } : true
+            logger.warn(`Dependency ${e.key} force-enabled: an enabled mod requires it.`)
         }
     }
 

@@ -260,6 +260,12 @@ selectAccount = "Select Account"
 selectedAccount = "Selected Account ✓"
 logout = "Log Out"
 
+[js.settings.modDependencies]
+blocked = "Can't be disabled: it is required by {list}."
+alsoEnabled = "Also enabled (it needs them): {list}."
+alsoDisabled = "Also disabled (nothing else needs them): {list}."
+andMore = "and {count} more"
+
 [js.settings.dropinMods]
 removeButton = "Remove"
 deleteFailedTitle = "Failed to Delete<br>Drop-in Mod {fullName}"
