@@ -816,8 +816,28 @@ class ProcessBuilder {
         const nativesRegex = /.+:natives-([^-]+)(?:-(.+))?/
         const libs = {}
 
+        // Newer Mojang manifests point java.library.path/SharedLibraryExtractPath/etc. at
+        // subfolders of natives_directory (`${natives_directory}/java`, `/lwjgl`, `/netty`,
+        // `/jna` — see _constructJVMArguments113's `natives_directory` case) instead of the
+        // directory itself. We don't know ahead of time which of these a given library's native
+        // belongs under, so every native gets written to the root AND to all of them.
+        const nativeSubDirs = ['java', 'lwjgl', 'netty', 'jna']
+        const nativeWriteTargets = [tempNativePath, ...nativeSubDirs.map(d => path.join(tempNativePath, d))]
+        const writeNativeFile = (fileName, data) => {
+            for (const dir of nativeWriteTargets) {
+                fs.writeFile(path.join(dir, fileName), data, (err) => {
+                    if (err) {
+                        logger.error('Error while extracting native library:', err)
+                    }
+                })
+            }
+        }
+
         const libArr = this.vanillaManifest.libraries
         fs.ensureDirSync(tempNativePath)
+        for (const dir of nativeWriteTargets) {
+            fs.ensureDirSync(dir)
+        }
         for (let i = 0; i < libArr.length; i++) {
             const lib = libArr[i]
             if (isLibraryCompatible(lib.rules, lib.natives)) {
@@ -853,11 +873,7 @@ class ProcessBuilder {
                             if (!path.resolve(destPath).startsWith(path.resolve(tempNativePath))) {
                                 logger.warn(`Skipping native entry with unsafe path: ${fileName}`)
                             } else {
-                                fs.writeFile(destPath, zipEntries[i].getData(), (err) => {
-                                    if (err) {
-                                        logger.error('Error while extracting native library:', err)
-                                    }
-                                })
+                                writeNativeFile(fileName, zipEntries[i].getData())
                             }
                         }
 
@@ -905,11 +921,7 @@ class ProcessBuilder {
 
                         // Extract the file.
                         if (!shouldExclude) {
-                            fs.writeFile(path.join(tempNativePath, extractName), zipEntries[i].getData(), (err) => {
-                                if (err) {
-                                    logger.error('Error while extracting native library:', err)
-                                }
-                            })
+                            writeNativeFile(extractName, zipEntries[i].getData())
                         }
 
                     }
