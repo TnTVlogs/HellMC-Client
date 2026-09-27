@@ -175,8 +175,8 @@ document.getElementById('serverSelectConfirm').addEventListener('click', async (
     const listings = document.getElementsByClassName('serverListing')
     for(let i=0; i<listings.length; i++){
         if(listings[i].hasAttribute('selected')){
-            const serv = (await DistroAPI.getDistribution()).getServerById(listings[i].getAttribute('servid'))
-            updateSelectedServer(serv)
+            const serv = (await DistroAPI.getDistribution()).getVersionById(listings[i].getAttribute('servid'))
+            updateSelectedVersion(serv)
             refreshServerStatus(true)
             toggleOverlay(false)
             return
@@ -184,8 +184,8 @@ document.getElementById('serverSelectConfirm').addEventListener('click', async (
     }
     // None are selected? Not possible right? Meh, handle it.
     if(listings.length > 0){
-        const serv = (await DistroAPI.getDistribution()).getServerById(listings[0].getAttribute('servid'))
-        updateSelectedServer(serv)
+        const serv = (await DistroAPI.getDistribution()).getVersionById(listings[0].getAttribute('servid'))
+        updateSelectedVersion(serv)
         toggleOverlay(false)
     }
 })
@@ -269,19 +269,22 @@ function setAccountListingHandlers(){
 
 async function populateServerListings(){
     const distro = await DistroAPI.getDistribution()
-    const giaSel = ConfigManager.getSelectedServer()
-    const servers = distro.servers
+    const giaSel = ConfigManager.getSelectedVersion()
+    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §3.3),
+    // so this lists every published version directly, same as the old server list.
+    const versions = distro.versions
+    const mainVersionId = distro.getMainVersion()?.rawVersion?.id
     let htmlString = ''
-    for(const serv of servers){
-        htmlString += `<button class="serverListing" servid="${serv.rawServer.id}" ${serv.rawServer.id === giaSel ? 'selected' : ''}>
-            <img class="serverListingImg" src="${serv.rawServer.icon}"/>
+    for(const serv of versions){
+        htmlString += `<button class="serverListing" servid="${serv.rawVersion.id}" ${serv.rawVersion.id === giaSel ? 'selected' : ''}>
+            <img class="serverListingImg" src="${serv.rawVersion.icon}"/>
             <div class="serverListingDetails">
-                <span class="serverListingName">${serv.rawServer.name}</span>
-                <span class="serverListingDescription">${serv.rawServer.description}</span>
+                <span class="serverListingName">${serv.rawVersion.name}</span>
+                <span class="serverListingDescription">${serv.rawVersion.description}</span>
                 <div class="serverListingInfo">
-                    <div class="serverListingVersion">${serv.rawServer.minecraftVersion}</div>
-                    <div class="serverListingRevision">${serv.rawServer.version}</div>
-                    ${serv.rawServer.mainServer ? `<div class="serverListingStarWrapper">
+                    <div class="serverListingVersion">${serv.rawVersion.minecraftVersion}</div>
+                    <div class="serverListingRevision">${serv.rawVersion.version}</div>
+                    ${serv.rawVersion.id === mainVersionId ? `<div class="serverListingStarWrapper">
                         <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                             <defs>
                                 <style>.cls-1{fill:#fff;}.cls-2{fill:none;stroke:#fff;stroke-miterlimit:10;}</style>

@@ -1,0 +1,16 @@
+HellMC Client
+Copyright © 2026 TnTVlogs
+
+This product is based on:
+  • HeliosLauncher — Copyright (c) 2017-2026 Daniel D. Scalzi — MIT License
+    https://github.com/dscalzi/HeliosLauncher
+
+This product uses:
+  • HellMC-Core — Copyright © 2026 TnTVlogs — LGPL-3.0-only
+    Modified fork of helios-core by Daniel D. Scalzi.
+    https://github.com/TnTVlogs/HellMC-Core
+  • HellMC-Distribution-Types — Copyright © 2026 TnTVlogs — MIT License
+    Independent implementation of the Helios distribution specification.
+    https://github.com/TnTVlogs/HellMC-Distribution-Types
+
+Full license texts: LICENSE.txt, THIRD_PARTY_LICENSES.txt.

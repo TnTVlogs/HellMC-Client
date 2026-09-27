@@ -72,22 +72,22 @@ document.getElementById('launch_button').addEventListener('click', async e => {
     }
     loggerLanding.info('Launching game..')
     try {
-        const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-        const jExe   = ConfigManager.getJavaExecutable(ConfigManager.getSelectedServer())
+        const version = (await DistroAPI.getDistribution()).getVersionById(ConfigManager.getSelectedVersion())
+        const jExe    = ConfigManager.getJavaExecutable(ConfigManager.getSelectedVersion())
         if (jExe == null) {
-            await asyncSystemScan(server.effectiveJavaOptions)
+            await asyncSystemScan(version.effectiveJavaOptions)
         } else {
 
             setLaunchDetails(Lang.queryJS('landing.launch.pleaseWait'))
             toggleLaunchArea(true)
             setLaunchPercentage(0, 100)
 
-            const details = await JavaUtils.validateSelectedJvm(jExe, server.effectiveJavaOptions.supported)
+            const details = await JavaUtils.validateSelectedJvm(jExe, version.effectiveJavaOptions.supported)
             if (details != null) {
                 loggerLanding.info('Jvm Details', details)
                 await dlAsync()
             } else {
-                await asyncSystemScan(server.effectiveJavaOptions)
+                await asyncSystemScan(version.effectiveJavaOptions)
             }
         }
     } catch (err) {
@@ -125,18 +125,18 @@ function updateSelectedAccount(authUser) {
 }
 updateSelectedAccount(ConfigManager.getSelectedAccount())
 
-// Bind selected server
-function updateSelectedServer(serv) {
+// Bind selected version
+function updateSelectedVersion(version) {
     if (getCurrentView() === VIEWS.settings) {
         fullSettingsSave()
     }
-    ConfigManager.setSelectedServer(serv != null ? serv.rawServer.id : null)
+    ConfigManager.setSelectedVersion(version != null ? version.rawVersion.id : null)
     ConfigManager.save()
-    server_selection_button.innerHTML = '&#8226; ' + (serv != null ? serv.rawServer.name : Lang.queryJS('landing.noSelection'))
+    server_selection_button.innerHTML = '&#8226; ' + (version != null ? version.rawVersion.name : Lang.queryJS('landing.noSelection'))
     if (getCurrentView() === VIEWS.settings) {
         animateSettingsTabRefresh()
     }
-    setLaunchEnabled(serv != null)
+    setLaunchEnabled(version != null)
 }
 // Real text is set in uibinder.js on distributionIndexDone.
 server_selection_button.innerHTML = '&#8226; ' + Lang.queryJS('landing.selectedServer.loading')
@@ -203,22 +203,15 @@ const refreshMojangStatuses = async function () {
     document.getElementById('mojang_status_icon').style.color              = MojangAPI.statusToHex(status)
 }
 
+// Fase 0: `Version` carries no address (moved to the future `Server` catalog,
+// see 01-terminologia-i-dades.md §3.3), so there's nothing to ping yet.
+// Re-enabled in fase 1 once a version can be linked to a server's address.
 const refreshServerStatus = async (fade = false) => {
     loggerLanding.info('Refreshing Server Status')
-    const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
 
     let pLabel = Lang.queryJS('landing.serverStatus.server')
     let pVal   = Lang.queryJS('landing.serverStatus.offline')
 
-    try {
-        const servStat = await MojangAPI.getServerStatus(47, serv.hostname, serv.port)
-        console.log(servStat)
-        pLabel = Lang.queryJS('landing.serverStatus.players')
-        pVal   = servStat.players.online + '/' + servStat.players.max
-    } catch (err) {
-        loggerLanding.warn('Unable to refresh server status, assuming offline.')
-        loggerLanding.debug(err)
-    }
     if (fade) {
         $('#server_status_wrapper').fadeOut(250, () => {
             document.getElementById('landingPlayerLabel').innerHTML = pLabel
@@ -297,7 +290,7 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true) {
         toggleOverlay(true, true)
     } else {
         const javaExec = JavaUtils.javaExecFromRoot(jvmDetails.path)
-        ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), javaExec)
+        ConfigManager.setJavaExecutable(ConfigManager.getSelectedVersion(), javaExec)
         ConfigManager.save()
 
         settingsJavaExecVal.value = javaExec
@@ -354,7 +347,7 @@ async function downloadJava(effectiveJavaOptions, launchAfter = true) {
 
     win.setProgressBar(-1)
 
-    ConfigManager.setJavaExecutable(ConfigManager.getSelectedServer(), newJavaExec)
+    ConfigManager.setJavaExecutable(ConfigManager.getSelectedVersion(), newJavaExec)
     ConfigManager.save()
 
     clearInterval(extractListener)
@@ -408,8 +401,6 @@ async function dlAsync(login = true) {
         ipc.send('game-status-changed', false)
         return
     }
-
-    const serv = distro.getServerById(ConfigManager.getSelectedServer())
 
     if (login) {
         if (ConfigManager.getSelectedAccount() == null) {
@@ -517,6 +508,17 @@ async function dlAsync(login = true) {
         let lastAttemptedIP = null
         const GAME_SERVER_CONFIRMED_JOIN_REGEX = /\[.+\]: (?:reloading ETF data|Loaded \d+ advancements|Creating pipeline for dimension)/
 
+        // Fase 0: `Version` carries no address (moved to the future `Server`
+        // catalog, see 01-terminologia-i-dades.md §3.3) — the address shown here
+        // is always the one scraped from the game's own connect log line.
+        const maskLocalAddress = (address) => {
+            const PRIVATE_IP_REGEX = /^(?:10\.|127\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.168\.|localhost)/
+            const NUMERIC_IP_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/
+            return (address != null && NUMERIC_IP_REGEX.test(address) && PRIVATE_IP_REGEX.test(address))
+                ? Lang.queryJS('landing.discord.localServer')
+                : address
+        }
+
         const gameStateChange = (data) => {
             data = data.trim()
 
@@ -524,7 +526,9 @@ async function dlAsync(login = true) {
                 currentRPCState = 2
                 discord.updateActivity({
                     details: Lang.queryJS('landing.discord.joined'),
-                    state:   Lang.queryJS('landing.discord.playingAt', { ip: serv.rawServer.address })
+                    state:   lastAttemptedIP != null
+                        ? Lang.queryJS('landing.discord.playingAt', { ip: maskLocalAddress(lastAttemptedIP) })
+                        : Lang.queryJS('landing.discord.idle')
                 })
             } else if (GAME_CONNECT_REGEX.test(data)) {
                 const match = GAME_CONNECT_REGEX.exec(data)
@@ -535,19 +539,12 @@ async function dlAsync(login = true) {
                 })
             } else if (GAME_SERVER_CONFIRMED_JOIN_REGEX.test(data) && lastAttemptedIP != null) {
                 currentRPCState = 2
+                const joinedAddress = lastAttemptedIP
                 lastAttemptedIP = null
-
-                let displayAddress = serv.rawServer.address
-
-                const PRIVATE_IP_REGEX = /^(?:10\.|127\.|172\.(?:1[6-9]|2\d|3[01])\.|192\.168\.|localhost)/
-                const NUMERIC_IP_REGEX = /^\d{1,3}(?:\.\d{1,3}){3}$/
-                if (NUMERIC_IP_REGEX.test(displayAddress) && PRIVATE_IP_REGEX.test(displayAddress)) {
-                    displayAddress = Lang.queryJS('landing.discord.localServer')
-                }
 
                 discord.updateActivity({
                     details: Lang.queryJS('landing.discord.joined'),
-                    state:   Lang.queryJS('landing.discord.playingAt', { ip: displayAddress })
+                    state:   Lang.queryJS('landing.discord.playingAt', { ip: maskLocalAddress(joinedAddress) })
                 })
             } else if (GAME_SINGLEPLAYER_REGEX.test(data)) {
                 currentRPCState = 1
@@ -917,13 +914,15 @@ const initEarlyRPC = async () => {
     try {
         const distro = await DistroAPI.getDistribution()
         if (!distro || !distro.rawDistribution) return
-        const selectedServ = ConfigManager.getSelectedServer()
-        if (!selectedServ) return
-        const serv = distro.getServerById(selectedServ)
-        if (!serv || !serv.rawServer) return
+        const selectedVersionId = ConfigManager.getSelectedVersion()
+        if (!selectedVersionId) return
+        const version = distro.getVersionById(selectedVersionId)
+        if (!version || !version.rawVersion) return
 
-        if (distro.rawDistribution.discord != null && serv.rawServer.discord != null) {
-            discord.initRPC(distro.rawDistribution.discord, serv.rawServer.discord, Lang.queryJS('discord.waiting'), Lang.queryJS('landing.discord.idle'))
+        // Fase 0: versions carry no discord settings (moved to the future
+        // `Server` catalog); RPC relies on the distribution's global settings alone.
+        if (distro.rawDistribution.discord != null) {
+            discord.initRPC(distro.rawDistribution.discord, null, Lang.queryJS('discord.waiting'), Lang.queryJS('landing.discord.idle'))
             hasRPC = true
         }
     } catch (err) {

@@ -126,10 +126,10 @@ async function initSettingsValues() {
 
     for (const v of sEls) {
         const cVal = v.getAttribute('cValue')
-        const serverDependent = v.hasAttribute('serverDependent') // Means the first argument is the server id.
+        const versionDependent = v.hasAttribute('versionDependent') // Means the first argument is the version id.
         const gFnOpts = []
-        if (serverDependent) {
-            gFnOpts.push(ConfigManager.getSelectedServer())
+        if (versionDependent) {
+            gFnOpts.push(ConfigManager.getSelectedVersion())
         }
         if (ConfigManager.hasGetter(cVal)) {
             if (v.tagName === 'INPUT') {
@@ -177,10 +177,10 @@ function saveSettingsValues() {
     const sEls = document.getElementById('settingsContainer').querySelectorAll('[cValue]')
     Array.from(sEls).map((v, index, arr) => {
         const cVal = v.getAttribute('cValue')
-        const serverDependent = v.hasAttribute('serverDependent') // Means the first argument is the server id.
+        const versionDependent = v.hasAttribute('versionDependent') // Means the first argument is the version id.
         const sFnOpts = []
-        if (serverDependent) {
-            sFnOpts.push(ConfigManager.getSelectedServer())
+        if (versionDependent) {
+            sFnOpts.push(ConfigManager.getSelectedVersion())
         }
         if (ConfigManager.hasSetter(cVal)) {
             if (v.tagName === 'INPUT') {
@@ -706,17 +706,17 @@ const settingsModsContainer = document.getElementById('settingsModsContainer')
  * Resolve and update the mods on the UI.
  */
 async function resolveModsForUI() {
-    const serv = ConfigManager.getSelectedServer()
+    const serv = ConfigManager.getSelectedVersion()
 
     const distro = await DistroAPI.getDistribution()
     const servConf = ConfigManager.getModConfiguration(serv)
 
-    const modStr = parseModulesForUI(distro.getServerById(serv).modules, false, servConf.mods)
+    const modStr = parseModulesForUI(distro.getVersionById(serv).modules, false, servConf.mods)
 
     document.getElementById('settingsReqModsContent').innerHTML = modStr.reqMods
     document.getElementById('settingsOptModsContent').innerHTML = modStr.optMods
 
-    initModGroups(distro.getServerById(serv).modules)
+    initModGroups(distro.getVersionById(serv).modules)
 }
 
 /**
@@ -928,7 +928,7 @@ function bindModsToggleSwitch() {
  * Save the mod configuration based on the UI values.
  */
 function saveModConfiguration() {
-    const serv = ConfigManager.getSelectedServer()
+    const serv = ConfigManager.getSelectedVersion()
     const modConf = ConfigManager.getModConfiguration(serv)
     modConf.mods = _saveModConfiguration(modConf.mods)
     ConfigManager.setModConfiguration(serv, modConf)
@@ -963,18 +963,22 @@ function _saveModConfiguration(modConf) {
  * Load the currently selected server information onto the mods tab.
  */
 async function loadSelectedServerOnModsTab() {
-    const serv = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
+    const distro = await DistroAPI.getDistribution()
+    const serv   = distro.getVersionById(ConfigManager.getSelectedVersion())
+    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §3.3);
+    // the star marks the distribution's main version (getMainVersion()) instead.
+    const mainVersionId = distro.getMainVersion()?.rawVersion?.id
 
     for (const el of document.getElementsByClassName('settingsSelServContent')) {
         el.innerHTML = `
-            <img class="serverListingImg" src="${serv.rawServer.icon}"/>
+            <img class="serverListingImg" src="${serv.rawVersion.icon}"/>
             <div class="serverListingDetails">
-                <span class="serverListingName">${serv.rawServer.name}</span>
-                <span class="serverListingDescription">${serv.rawServer.description}</span>
+                <span class="serverListingName">${serv.rawVersion.name}</span>
+                <span class="serverListingDescription">${serv.rawVersion.description}</span>
                 <div class="serverListingInfo">
-                    <div class="serverListingVersion">${serv.rawServer.minecraftVersion}</div>
-                    <div class="serverListingRevision">${serv.rawServer.version}</div>
-                    ${serv.rawServer.mainServer ? `<div class="serverListingStarWrapper">
+                    <div class="serverListingVersion">${serv.rawVersion.minecraftVersion}</div>
+                    <div class="serverListingRevision">${serv.rawVersion.version}</div>
+                    ${serv.rawVersion.id === mainVersionId ? `<div class="serverListingStarWrapper">
                         <svg id="Layer_1" viewBox="0 0 107.45 104.74" width="20px" height="20px">
                             <defs>
                                 <style>.cls-1{fill:#fff;}.cls-2{fill:none;stroke:#fff;stroke-miterlimit:10;}</style>
@@ -1228,9 +1232,9 @@ function populateMemoryStatus() {
  * @param {string} execPath The executable path to populate against.
  */
 async function populateJavaExecDetails(execPath) {
-    const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
+    const version = (await DistroAPI.getDistribution()).getVersionById(ConfigManager.getSelectedVersion())
 
-    const details = await JavaUtils.validateSelectedJvm(execPath, server.effectiveJavaOptions.supported)
+    const details = await JavaUtils.validateSelectedJvm(execPath, version.effectiveJavaOptions.supported)
 
     if (details != null) {
         settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.selectedJava', { version: details.semverStr, vendor: details.vendor })
@@ -1239,12 +1243,12 @@ async function populateJavaExecDetails(execPath) {
     }
 }
 
-function populateJavaReqDesc(server) {
-    settingsJavaReqDesc.innerHTML = Lang.queryJS('settings.java.requiresJava', { major: server.effectiveJavaOptions.suggestedMajor })
+function populateJavaReqDesc(version) {
+    settingsJavaReqDesc.innerHTML = Lang.queryJS('settings.java.requiresJava', { major: version.effectiveJavaOptions.suggestedMajor })
 }
 
-function populateJvmOptsLink(server) {
-    const major = server.effectiveJavaOptions.suggestedMajor
+function populateJvmOptsLink(version) {
+    const major = version.effectiveJavaOptions.suggestedMajor
     settingsJvmOptsLink.innerHTML = Lang.queryJS('settings.java.availableOptions', { major: major })
     if (major >= 12) {
         settingsJvmOptsLink.href = `https://docs.oracle.com/en/java/javase/${major}/docs/specs/man/java.html#extra-options-for-java`
@@ -1260,10 +1264,10 @@ function populateJvmOptsLink(server) {
     }
 }
 
-function bindMinMaxRam(server) {
+function bindMinMaxRam(version) {
     // Store maximum memory values.
-    const SETTINGS_MAX_MEMORY = ConfigManager.getAbsoluteMaxRAM(server.rawServer.javaOptions?.ram)
-    const SETTINGS_MIN_MEMORY = ConfigManager.getAbsoluteMinRAM(server.rawServer.javaOptions?.ram)
+    const SETTINGS_MAX_MEMORY = ConfigManager.getAbsoluteMaxRAM(version.rawVersion.javaOptions?.ram)
+    const SETTINGS_MIN_MEMORY = ConfigManager.getAbsoluteMinRAM(version.rawVersion.javaOptions?.ram)
 
     // Set the max and min values for the ranged sliders.
     settingsMaxRAMRange.setAttribute('max', SETTINGS_MAX_MEMORY)
@@ -1276,12 +1280,12 @@ function bindMinMaxRam(server) {
  * Prepare the Java tab for display.
  */
 async function prepareJavaTab() {
-    const server = (await DistroAPI.getDistribution()).getServerById(ConfigManager.getSelectedServer())
-    bindMinMaxRam(server)
-    bindRangeSlider(server)
+    const version = (await DistroAPI.getDistribution()).getVersionById(ConfigManager.getSelectedVersion())
+    bindMinMaxRam(version)
+    bindRangeSlider(version)
     populateMemoryStatus()
-    populateJavaReqDesc(server)
-    populateJvmOptsLink(server)
+    populateJavaReqDesc(version)
+    populateJvmOptsLink(version)
 }
 
 /**

@@ -7,19 +7,19 @@ const os = require('os')
 const path = require('path')
 const semver = require('semver')
 
-const { LoggerUtil } = require('helios-core')
-const { HeliosDistribution } = require('helios-core/common')
+const { LoggerUtil } = require('hellmc-core')
+const { HeliosDistribution } = require('hellmc-core/common')
 const {
     RestResponseStatus,
     isDisplayableError,
     validateLocalFile
-} = require('helios-core/common')
+} = require('hellmc-core/common')
 const {
     FullRepair,
     DistributionIndexProcessor,
     MojangIndexProcessor,
     downloadFile
-} = require('helios-core/dl')
+} = require('hellmc-core/dl')
 const {
     validateSelectedJvm,
     ensureJavaDirIsRoot,
@@ -27,9 +27,9 @@ const {
     discoverBestJvmInstallation,
     latestOpenJDK,
     extractJdk
-} = require('helios-core/java')
-const { MojangRestAPI, getServerStatus } = require('helios-core/mojang')
-const { Type } = require('helios-distribution-types')
+} = require('hellmc-core/java')
+const { MojangRestAPI, getServerStatus } = require('hellmc-core/mojang')
+const { Type } = require('hellmc-distribution-types')
 
 const ConfigManager  = require('./configmanager')
 const { DistroAPI }  = require('./distromanager')
@@ -53,9 +53,9 @@ LangLoader.setupLanguage()
 
 function onDistroLoad(data) {
     if (data != null) {
-        if (ConfigManager.getSelectedServer() == null || data.getServerById(ConfigManager.getSelectedServer()) == null) {
-            logger.info('Determining default selected server..')
-            ConfigManager.setSelectedServer(data.getMainServer().rawServer.id)
+        if (ConfigManager.getSelectedVersion() == null || data.getVersionById(ConfigManager.getSelectedVersion()) == null) {
+            logger.info('Determining default selected version..')
+            ConfigManager.setSelectedVersion(data.getMainVersion().rawVersion.id)
             ConfigManager.save()
         }
     }
@@ -231,8 +231,8 @@ contextBridge.exposeInMainWorld('launcherAPI', {
         hasValidator:    (cValue)          => typeof ConfigManager['validate' + cValue] === 'function',
 
         // Concrete accessors used across renderer scripts
-        getSelectedServer:    ()       => ConfigManager.getSelectedServer(),
-        setSelectedServer:    (id)     => ConfigManager.setSelectedServer(id),
+        getSelectedVersion:    ()       => ConfigManager.getSelectedVersion(),
+        setSelectedVersion:    (id)     => ConfigManager.setSelectedVersion(id),
         getSelectedAccount:   ()       => ConfigManager.getSelectedAccount(),
         setSelectedAccount:   (uuid)   => ConfigManager.setSelectedAccount(uuid),
         getAuthAccounts:      ()       => ConfigManager.getAuthAccounts(),
@@ -362,7 +362,7 @@ contextBridge.exposeInMainWorld('launcherAPI', {
                 ConfigManager.getCommonDirectory(),
                 ConfigManager.getInstanceDirectory(),
                 ConfigManager.getLauncherDirectory(),
-                ConfigManager.getSelectedServer(),
+                ConfigManager.getSelectedVersion(),
                 DistroAPI.isDevMode()
             )
             _repair.spawnReceiver()
@@ -391,24 +391,24 @@ contextBridge.exposeInMainWorld('launcherAPI', {
         // Returns serialisable info needed by the renderer to build the proc.
         // The actual ProcessBuilder is also created here so it lives in Node context.
         prepareAndLaunch: async (appVersion) => {
-            const distro    = await DistroAPI.getDistribution()
-            const serv      = distro.getServerById(ConfigManager.getSelectedServer())
-            const authUser  = ConfigManager.getSelectedAccount()
+            const distro          = await DistroAPI.getDistribution()
+            const selectedVersion = distro.getVersionById(ConfigManager.getSelectedVersion())
+            const authUser        = ConfigManager.getSelectedAccount()
 
             const mojangProcessor  = new MojangIndexProcessor(
                 ConfigManager.getCommonDirectory(),
-                serv.rawServer.minecraftVersion
+                selectedVersion.rawVersion.minecraftVersion
             )
             const distroProcessor  = new DistributionIndexProcessor(
                 ConfigManager.getCommonDirectory(),
                 distro,
-                serv.rawServer.id
+                selectedVersion.rawVersion.id
             )
 
-            const modLoaderData = await distroProcessor.loadModLoaderVersionJson(serv)
+            const modLoaderData = await distroProcessor.loadModLoaderVersionJson(selectedVersion)
             const versionData   = await mojangProcessor.getVersionJson()
 
-            const pb = new ProcessBuilder(serv, versionData, modLoaderData, authUser, appVersion)
+            const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, authUser, appVersion)
             _proc = pb.build()
 
             _proc.stdout.on('data', lineBuffered(line => _fireListeners(_stdoutListeners, line)))
@@ -426,13 +426,15 @@ contextBridge.exposeInMainWorld('launcherAPI', {
             _proc.on('close', onProcEnd)
             _proc.on('exit',  onProcEnd)
 
-            // Return serialisable server/discord info the renderer needs.
+            // Return serialisable discord info the renderer needs.
+            // Fase 0: `Version` carries no address/discord (moved to the future
+            // `Server` catalog, see 01-terminologia-i-dades.md §3.3), so RPC
+            // falls back to just the distribution's global discord settings.
             return {
-                pid:           _proc.pid,
-                serverAddress: serv.rawServer.address,
-                displayName:   authUser.displayName,
-                discord: (distro.rawDistribution.discord != null && serv.rawServer.discord != null)
-                    ? { gen: distro.rawDistribution.discord, serv: serv.rawServer.discord }
+                pid:         _proc.pid,
+                displayName: authUser.displayName,
+                discord: distro.rawDistribution.discord != null
+                    ? { gen: distro.rawDistribution.discord, serv: null }
                     : null
             }
         },

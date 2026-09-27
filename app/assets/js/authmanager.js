@@ -10,10 +10,10 @@
  */
 // Requirements
 const ConfigManager = require('./configmanager')
-const { LoggerUtil } = require('helios-core')
-const { RestResponseStatus } = require('helios-core/common')
-const { MojangRestAPI, MojangErrorCode } = require('helios-core/mojang')
-const { MicrosoftAuth, MicrosoftErrorCode } = require('helios-core/microsoft')
+const { LoggerUtil } = require('hellmc-core')
+const { RestResponseStatus } = require('hellmc-core/common')
+const { MojangRestAPI, MojangErrorCode } = require('hellmc-core/mojang')
+const { MicrosoftAuth, MicrosoftErrorCode } = require('hellmc-core/microsoft')
 const { AZURE_CLIENT_ID } = require('./ipcconstants')
 const Lang = require('./langloader')
 

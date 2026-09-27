@@ -6,6 +6,10 @@
 ![Build](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml/badge.svg)](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml)]
 <p align="center">Join modded servers without worrying about installing Java, Forge, or other mods. We'll handle that for you.</p>
 
+**HellMC Client** is a fork of [HeliosLauncher](https://github.com/dscalzi/HeliosLauncher) by Daniel D. Scalzi ([MIT](LICENSE.txt)).
+Uses [HellMC-Core](https://github.com/TnTVlogs/HellMC-Core), a modified fork of [helios-core](https://github.com/dscalzi/helios-core) (LGPL-3.0),
+and [HellMC-Distribution-Types](https://github.com/TnTVlogs/HellMC-Distribution-Types) (MIT). See [`NOTICE`](NOTICE) for the full list.
+
 ![Screenshot 1](https://i.imgur.com/6o7SmH6.png)
 ![Screenshot 2](https://i.imgur.com/x3B34n1.png)
 

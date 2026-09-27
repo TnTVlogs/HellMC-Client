@@ -1,5 +1,5 @@
 // Work in progress
-const { LoggerUtil } = require('helios-core')
+const { LoggerUtil } = require('hellmc-core')
 
 const logger = LoggerUtil.getLogger('DiscordWrapper')
 
@@ -12,9 +12,12 @@ let activity
 let genSettings
 let servSettings
 
-exports.initRPC = function (gen, serv, initialDetails = Lang.queryJS('discord.waiting'), initialState = Lang.queryJS('discord.state', { shortId: serv.shortId })) {
+// Fase 0: `serv` is null when the launched version isn't tied to a `Server`
+// (no catalog exists yet, see 01-terminologia-i-dades.md §3.3) — RPC then
+// falls back to generic branding instead of a per-server shortId/state.
+exports.initRPC = function (gen, serv, initialDetails = Lang.queryJS('discord.waiting'), initialState = serv != null ? Lang.queryJS('discord.state', { shortId: serv.shortId }) : Lang.queryJS('discord.waiting')) {
     genSettings = gen
-    servSettings = serv
+    servSettings = serv || {}
 
     if (!initialDetails || initialDetails === '') initialDetails = 'Waiting...'
     if (!initialState || initialState === '') initialState = 'Idle'

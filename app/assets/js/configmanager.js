@@ -1,5 +1,5 @@
 const fs = require('fs-extra')
-const { LoggerUtil } = require('helios-core')
+const { LoggerUtil } = require('hellmc-core')
 const os = require('os')
 const path = require('path')
 
@@ -32,6 +32,9 @@ function getConfigPath() {
 }
 
 const configPathLEGACY = path.join(dataPath, 'config.json')
+
+// 01-terminologia-i-dades.md §5.1: bump when the persisted config shape changes.
+const CONFIG_SCHEMA_VERSION = 1
 
 exports.getAbsoluteMinRAM = function (ram) {
     if (ram?.minimum != null) {
@@ -87,11 +90,14 @@ const DEFAULT_CONFIG = {
         dismissed: false
     },
     clientToken: null,
-    selectedServer: null, // Resolved
+    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §5), so
+    // `serverId` is always null here. It starts being populated in fase 1.
+    lastPlay: { serverId: null, versionId: null }, // Resolved
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
-    javaConfig: {}
+    javaConfig: {},
+    schemaVersion: CONFIG_SCHEMA_VERSION
 }
 
 let config = null
@@ -130,6 +136,7 @@ exports.load = function () {
         let doValidate = false
         try {
             config = JSON.parse(fs.readFileSync(configPath, 'UTF-8'))
+            config = migrateLegacyConfig(config, configPath)
             doValidate = true
         } catch (err) {
             logger.error(err)
@@ -145,6 +152,24 @@ exports.load = function () {
         }
     }
     logger.info('Successfully Loaded')
+}
+
+/**
+ * 01-terminologia-i-dades.md §5.1: migrate the pre-fase-0 `selectedServer`
+ * key (a raw version id) into `lastPlay`. `serverId` stays null here: fase 0
+ * has no `Server` catalog to resolve it against.
+ *
+ * @param {Object} rawConfig The freshly parsed config.json contents.
+ * @param {string} configPath Path of the config file being migrated, for the backup copy.
+ * @returns {Object} The migrated config.
+ */
+function migrateLegacyConfig(rawConfig, configPath) {
+    if (rawConfig != null && rawConfig.lastPlay == null && Object.prototype.hasOwnProperty.call(rawConfig, 'selectedServer')) {
+        fs.copyFileSync(configPath, `${configPath}.bak-v1`)
+        rawConfig.lastPlay = { serverId: null, versionId: rawConfig.selectedServer }
+        delete rawConfig.selectedServer
+    }
+    return rawConfig
 }
 
 /**
@@ -240,7 +265,7 @@ exports.getCommonDirectory = function () {
 
 /**
  * Retrieve the instance directory for the per
- * server game directories.
+ * version game directories.
  * 
  * @returns {string} The launcher's instance directory.
  */
@@ -268,22 +293,22 @@ exports.setClientToken = function (clientToken) {
 }
 
 /**
- * Retrieve the ID of the selected serverpack.
- * 
+ * Retrieve the ID of the selected version.
+ *
  * @param {boolean} def Optional. If true, the default value will be returned.
- * @returns {string} The ID of the selected serverpack.
+ * @returns {string} The ID of the selected version.
  */
-exports.getSelectedServer = function (def = false) {
-    return !def ? config.selectedServer : DEFAULT_CONFIG.clientToken
+exports.getSelectedVersion = function (def = false) {
+    return !def ? config.lastPlay.versionId : DEFAULT_CONFIG.lastPlay.versionId
 }
 
 /**
- * Set the ID of the selected serverpack.
- * 
- * @param {string} serverID The ID of the new selected serverpack.
+ * Set the ID of the selected version.
+ *
+ * @param {string} versionID The ID of the new selected version.
  */
-exports.setSelectedServer = function (serverID) {
-    config.selectedServer = serverID
+exports.setSelectedVersion = function (versionID) {
+    config.lastPlay.versionId = versionID
 }
 
 /**
@@ -465,15 +490,15 @@ exports.setModConfigurations = function (configurations) {
 }
 
 /**
- * Get the mod configuration for a specific server.
+ * Get the mod configuration for a specific version.
  * 
- * @param {string} serverid The id of the server.
- * @returns {Object} The mod configuration for the given server.
+ * @param {string} versionid The id of the version.
+ * @returns {Object} The mod configuration for the given version.
  */
-exports.getModConfiguration = function (serverid) {
+exports.getModConfiguration = function (versionid) {
     const cfgs = config.modConfigurations
     for (let i = 0; i < cfgs.length; i++) {
-        if (cfgs[i].id === serverid) {
+        if (cfgs[i].id === versionid) {
             return cfgs[i]
         }
     }
@@ -481,15 +506,15 @@ exports.getModConfiguration = function (serverid) {
 }
 
 /**
- * Set the mod configuration for a specific server. This overrides any existing value.
+ * Set the mod configuration for a specific version. This overrides any existing value.
  * 
- * @param {string} serverid The id of the server for the given mod configuration.
- * @param {Object} configuration The mod configuration for the given server.
+ * @param {string} versionid The id of the version for the given mod configuration.
+ * @param {Object} configuration The mod configuration for the given version.
  */
-exports.setModConfiguration = function (serverid, configuration) {
+exports.setModConfiguration = function (versionid, configuration) {
     const cfgs = config.modConfigurations
     for (let i = 0; i < cfgs.length; i++) {
-        if (cfgs[i].id === serverid) {
+        if (cfgs[i].id === versionid) {
             cfgs[i] = configuration
             return
         }
@@ -540,14 +565,14 @@ function defaultJavaConfig17(ram) {
 }
 
 /**
- * Ensure a java config property is set for the given server.
+ * Ensure a java config property is set for the given version.
  * 
- * @param {string} serverid The server id.
- * @param {*} mcVersion The minecraft version of the server.
+ * @param {string} versionid The version id.
+ * @param {*} mcVersion The minecraft version of the version.
  */
-exports.ensureJavaConfig = function (serverid, effectiveJavaOptions, ram) {
-    if (!Object.prototype.hasOwnProperty.call(config.javaConfig, serverid)) {
-        config.javaConfig[serverid] = defaultJavaConfig(effectiveJavaOptions, ram)
+exports.ensureJavaConfig = function (versionid, effectiveJavaOptions, ram) {
+    if (!Object.prototype.hasOwnProperty.call(config.javaConfig, versionid)) {
+        config.javaConfig[versionid] = defaultJavaConfig(effectiveJavaOptions, ram)
     }
 }
 
@@ -556,11 +581,11 @@ exports.ensureJavaConfig = function (serverid, effectiveJavaOptions, ram) {
  * contains the units of memory. For example, '5G' = 5 GigaBytes, '1024M' = 
  * 1024 MegaBytes, etc.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @returns {string} The minimum amount of memory for JVM initialization.
  */
-exports.getMinRAM = function (serverid) {
-    return config.javaConfig[serverid].minRAM
+exports.getMinRAM = function (versionid) {
+    return config.javaConfig[versionid].minRAM
 }
 
 /**
@@ -568,11 +593,11 @@ exports.getMinRAM = function (serverid) {
  * contain the units of memory. For example, '5G' = 5 GigaBytes, '1024M' = 
  * 1024 MegaBytes, etc.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @param {string} minRAM The new minimum amount of memory for JVM initialization.
  */
-exports.setMinRAM = function (serverid, minRAM) {
-    config.javaConfig[serverid].minRAM = minRAM
+exports.setMinRAM = function (versionid, minRAM) {
+    config.javaConfig[versionid].minRAM = minRAM
 }
 
 /**
@@ -580,11 +605,11 @@ exports.setMinRAM = function (serverid, minRAM) {
  * contains the units of memory. For example, '5G' = 5 GigaBytes, '1024M' = 
  * 1024 MegaBytes, etc.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @returns {string} The maximum amount of memory for JVM initialization.
  */
-exports.getMaxRAM = function (serverid) {
-    return config.javaConfig[serverid].maxRAM
+exports.getMaxRAM = function (versionid) {
+    return config.javaConfig[versionid].maxRAM
 }
 
 /**
@@ -592,11 +617,11 @@ exports.getMaxRAM = function (serverid) {
  * contain the units of memory. For example, '5G' = 5 GigaBytes, '1024M' = 
  * 1024 MegaBytes, etc.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @param {string} maxRAM The new maximum amount of memory for JVM initialization.
  */
-exports.setMaxRAM = function (serverid, maxRAM) {
-    config.javaConfig[serverid].maxRAM = maxRAM
+exports.setMaxRAM = function (versionid, maxRAM) {
+    config.javaConfig[versionid].maxRAM = maxRAM
 }
 
 /**
@@ -604,21 +629,21 @@ exports.setMaxRAM = function (serverid, maxRAM) {
  * 
  * This is a resolved configuration value and defaults to null until externally assigned.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @returns {string} The path of the Java Executable.
  */
-exports.getJavaExecutable = function (serverid) {
-    return config.javaConfig[serverid].executable
+exports.getJavaExecutable = function (versionid) {
+    return config.javaConfig[versionid].executable
 }
 
 /**
  * Set the path of the Java Executable.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @param {string} executable The new path of the Java Executable.
  */
-exports.setJavaExecutable = function (serverid, executable) {
-    config.javaConfig[serverid].executable = executable
+exports.setJavaExecutable = function (versionid, executable) {
+    config.javaConfig[versionid].executable = executable
 }
 
 /**
@@ -626,11 +651,11 @@ exports.setJavaExecutable = function (serverid, executable) {
  * such as memory allocation, will be dynamically resolved and will not be included
  * in this value.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @returns {Array.<string>} An array of the additional arguments for JVM initialization.
  */
-exports.getJVMOptions = function (serverid) {
-    return config.javaConfig[serverid].jvmOptions
+exports.getJVMOptions = function (versionid) {
+    return config.javaConfig[versionid].jvmOptions
 }
 
 /**
@@ -638,12 +663,12 @@ exports.getJVMOptions = function (serverid) {
  * such as memory allocation, will be dynamically resolved and should not be
  * included in this value.
  * 
- * @param {string} serverid The server id.
+ * @param {string} versionid The version id.
  * @param {Array.<string>} jvmOptions An array of the new additional arguments for JVM 
  * initialization.
  */
-exports.setJVMOptions = function (serverid, jvmOptions) {
-    config.javaConfig[serverid].jvmOptions = jvmOptions
+exports.setJVMOptions = function (versionid, jvmOptions) {
+    config.javaConfig[versionid].jvmOptions = jvmOptions
 }
 
 // Game Settings

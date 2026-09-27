@@ -2,9 +2,9 @@ const AdmZip = require('adm-zip')
 const child_process = require('child_process')
 const crypto = require('crypto')
 const fs = require('fs-extra')
-const { LoggerUtil } = require('helios-core')
-const { getMojangOS, isLibraryCompatible, mcVersionAtLeast } = require('helios-core/common')
-const { Type } = require('helios-distribution-types')
+const { LoggerUtil } = require('hellmc-core')
+const { getMojangOS, isLibraryCompatible, mcVersionAtLeast } = require('hellmc-core/common')
+const { Type } = require('hellmc-distribution-types')
 const os = require('os')
 const path = require('path')
 
@@ -24,10 +24,10 @@ const logger = LoggerUtil.getLogger('ProcessBuilder')
  */
 class ProcessBuilder {
 
-    constructor(distroServer, vanillaManifest, modManifest, authUser, launcherVersion) {
-        this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroServer.rawServer.id)
+    constructor(distroVersion, vanillaManifest, modManifest, authUser, launcherVersion) {
+        this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroVersion.rawVersion.id)
         this.commonDir = ConfigManager.getCommonDirectory()
-        this.server = distroServer
+        this.version = distroVersion
         this.vanillaManifest = vanillaManifest
         this.modManifest = modManifest
         this.authUser = authUser
@@ -55,18 +55,18 @@ class ProcessBuilder {
         process.throwDeprecation = true
         this.setupLiteLoader()
         logger.info('Using liteloader:', this.usingLiteLoader)
-        this.usingFabricLoader = this.server.modules.some(mdl => mdl.rawModule.type === Type.Fabric)
+        this.usingFabricLoader = this.version.modules.some(mdl => mdl.rawModule.type === Type.Fabric)
         logger.info('Using fabric loader:', this.usingFabricLoader)
         // Forge 1.20.3+ and NeoForge dropped --fml.modLists: they only discover mods in <gameDir>/mods.
-        this.usingModsFolder = !this.usingFabricLoader && mcVersionAtLeast('1.20.3', this.server.rawServer.minecraftVersion)
+        this.usingModsFolder = !this.usingFabricLoader && mcVersionAtLeast('1.20.3', this.version.rawVersion.minecraftVersion)
         logger.info('Using mods folder:', this.usingModsFolder)
-        const modCfg = ConfigManager.getModConfiguration(this.server.rawServer.id).mods
-        this.enforceModDependencies(modCfg, this.server.modules)
-        const modObj = this.resolveModConfiguration(modCfg, this.server.modules)
+        const modCfg = ConfigManager.getModConfiguration(this.version.rawVersion.id).mods
+        this.enforceModDependencies(modCfg, this.version.modules)
+        const modObj = this.resolveModConfiguration(modCfg, this.version.modules)
 
         // Mod list below 1.13
         // Fabric only supports 1.14+
-        if (!mcVersionAtLeast('1.13', this.server.rawServer.minecraftVersion)) {
+        if (!mcVersionAtLeast('1.13', this.version.rawVersion.minecraftVersion)) {
             this.constructJSONModList('forge', modObj.fMods, true)
             if (this.usingLiteLoader) {
                 this.constructJSONModList('liteloader', modObj.lMods, true)
@@ -76,7 +76,7 @@ class ProcessBuilder {
         const uberModArr = modObj.fMods.concat(modObj.lMods)
         let args = this.constructJVMArguments(uberModArr, tempNativePath)
 
-        if (mcVersionAtLeast('1.13', this.server.rawServer.minecraftVersion)) {
+        if (mcVersionAtLeast('1.13', this.version.rawVersion.minecraftVersion)) {
             //args = args.concat(this.constructModArguments(modObj.fMods))
             if (this.usingModsFolder) {
                 this.syncModsFolder(modObj.fMods)
@@ -87,7 +87,7 @@ class ProcessBuilder {
 
         logger.info('Launch Arguments:', args)
 
-        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.server.rawServer.id), args, {
+        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.version.rawVersion.id), args, {
             cwd: this.gameDir,
             detached: ConfigManager.getLaunchDetached()
         })
@@ -158,10 +158,10 @@ class ProcessBuilder {
      * mod. It must not be declared as a submodule.
      */
     setupLiteLoader() {
-        for (let ll of this.server.modules) {
+        for (let ll of this.version.modules) {
             if (ll.rawModule.type === Type.LiteLoader) {
                 if (!ll.getRequired().value) {
-                    const modCfg = ConfigManager.getModConfiguration(this.server.rawServer.id).mods
+                    const modCfg = ConfigManager.getModConfiguration(this.version.rawVersion.id).mods
                     if (ProcessBuilder.isModEnabled(modCfg[ll.getVersionlessMavenIdentifier()], ll.getRequired())) {
                         if (fs.existsSync(ll.getPath())) {
                             this.usingLiteLoader = true
@@ -404,18 +404,10 @@ class ProcessBuilder {
         logger.info(`Placed ${placed.length} mods in ${this.modsDir}.`)
     }
 
-    _processAutoConnectArg(args) {
-        if (ConfigManager.getAutoConnect() && this.server.rawServer.autoconnect) {
-            if (mcVersionAtLeast('1.20', this.server.rawServer.minecraftVersion)) {
-                args.push('--quickPlayMultiplayer')
-                args.push(`${this.server.hostname}:${this.server.port}`)
-            } else {
-                args.push('--server')
-                args.push(this.server.hostname)
-                args.push('--port')
-                args.push(this.server.port)
-            }
-        }
+    // Fase 0: `Version` carries no address/autoconnect (moved to the future
+    // `Server` catalog, see 01-terminologia-i-dades.md §3.3) — no-op until fase 1.
+    _processAutoConnectArg(_args) {
+        return
     }
 
     /**
@@ -426,7 +418,7 @@ class ProcessBuilder {
      * @returns {Array.<string>} An array containing the full JVM arguments for this process.
      */
     constructJVMArguments(mods, tempNativePath) {
-        if (mcVersionAtLeast('1.13', this.server.rawServer.minecraftVersion)) {
+        if (mcVersionAtLeast('1.13', this.version.rawVersion.minecraftVersion)) {
             return this._constructJVMArguments113(mods, tempNativePath)
         } else {
             return this._constructJVMArguments112(mods, tempNativePath)
@@ -454,9 +446,9 @@ class ProcessBuilder {
             args.push('-Xdock:name=HellMCClient')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
-        args.push('-Xmx' + ConfigManager.getMaxRAM(this.server.rawServer.id))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.server.rawServer.id))
-        args = args.concat(ConfigManager.getJVMOptions(this.server.rawServer.id))
+        args.push('-Xmx' + ConfigManager.getMaxRAM(this.version.rawVersion.id))
+        args.push('-Xms' + ConfigManager.getMinRAM(this.version.rawVersion.id))
+        args = args.concat(ConfigManager.getJVMOptions(this.version.rawVersion.id))
         args.push('-Djava.library.path=' + tempNativePath)
 
         // Main Java Class
@@ -505,9 +497,9 @@ class ProcessBuilder {
             args.push('-Xdock:name=HellMCClient')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
-        args.push('-Xmx' + ConfigManager.getMaxRAM(this.server.rawServer.id))
-        args.push('-Xms' + ConfigManager.getMinRAM(this.server.rawServer.id))
-        args = args.concat(ConfigManager.getJVMOptions(this.server.rawServer.id))
+        args.push('-Xmx' + ConfigManager.getMaxRAM(this.version.rawVersion.id))
+        args.push('-Xms' + ConfigManager.getMinRAM(this.version.rawVersion.id))
+        args = args.concat(ConfigManager.getJVMOptions(this.version.rawVersion.id))
 
         // Main Java Class
         args.push(this.modManifest.mainClass)
@@ -571,7 +563,7 @@ class ProcessBuilder {
                             break
                         case 'version_name':
                             //val = vanillaManifest.id
-                            val = this.server.rawServer.id
+                            val = this.version.rawVersion.id
                             break
                         case 'game_directory':
                             val = this.gameDir
@@ -655,7 +647,7 @@ class ProcessBuilder {
                         break
                     case 'version_name':
                         //val = vanillaManifest.id
-                        val = this.server.rawServer.id
+                        val = this.version.rawVersion.id
                         break
                     case 'game_directory':
                         val = this.gameDir
@@ -744,7 +736,7 @@ class ProcessBuilder {
 
     /**
      * Resolve the full classpath argument list for this process. This method will resolve all Mojang-declared
-     * libraries as well as the libraries declared by the server. Since mods are permitted to declare libraries,
+     * libraries as well as the libraries declared by the version. Since mods are permitted to declare libraries,
      * this method requires all enabled mods as an input
      * 
      * @param {Array.<Object>} mods An array of enabled mods which will be launched with this process.
@@ -754,7 +746,7 @@ class ProcessBuilder {
     classpathArg(mods, tempNativePath) {
         let cpArgs = []
 
-        if (!mcVersionAtLeast('1.17', this.server.rawServer.minecraftVersion) || this.usingFabricLoader) {
+        if (!mcVersionAtLeast('1.17', this.version.rawVersion.minecraftVersion) || this.usingFabricLoader) {
             // Add the version.jar to the classpath.
             // Must not be added to the classpath for Forge 1.17+.
             const version = this.vanillaManifest.id
@@ -769,13 +761,13 @@ class ProcessBuilder {
         // Resolve the Mojang declared libraries.
         const mojangLibs = this._resolveMojangLibraries(tempNativePath)
 
-        // Resolve the server declared libraries.
-        const servLibs = this._resolveServerLibraries(mods)
+        // Resolve the version declared libraries.
+        const versionLibs = this._resolveVersionLibraries(mods)
 
-        // Merge libraries, server libs with the same
+        // Merge libraries, version libs with the same
         // maven identifier will override the mojang ones.
         // Ex. 1.7.10 forge overrides mojang's guava with newer version.
-        const finalLibs = { ...mojangLibs, ...servLibs }
+        const finalLibs = { ...mojangLibs, ...versionLibs }
         cpArgs = cpArgs.concat(Object.values(finalLibs))
 
         this._processClassPathList(cpArgs)
@@ -909,15 +901,15 @@ class ProcessBuilder {
     }
 
     /**
-     * Resolve the libraries declared by this server in order to add them to the classpath.
+     * Resolve the libraries declared by this version in order to add them to the classpath.
      * This method will also check each enabled mod for libraries, as mods are permitted to
      * declare libraries.
      * 
      * @param {Array.<Object>} mods An array of enabled mods which will be launched with this process.
-     * @returns {{[id: string]: string}} An object containing the paths of each library this server requires.
+     * @returns {{[id: string]: string}} An object containing the paths of each library this version requires.
      */
-    _resolveServerLibraries(mods) {
-        const mdls = this.server.modules
+    _resolveVersionLibraries(mods) {
+        const mdls = this.version.modules
         let libs = {}
 
         // Locate Forge/Fabric/Libraries
@@ -949,7 +941,7 @@ class ProcessBuilder {
     /**
      * Recursively resolve the path of each library required by this module.
      * 
-     * @param {Object} mdl A module object from the server distro index.
+     * @param {Object} mdl A module object from the version's distro index.
      * @returns {{[id: string]: string}} An object containing the paths of each library this module requires.
      */
     _resolveModuleLibraries(mdl) {

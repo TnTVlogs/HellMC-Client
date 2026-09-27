@@ -10,7 +10,7 @@ publish:
 
 
 
-copyright: 'Copyright © 2026 TnTVlogs'
+copyright: 'Copyright © 2017-2026 Daniel D. Scalzi, TnTVlogs'
 
 
 asar: true
@@ -21,6 +21,9 @@ files:
 
 extraResources:
   - 'libraries'
+  - 'NOTICE'
+  - 'LICENSE.txt'
+  - 'THIRD_PARTY_LICENSES.txt'
 
 win: 
   target: 

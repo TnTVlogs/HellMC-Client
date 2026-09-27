@@ -179,7 +179,7 @@
                         <div class="settingsMemoryContentItem">
                             <span class="settingsMemoryHeader"><%- lang('settings.maxRAM') %></span>
                             <div class="settingsMemoryActionContainer">
-                                <div id="settingsMaxRAMRange" class="rangeSlider" cValue="MaxRAM" serverDependent
+                                <div id="settingsMaxRAMRange" class="rangeSlider" cValue="MaxRAM" versionDependent
                                     min="2" max="8" value="2" step="0.5">
                                     <div class="rangeSliderBar"></div>
                                     <div class="rangeSliderTrack"></div>
@@ -190,7 +190,7 @@
                         <div class="settingsMemoryContentItem">
                             <span class="settingsMemoryHeader"><%- lang('settings.minRAM') %></span>
                             <div class="settingsMemoryActionContainer">
-                                <div id="settingsMinRAMRange" class="rangeSlider" cValue="MinRAM" serverDependent
+                                <div id="settingsMinRAMRange" class="rangeSlider" cValue="MinRAM" versionDependent
                                     min="2" max="8" value="2" step="0.5">
                                     <div class="rangeSliderBar"></div>
                                     <div class="rangeSliderTrack"></div>
@@ -251,7 +251,7 @@
                             </svg>
                         </div>
                         <input class="settingsFileSelVal" id="settingsJavaExecVal" type="text" value="null"
-                            cValue="JavaExecutable" serverDependent disabled>
+                            cValue="JavaExecutable" versionDependent disabled>
                         <button class="settingsFileSelButton" id="settingsJavaExecSel"
                             dialogTitle="<%- lang('settings.javaExecSelDialogTitle') %>" dialogDirectory="false"><%-
                                 lang('settings.javaExecSelButtonText') %></button>
@@ -295,7 +295,7 @@
                             </g>
                         </svg>
                     </div>
-                    <input id="settingsJVMOptsVal" cValue="JVMOptions" serverDependent type="text">
+                    <input id="settingsJVMOptsVal" cValue="JVMOptions" versionDependent type="text">
                 </div>
                 <div id="settingsJVMOptsDesc"><%- lang('settings.jvmOptsDesc') %><br><a href="#"
                             id="settingsJvmOptsLink"><!-- Available Options --></a></div>

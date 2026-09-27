@@ -6,9 +6,9 @@
 // All Node.js modules come from window.launcherAPI (contextBridge).
 var { ipc, app, win, config: ConfigManager, auth: AuthManager, lang: Lang, logger, distroTypes: Type } = window.launcherAPI
 
-// helios-core distribution classes (HeliosDistribution/HeliosServer/HeliosModule) lose
+// hellmc-core distribution classes (HeliosDistribution/HeliosVersion/HeliosModule) lose
 // their prototype methods crossing contextBridge — structured-clone only keeps own data
-// properties (rawServer, rawModule, required, mavenComponents, subModules, ...). These
+// properties (rawVersion, rawModule, required, mavenComponents, subModules, ...). These
 // methods are pure derivations of that data, so reattach them here rather than editing
 // every call site across the renderer scripts.
 function _rehydrateModule(mdl) {
@@ -35,16 +35,18 @@ function _rehydrateModule(mdl) {
 
 function _rehydrateDistribution(distro) {
     if (distro == null) return distro
-    if (distro.servers) {
-        distro.servers.forEach(serv => {
-            if (serv.modules) serv.modules.forEach(_rehydrateModule)
+    if (distro.versions) {
+        distro.versions.forEach(v => {
+            if (v.modules) v.modules.forEach(_rehydrateModule)
         })
     }
-    distro.getMainServer = function () {
-        return this.mainServerIndex < this.servers.length ? this.servers[this.mainServerIndex] : null
+    // Mirrors HeliosDistribution (hellmc-core/common): fase 0 has no `Server`
+    // catalog, so the main version is simply the first published one.
+    distro.getMainVersion = function () {
+        return this.versions.length > 0 ? this.versions[0] : null
     }
-    distro.getServerById = function (id) {
-        return this.servers.find(s => s.rawServer.id === id) || null
+    distro.getVersionById = function (id) {
+        return this.versions.find(v => v.rawVersion.id === id) || null
     }
     return distro
 }
@@ -97,7 +99,7 @@ async function showMainUI(data) {
     }
 
     await prepareSettings(true)
-    updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
+    updateSelectedVersion(data.getVersionById(ConfigManager.getSelectedVersion()))
     refreshServerStatus()
     setTimeout(async () => {
         document.getElementById('frameBar').style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
@@ -157,7 +159,7 @@ function showFatalStartupError() {
 }
 
 function onDistroRefresh(data) {
-    updateSelectedServer(data.getServerById(ConfigManager.getSelectedServer()))
+    updateSelectedVersion(data.getVersionById(ConfigManager.getSelectedVersion()))
     refreshServerStatus()
     initNews()
     syncModConfigurations(data)
@@ -168,9 +170,9 @@ function syncModConfigurations(data) {
 
     const syncedCfgs = []
 
-    for (let serv of data.servers) {
+    for (let serv of data.versions) {
 
-        const id   = serv.rawServer.id
+        const id   = serv.rawVersion.id
         const mdls = serv.modules
         const cfg  = ConfigManager.getModConfiguration(id)
 
@@ -237,8 +239,8 @@ function syncModConfigurations(data) {
 }
 
 function ensureJavaSettings(data) {
-    for (const serv of data.servers) {
-        ConfigManager.ensureJavaConfig(serv.rawServer.id, serv.effectiveJavaOptions, serv.rawServer.javaOptions?.ram)
+    for (const serv of data.versions) {
+        ConfigManager.ensureJavaConfig(serv.rawVersion.id, serv.effectiveJavaOptions, serv.rawVersion.javaOptions?.ram)
     }
     ConfigManager.save()
 }
@@ -422,7 +424,7 @@ async function devModeToggle() {
     DistroAPI.toggleDevMode(true)
     const data = await DistroAPI.refreshDistributionOrFallback()
     ensureJavaSettings(data)
-    updateSelectedServer(data.servers[0])
+    updateSelectedVersion(data.getMainVersion())
     syncModConfigurations(data)
 }
 
