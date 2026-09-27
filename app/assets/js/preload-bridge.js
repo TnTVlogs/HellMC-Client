@@ -51,11 +51,31 @@ DistroAPI['instanceDir'] = ConfigManager.getInstanceDirectory()
 
 LangLoader.setupLanguage()
 
+// D18: first launch (or a stale/removed selection) preselects the main server's recommended
+// version if there is one, else falls back to the distribution's main version (no server, D4).
+function pickDefaultPlay(data) {
+    const mainServer = data.getMainServer()
+    if (mainServer != null) {
+        const recommended = mainServer.versions.find(v => v.recommended) || mainServer.versions[0]
+        if (recommended != null && data.getVersionById(recommended.id) != null) {
+            return { serverId: mainServer.id, versionId: recommended.id }
+        }
+    }
+    const mainVersion = data.getMainVersion()
+    return { serverId: null, versionId: mainVersion != null ? mainVersion.rawVersion.id : null }
+}
+
 function onDistroLoad(data) {
     if (data != null) {
-        if (ConfigManager.getSelectedVersion() == null || data.getVersionById(ConfigManager.getSelectedVersion()) == null) {
-            logger.info('Determining default selected version..')
-            ConfigManager.setSelectedVersion(data.getMainVersion().rawVersion.id)
+        const serverId = ConfigManager.getSelectedServer()
+        const versionId = ConfigManager.getSelectedVersion()
+        const serverStillValid = serverId == null || data.getServerById(serverId) != null
+        const versionStillValid = versionId != null && data.getVersionById(versionId) != null
+        if (!serverStillValid || !versionStillValid) {
+            logger.info('Determining default selected server/version..')
+            const play = pickDefaultPlay(data)
+            ConfigManager.setSelectedServer(play.serverId)
+            ConfigManager.setSelectedVersion(play.versionId)
             ConfigManager.save()
         }
     }
@@ -233,6 +253,10 @@ contextBridge.exposeInMainWorld('launcherAPI', {
         // Concrete accessors used across renderer scripts
         getSelectedVersion:    ()       => ConfigManager.getSelectedVersion(),
         setSelectedVersion:    (id)     => ConfigManager.setSelectedVersion(id),
+        getSelectedServer:    ()       => ConfigManager.getSelectedServer(),
+        setSelectedServer:    (id)     => ConfigManager.setSelectedServer(id),
+        getLastVersionByServer: (serverId) => ConfigManager.getLastVersionByServer(serverId),
+        setLastVersionByServer: (serverId, versionId) => ConfigManager.setLastVersionByServer(serverId, versionId),
         getSelectedAccount:   ()       => ConfigManager.getSelectedAccount(),
         setSelectedAccount:   (uuid)   => ConfigManager.setSelectedAccount(uuid),
         getAuthAccounts:      ()       => ConfigManager.getAuthAccounts(),
@@ -395,6 +419,12 @@ contextBridge.exposeInMainWorld('launcherAPI', {
             const selectedVersion = distro.getVersionById(ConfigManager.getSelectedVersion())
             const authUser        = ConfigManager.getSelectedAccount()
 
+            // Fase 1: only trust the remembered server if it actually still offers this version
+            // (D4: otherwise this is really "playing without a server").
+            const selectedServerId = ConfigManager.getSelectedServer()
+            const rawServer        = selectedServerId != null ? distro.getServerById(selectedServerId) : null
+            const server           = rawServer != null && rawServer.versions.some(v => v.id === selectedVersion.rawVersion.id) ? rawServer : null
+
             const mojangProcessor  = new MojangIndexProcessor(
                 ConfigManager.getCommonDirectory(),
                 selectedVersion.rawVersion.minecraftVersion
@@ -408,7 +438,7 @@ contextBridge.exposeInMainWorld('launcherAPI', {
             const modLoaderData = await distroProcessor.loadModLoaderVersionJson(selectedVersion)
             const versionData   = await mojangProcessor.getVersionJson()
 
-            const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, authUser, appVersion)
+            const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, authUser, appVersion, server)
             _proc = pb.build()
 
             _proc.stdout.on('data', lineBuffered(line => _fireListeners(_stdoutListeners, line)))
@@ -426,15 +456,13 @@ contextBridge.exposeInMainWorld('launcherAPI', {
             _proc.on('close', onProcEnd)
             _proc.on('exit',  onProcEnd)
 
-            // Return serialisable discord info the renderer needs.
-            // Fase 0: `Version` carries no address/discord (moved to the future
-            // `Server` catalog, see 01-terminologia-i-dades.md §3.3), so RPC
-            // falls back to just the distribution's global discord settings.
+            // Return serialisable discord info the renderer needs. Fase 1: per-server discord
+            // settings (01 §3.2) if playing through one that has them; else just the global ones.
             return {
                 pid:         _proc.pid,
                 displayName: authUser.displayName,
                 discord: distro.rawDistribution.discord != null
-                    ? { gen: distro.rawDistribution.discord, serv: null }
+                    ? { gen: distro.rawDistribution.discord, serv: server != null ? server.discord : null }
                     : null
             }
         },

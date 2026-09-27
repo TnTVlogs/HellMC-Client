@@ -859,20 +859,12 @@ function displayArticle(articleObject, index) {
     newsContent.setAttribute('article', index - 1)
 }
 
-async function loadNews() {
-
-    const distroData = await DistroAPI.getDistribution()
-    if (!distroData.rawDistribution.rss) {
-        loggerLanding.debug('No RSS feed provided.')
-        return null
-    }
-
-    const promise = new Promise((resolve, reject) => {
-
-        const newsFeed = distroData.rawDistribution.rss
-        const newsHost = new URL(newsFeed).origin + '/'
+// Fetches and parses a single RSS feed into our article shape, or null if it fails/times out.
+function fetchFeed(feedUrl) {
+    return new Promise((resolve) => {
+        const newsHost = new URL(feedUrl).origin + '/'
         $.ajax({
-            url: newsFeed,
+            url: feedUrl,
             success: (data) => {
                 const items    = $(data).find('item')
                 const articles = []
@@ -880,7 +872,8 @@ async function loadNews() {
                 for (let i = 0; i < items.length; i++) {
                     const el = $(items[i])
 
-                    const date = new Date(el.find('pubDate').text()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' })
+                    const dateRaw = new Date(el.find('pubDate').text())
+                    const date = dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' })
 
                     let comments = el.find('slash\\:comments').text() || '0'
                     comments = comments + ' Comment' + (comments === '1' ? '' : 's')
@@ -896,15 +889,41 @@ async function loadNews() {
                     let title  = el.find('title').text()
                     let author = el.find('dc\\:creator').text()
 
-                    articles.push({ link, title, date, author, content, comments, commentsLink: link + '#comments' })
+                    articles.push({ link, title, date, dateRaw, author, content, comments, commentsLink: link + '#comments' })
                 }
-                resolve({ articles })
+                resolve(articles)
             },
             timeout: 2500
-        }).catch(err => {
-            resolve({ articles: null })
-        })
+        }).catch(() => resolve(null))
     })
+}
+
+async function loadNews() {
+
+    const distroData = await DistroAPI.getDistribution()
+
+    // D9: global RSS + the selected server's own feed, if it offers the selected version and has one.
+    const feeds = []
+    if (distroData.rawDistribution.rss) feeds.push(distroData.rawDistribution.rss)
+    const selectedVersionId = ConfigManager.getSelectedVersion()
+    const selectedServerId  = ConfigManager.getSelectedServer()
+    const rawServer = selectedServerId != null ? distroData.getServerById(selectedServerId) : null
+    const server = rawServer != null && rawServer.versions.some(v => v.id === selectedVersionId) ? rawServer : null
+    if (server != null && server.rss) feeds.push(server.rss)
+
+    if (feeds.length === 0) {
+        loggerLanding.debug('No RSS feed provided.')
+        return null
+    }
+
+    const promise = (async () => {
+        const results = await Promise.all(feeds.map(fetchFeed))
+        if (results.every(r => r == null)) {
+            return { articles: null }
+        }
+        const articles = results.flatMap(r => r || []).sort((a, b) => b.dateRaw - a.dateRaw)
+        return { articles }
+    })()
 
     return await promise
 }
@@ -919,10 +938,14 @@ const initEarlyRPC = async () => {
         const version = distro.getVersionById(selectedVersionId)
         if (!version || !version.rawVersion) return
 
-        // Fase 0: versions carry no discord settings (moved to the future
-        // `Server` catalog); RPC relies on the distribution's global settings alone.
+        // Fase 1: per-server discord settings (01 §3.2) if the remembered server still offers
+        // this version (D4), else just the distribution's global settings.
+        const selectedServerId = ConfigManager.getSelectedServer()
+        const rawServer = selectedServerId != null ? distro.getServerById(selectedServerId) : null
+        const server = rawServer != null && rawServer.versions.some(v => v.id === selectedVersionId) ? rawServer : null
+
         if (distro.rawDistribution.discord != null) {
-            discord.initRPC(distro.rawDistribution.discord, null, Lang.queryJS('discord.waiting'), Lang.queryJS('landing.discord.idle'))
+            discord.initRPC(distro.rawDistribution.discord, server != null ? server.discord : null, Lang.queryJS('discord.waiting'), Lang.queryJS('landing.discord.idle'))
             hasRPC = true
         }
     } catch (err) {

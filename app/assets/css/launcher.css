@@ -4031,6 +4031,16 @@ input:checked + .toggleSwitchSlider:before {
     margin-top: 7px;
 }
 
+/* Fase 1: server(s) offering this version, if any (D1) — small muted tag, no redesign (Fase 2). */
+.serverListingServerTags {
+    display: block;
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.65;
+    text-align: left;
+    margin-top: 2px;
+}
+
 /* Content container for the server listing's information. */
 .serverListingInfo {
     width: 100%;

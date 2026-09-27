@@ -40,13 +40,27 @@ function _rehydrateDistribution(distro) {
             if (v.modules) v.modules.forEach(_rehydrateModule)
         })
     }
-    // Mirrors HeliosDistribution (hellmc-core/common): fase 0 has no `Server`
-    // catalog, so the main version is simply the first published one.
+    // Mirrors HeliosDistribution (hellmc-core/common). `getMainVersion` is the
+    // fase-0 "no server applies" fallback: first published version.
     distro.getMainVersion = function () {
         return this.versions.length > 0 ? this.versions[0] : null
     }
     distro.getVersionById = function (id) {
         return this.versions.find(v => v.rawVersion.id === id) || null
+    }
+    distro.getServerById = function (id) {
+        return (this.servers || []).find(s => s.id === id) || null
+    }
+    distro.getMainServer = function () {
+        return (this.servers || []).find(s => s.mainServer) || null
+    }
+    distro.getVersionsOf = function (serverId) {
+        const server = this.getServerById(serverId)
+        if (server == null) return []
+        return server.versions.map(v => this.getVersionById(v.id)).filter(v => v != null)
+    }
+    distro.getServersOf = function (versionId) {
+        return (this.servers || []).filter(s => s.versions.some(v => v.id === versionId))
     }
     return distro
 }
@@ -99,6 +113,7 @@ async function showMainUI(data) {
     }
 
     await prepareSettings(true)
+    ensureValidSelection(data)
     updateSelectedVersion(data.getVersionById(ConfigManager.getSelectedVersion()))
     refreshServerStatus()
     setTimeout(async () => {
@@ -158,7 +173,35 @@ function showFatalStartupError() {
     }, 750)
 }
 
+// D18: mirrors preload-bridge.js's `pickDefaultPlay` (separate JS realm, can't share the function) —
+// used whenever a refresh may have invalidated the current server/version selection.
+function pickDefaultPlay(data) {
+    const mainServer = data.getMainServer()
+    if (mainServer != null) {
+        const recommended = mainServer.versions.find(v => v.recommended) || mainServer.versions[0]
+        if (recommended != null && data.getVersionById(recommended.id) != null) {
+            return { serverId: mainServer.id, versionId: recommended.id }
+        }
+    }
+    const mainVersion = data.getMainVersion()
+    return { serverId: null, versionId: mainVersion != null ? mainVersion.rawVersion.id : null }
+}
+
+function ensureValidSelection(data) {
+    const serverId = ConfigManager.getSelectedServer()
+    const versionId = ConfigManager.getSelectedVersion()
+    const serverStillValid = serverId == null || data.getServerById(serverId) != null
+    const versionStillValid = versionId != null && data.getVersionById(versionId) != null
+    if (!serverStillValid || !versionStillValid) {
+        const play = pickDefaultPlay(data)
+        ConfigManager.setSelectedServer(play.serverId)
+        ConfigManager.setSelectedVersion(play.versionId)
+        ConfigManager.save()
+    }
+}
+
 function onDistroRefresh(data) {
+    ensureValidSelection(data)
     updateSelectedVersion(data.getVersionById(ConfigManager.getSelectedVersion()))
     refreshServerStatus()
     initNews()

@@ -90,9 +90,11 @@ const DEFAULT_CONFIG = {
         dismissed: false
     },
     clientToken: null,
-    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §5), so
-    // `serverId` is always null here. It starts being populated in fase 1.
+    // Fase 1: `serverId` is populated once the player picks (or is preselected into) a server from
+    // the catalog; null means "playing without a server" (D4). 01-terminologia-i-dades.md §5.
     lastPlay: { serverId: null, versionId: null }, // Resolved
+    // Remembers, per server, the last version picked while playing through it (01 §5).
+    lastVersionByServer: {},
     selectedAccount: null,
     authenticationDatabase: {},
     modConfigurations: [],
@@ -191,7 +193,7 @@ function validateKeySet(srcObj, destObj) {
     if (srcObj == null) {
         srcObj = {}
     }
-    const validationBlacklist = ['authenticationDatabase', 'javaConfig']
+    const validationBlacklist = ['authenticationDatabase', 'javaConfig', 'lastVersionByServer']
     const keys = Object.keys(srcObj)
     for (let i = 0; i < keys.length; i++) {
         if (typeof destObj[keys[i]] === 'undefined') {
@@ -309,6 +311,45 @@ exports.getSelectedVersion = function (def = false) {
  */
 exports.setSelectedVersion = function (versionID) {
     config.lastPlay.versionId = versionID
+}
+
+/**
+ * Retrieve the ID of the selected server (D4: null = playing without a server).
+ *
+ * @returns {string|null} The ID of the selected server, or null.
+ */
+exports.getSelectedServer = function () {
+    return config.lastPlay.serverId
+}
+
+/**
+ * Set the ID of the selected server (fase 1). Does not touch `lastPlay.versionId`; callers pick the
+ * version separately (usually the server's recommended one, or `lastVersionByServer[serverId]`).
+ *
+ * @param {string|null} serverID The ID of the new selected server, or null for "no server".
+ */
+exports.setSelectedServer = function (serverID) {
+    config.lastPlay.serverId = serverID
+}
+
+/**
+ * Retrieve the version last played through a given server, if any.
+ *
+ * @param {string} serverID The server id.
+ * @returns {string|undefined} The version id, if one is remembered for this server.
+ */
+exports.getLastVersionByServer = function (serverID) {
+    return config.lastVersionByServer[serverID]
+}
+
+/**
+ * Remember the version last played through a given server.
+ *
+ * @param {string} serverID The server id.
+ * @param {string} versionID The version id picked for this server.
+ */
+exports.setLastVersionByServer = function (serverID, versionID) {
+    config.lastVersionByServer[serverID] = versionID
 }
 
 /**

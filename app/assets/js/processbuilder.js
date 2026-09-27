@@ -24,10 +24,13 @@ const logger = LoggerUtil.getLogger('ProcessBuilder')
  */
 class ProcessBuilder {
 
-    constructor(distroVersion, vanillaManifest, modManifest, authUser, launcherVersion) {
+    constructor(distroVersion, vanillaManifest, modManifest, authUser, launcherVersion, server = null) {
         this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroVersion.rawVersion.id)
         this.commonDir = ConfigManager.getCommonDirectory()
         this.version = distroVersion
+        // Fase 1: the raw `Server` (01 §3.2) the player launched through, if any (D4: null when
+        // playing without a server) — only source of `address`/`autoconnect` since fase 0.
+        this.server = server
         this.vanillaManifest = vanillaManifest
         this.modManifest = modManifest
         this.authUser = authUser
@@ -404,10 +407,35 @@ class ProcessBuilder {
         logger.info(`Placed ${placed.length} mods in ${this.modsDir}.`)
     }
 
-    // Fase 0: `Version` carries no address/autoconnect (moved to the future
-    // `Server` catalog, see 01-terminologia-i-dades.md §3.3) — no-op until fase 1.
-    _processAutoConnectArg(_args) {
-        return
+    // `host`, `host:port` or `[ipv6]:port` -> [host, port] (port undefined if not given).
+    static _splitAddress(address) {
+        if (address.startsWith('[')) {
+            const end = address.indexOf(']')
+            const rest = address.slice(end + 1)
+            return [address.slice(1, end), rest.startsWith(':') ? rest.slice(1) : undefined]
+        }
+        const parts = address.split(':')
+        return [parts[0], parts[1]]
+    }
+
+    // Fase 1: `address`/`autoconnect` live on the `Server` (01 §3.2), never on `Version`
+    // (01-terminologia-i-dades.md §3.3) — so there is nothing to connect to without one.
+    _processAutoConnectArg(args) {
+        if (!ConfigManager.getAutoConnect() || this.server == null || !this.server.autoconnect || !this.server.address) {
+            return
+        }
+        const [host, port] = ProcessBuilder._splitAddress(this.server.address)
+        if (mcVersionAtLeast('1.20', this.version.rawVersion.minecraftVersion)) {
+            args.push('--quickPlayMultiplayer')
+            args.push(port ? `${host}:${port}` : host)
+        } else {
+            args.push('--server')
+            args.push(host)
+            if (port) {
+                args.push('--port')
+                args.push(port)
+            }
+        }
     }
 
     /**

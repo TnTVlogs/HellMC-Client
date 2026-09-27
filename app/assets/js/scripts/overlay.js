@@ -171,12 +171,26 @@ function setDismissHandler(handler){
 
 /* Server Select View */
 
+// Fase 1 (D4): this list is versions, not servers (legacy class name) — a "provisional" flat
+// picker, no dedicated server UI yet. Picking a version infers `lastPlay.serverId` from the
+// catalog: exactly one server offering it -> that server (so autoconnect/RSS/Discord kick in);
+// zero or more than one -> null ("playing without a server"), never a guess.
+async function selectVersionAndInferServer(versionId) {
+    const distro = await DistroAPI.getDistribution()
+    const version = distro.getVersionById(versionId)
+    updateSelectedVersion(version)
+    const servers = distro.getServersOf(versionId)
+    const serverId = servers.length === 1 ? servers[0].id : null
+    ConfigManager.setSelectedServer(serverId)
+    if (serverId != null) ConfigManager.setLastVersionByServer(serverId, versionId)
+    ConfigManager.save()
+}
+
 document.getElementById('serverSelectConfirm').addEventListener('click', async () => {
     const listings = document.getElementsByClassName('serverListing')
     for(let i=0; i<listings.length; i++){
         if(listings[i].hasAttribute('selected')){
-            const serv = (await DistroAPI.getDistribution()).getVersionById(listings[i].getAttribute('servid'))
-            updateSelectedVersion(serv)
+            await selectVersionAndInferServer(listings[i].getAttribute('servid'))
             refreshServerStatus(true)
             toggleOverlay(false)
             return
@@ -184,8 +198,7 @@ document.getElementById('serverSelectConfirm').addEventListener('click', async (
     }
     // None are selected? Not possible right? Meh, handle it.
     if(listings.length > 0){
-        const serv = (await DistroAPI.getDistribution()).getVersionById(listings[0].getAttribute('servid'))
-        updateSelectedVersion(serv)
+        await selectVersionAndInferServer(listings[0].getAttribute('servid'))
         toggleOverlay(false)
     }
 })
@@ -270,17 +283,23 @@ function setAccountListingHandlers(){
 async function populateServerListings(){
     const distro = await DistroAPI.getDistribution()
     const giaSel = ConfigManager.getSelectedVersion()
-    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §3.3),
-    // so this lists every published version directly, same as the old server list.
+    // Fase 1: still lists every published version flat (no dedicated Servers screen yet, 01 §3.3) —
+    // but now tags each one with the server(s) that offer it, if any (D1: a version can belong to
+    // 0, 1 or more servers). Picking one infers the server automatically (see `serverSelectConfirm`).
     const versions = distro.versions
-    const mainVersionId = distro.getMainVersion()?.rawVersion?.id
+    const mainServer = distro.getMainServer()
+    const mainVersionId = mainServer != null
+        ? (mainServer.versions.find(v => v.recommended) || mainServer.versions[0])?.id
+        : distro.getMainVersion()?.rawVersion?.id
     let htmlString = ''
     for(const serv of versions){
+        const servers = distro.getServersOf(serv.rawVersion.id)
         htmlString += `<button class="serverListing" servid="${serv.rawVersion.id}" ${serv.rawVersion.id === giaSel ? 'selected' : ''}>
             <img class="serverListingImg" src="${serv.rawVersion.icon}"/>
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawVersion.name}</span>
                 <span class="serverListingDescription">${serv.rawVersion.description}</span>
+                ${servers.length > 0 ? `<span class="serverListingServerTags">${servers.map(s => s.name).join(', ')}</span>` : ''}
                 <div class="serverListingInfo">
                     <div class="serverListingVersion">${serv.rawVersion.minecraftVersion}</div>
                     <div class="serverListingRevision">${serv.rawVersion.version}</div>

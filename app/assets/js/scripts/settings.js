@@ -965,9 +965,13 @@ function _saveModConfiguration(modConf) {
 async function loadSelectedServerOnModsTab() {
     const distro = await DistroAPI.getDistribution()
     const serv   = distro.getVersionById(ConfigManager.getSelectedVersion())
-    // Fase 0: no `Server` catalog exists yet (01-terminologia-i-dades.md §3.3);
-    // the star marks the distribution's main version (getMainVersion()) instead.
-    const mainVersionId = distro.getMainVersion()?.rawVersion?.id
+    // Fase 1: the star marks the main server's recommended version if there is one (D18),
+    // else falls back to the distribution's main version (no server, D4).
+    const mainServer = distro.getMainServer()
+    const mainVersionId = mainServer != null
+        ? (mainServer.versions.find(v => v.recommended) || mainServer.versions[0])?.id
+        : distro.getMainVersion()?.rawVersion?.id
+    const servers = distro.getServersOf(serv.rawVersion.id)
 
     for (const el of document.getElementsByClassName('settingsSelServContent')) {
         el.innerHTML = `
@@ -975,6 +979,7 @@ async function loadSelectedServerOnModsTab() {
             <div class="serverListingDetails">
                 <span class="serverListingName">${serv.rawVersion.name}</span>
                 <span class="serverListingDescription">${serv.rawVersion.description}</span>
+                ${servers.length > 0 ? `<span class="serverListingServerTags">${servers.map(s => s.name).join(', ')}</span>` : ''}
                 <div class="serverListingInfo">
                     <div class="serverListingVersion">${serv.rawVersion.minecraftVersion}</div>
                     <div class="serverListingRevision">${serv.rawVersion.version}</div>
