@@ -2,11 +2,12 @@ const remoteMain = require('@electron/remote/main')
 remoteMain.initialize()
 
 // Requirements
-const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, shell } = require('electron')
 const autoUpdater = require('electron-updater').autoUpdater
 const ejse = require('ejs-electron')
 const fs = require('fs')
 const isDev = require('./app/assets/js/isdev')
+const os = require('os')
 const path = require('path')
 const semver = require('semver')
 const { pathToFileURL } = require('url')
@@ -372,6 +373,108 @@ function createMenu() {
 
 }
 
+// 06 §12 pas 1: finestra de proves per al renderer nou (Vite+Preact), separada de `createWindow()`
+// perquè l'app antiga (EJS/jQuery) segueixi funcionant intacta mentre es migra pas a pas. Només
+// en dev, darrere una drecera perquè no interfereixi amb l'ús normal. Amb `RENDERER_DEV_SERVER=1`
+// carrega el servidor de `vite` (`npm run dev:renderer`) en lloc del build estàtic.
+let rendererTestWin = null
+function openRendererTestWindow() {
+    if (rendererTestWin != null) {
+        rendererTestWin.focus()
+        return
+    }
+
+    // 08 §8: botons de finestra natius via `titleBarOverlay` (Windows/Linux) o `trafficLightPosition`
+    // (macOS) en comptes de simular-los amb CSS (l'error de la barra estirada a macOS de l'app
+    // antiga venia exactament d'intentar-ho amb CSS, 08 §8.1).
+    const platformTitleBarOptions = process.platform === 'darwin'
+        ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } }
+        : { titleBarStyle: 'hidden', titleBarOverlay: { color: '#15181D', symbolColor: '#ECEFF4', height: 36 } }
+
+    rendererTestWin = new BrowserWindow({
+        width: 1280,
+        height: 760,
+        minWidth: 800,
+        minHeight: 560,
+        title: 'HellMC Client — renderer (proves)',
+        ...platformTitleBarOptions,
+        webPreferences: {
+            preload: path.join(__dirname, 'src-node', 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: false
+        },
+        backgroundColor: '#0E1013'
+    })
+
+    if (process.env.RENDERER_DEV_SERVER === '1') {
+        const devUrl = 'http://localhost:5173'
+        const loadDevServer = () => {
+            rendererTestWin?.loadURL(devUrl).catch(() => { /* handled by did-fail-load below */ })
+        }
+        // El servidor de `vite` pot no estar a punt encara (dues comandes arrencant en paral·lel,
+        // `npm run dev`); si falla la primera càrrega, es reintenta en lloc de quedar-se en blanc.
+        rendererTestWin.webContents.on('did-fail-load', () => {
+            if (rendererTestWin != null) {
+                setTimeout(loadDevServer, 500)
+            }
+        })
+        loadDevServer()
+    } else {
+        rendererTestWin.loadURL(pathToFileURL(path.join(__dirname, 'renderer-dist', 'index.html')).toString())
+    }
+
+    rendererTestWin.webContents.openDevTools()
+
+    rendererTestWin.on('maximize', () => {
+        rendererTestWin.webContents.send('hellmc:window-maximize-changed', true)
+    })
+    rendererTestWin.on('unmaximize', () => {
+        rendererTestWin.webContents.send('hellmc:window-maximize-changed', false)
+    })
+
+    rendererTestWin.on('closed', () => {
+        rendererTestWin = null
+    })
+}
+
+// IPC de `src-node/preload.js` (`window.hellmc`), només fet servir per la finestra de proves. Es
+// resol la finestra a partir del `sender` (no de `rendererTestWin`) perquè, si en el futur hi ha
+// més d'una finestra amb aquest preload, cadascuna controli la seva pròpia.
+ipcMain.on('hellmc:window-minimize', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+})
+ipcMain.on('hellmc:window-maximize-toggle', (event) => {
+    const senderWin = BrowserWindow.fromWebContents(event.sender)
+    if (senderWin == null) return
+    if (senderWin.isMaximized()) {
+        senderWin.unmaximize()
+    } else {
+        senderWin.maximize()
+    }
+})
+ipcMain.on('hellmc:window-close', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+})
+// 08 §8.2: recolora els botons natius (`titleBarOverlay`) en canviar de tema. Només Windows/Linux
+// ('darwin' fa servir semàfors natius, sense overlay — `setTitleBarOverlay` no hi aplica).
+const TITLEBAR_OVERLAY_COLORS = {
+    dark: { color: '#15181D', symbolColor: '#ECEFF4' },
+    light: { color: '#FFFFFF', symbolColor: '#14171C' }
+}
+ipcMain.on('hellmc:set-titlebar-overlay', (event, effectiveTheme) => {
+    if (process.platform === 'darwin') return
+    const senderWin = BrowserWindow.fromWebContents(event.sender)
+    const colors = TITLEBAR_OVERLAY_COLORS[effectiveTheme]
+    if (senderWin == null || colors == null) return
+    senderWin.setTitleBarOverlay({ ...colors, height: 36 })
+})
+ipcMain.handle('hellmc:system-memory', () => {
+    return { totalMb: Math.round(os.totalmem() / 1048576), freeMb: Math.round(os.freemem() / 1048576) }
+})
+ipcMain.handle('hellmc:open-path', (_event, p) => shell.openPath(p))
+ipcMain.handle('hellmc:open-external', (_event, url) => shell.openExternal(url))
+
 function getPlatformIcon(filename) {
     let ext
     switch (process.platform) {
@@ -388,8 +491,31 @@ function getPlatformIcon(filename) {
     return path.join(__dirname, 'app', 'assets', 'images', `${filename}.${ext}`)
 }
 
-app.on('ready', createWindow)
-app.on('ready', createMenu)
+// `npm run dev` (OPEN_RENDERER_TEST=1) és per iterar només sobre el renderer nou: no calen
+// l'app antiga ni el seu menú, i esperarien recursos/temps d'arrencada per res. `npm start` (sense
+// la variable) manté el comportament de sempre.
+if (process.env.OPEN_RENDERER_TEST !== '1') {
+    app.on('ready', createWindow)
+    app.on('ready', createMenu)
+}
+
+if (isDev) {
+    app.on('ready', () => {
+        const registered = globalShortcut.register('CommandOrControl+Shift+R', openRendererTestWindow)
+        console.log(registered
+            ? '[renderer-test] Drecera Ctrl/Cmd+Shift+R registrada (obre la finestra de proves del renderer nou).'
+            : '[renderer-test] AVÍS: no s\'ha pogut registrar Ctrl/Cmd+Shift+R (una altra app deu tenir-la agafada). Fes servir OPEN_RENDERER_TEST=1 en comptes de la drecera.')
+
+        // Amb `OPEN_RENDERER_TEST=1` s'obre sola en arrencar, sense dependre de la drecera (que és
+        // global i pot xocar amb una altra app). Fet servir per `npm run dev`.
+        if (process.env.OPEN_RENDERER_TEST === '1') {
+            openRendererTestWindow()
+        }
+    })
+    app.on('will-quit', () => {
+        globalShortcut.unregisterAll()
+    })
+}
 
 app.on('window-all-closed', () => {
     // On macOS it is common for applications and their menu bar

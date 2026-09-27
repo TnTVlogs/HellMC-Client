@@ -1,0 +1,54 @@
+/* Tokens del sistema de disseny (docs/client-redesign/08-sistema-de-disseny.md §11).
+   Si es retoquen aquí, cal retocar-los també a `docs/client-redesign/prototype/assets/tokens.css`. */
+:root {
+  color-scheme: dark light;
+  --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 999px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --space-page: clamp(16px, 2.2vw, 40px); --gap-grid: clamp(12px, 1.4vw, 24px);
+  --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 240ms; --ease: cubic-bezier(.2,.7,.2,1);
+  --sidebar-w: 232px; --sidebar-w-compact: 64px; --titlebar-h: 36px; --content-max: 1200px;
+
+  --fs-xs: clamp(.72rem, .70rem + .1vw, .78rem);
+  --fs-sm: clamp(.80rem, .78rem + .1vw, .875rem);
+  --fs-md: clamp(.90rem, .87rem + .15vw, 1rem);
+  --fs-lg: clamp(1.05rem, 1rem + .3vw, 1.25rem);
+  --fs-xl: clamp(1.3rem, 1.15rem + .6vw, 1.75rem);
+  --fs-2xl: clamp(1.6rem, 1.3rem + 1.2vw, 2.4rem);
+
+  --shadow-1: 0 1px 2px rgba(20,23,28,.06);
+  --shadow-2: 0 8px 24px rgba(20,23,28,.14);
+
+  --bp-medium: 960px; --bp-wide: 1280px;
+}
+:root, :root[data-theme="dark"] {
+  --bg:#0E1013; --surface-1:#15181D; --surface-2:#1C2027; --surface-3:#242932;
+  --border:#2B313B; --border-strong:#39414D;
+  --text:#ECEFF4; --text-muted:#A3ACBA; --text-faint:#6F7887;
+  --accent:#FF5A36; --accent-fill:#D93A14; --accent-fill-hover:#C7330F; --accent-fill-active:#B02B0A;
+  --accent-soft:rgba(255,90,54,.14); --bg-glow:rgba(255,90,54,.07);
+  --success:#34C77B; --warning:#F2B441; --danger:#FF6B6B; --info:#5AA9FF;
+}
+:root[data-theme="light"] {
+  --bg:#F4F5F7; --surface-1:#FFFFFF; --surface-2:#F0F2F5; --surface-3:#E7EAEE;
+  --border:#DADFE6; --border-strong:#BFC6D0;
+  --text:#14171C; --text-muted:#566070; --text-faint:#7B8494;
+  --accent:#C2300E; --accent-fill:#D93A14; --accent-fill-hover:#C7330F; --accent-fill-active:#B02B0A;
+  --accent-soft:rgba(217,58,20,.10); --bg-glow:rgba(217,58,20,.06);
+  --success:#15783A; --warning:#8A5B00; --danger:#C62828; --info:#1D62C9;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg:#F4F5F7; --surface-1:#FFFFFF; --surface-2:#F0F2F5; --surface-3:#E7EAEE;
+    --border:#DADFE6; --border-strong:#BFC6D0;
+    --text:#14171C; --text-muted:#566070; --text-faint:#7B8494;
+    --accent:#C2300E; --accent-fill:#D93A14; --accent-fill-hover:#C7330F; --accent-fill-active:#B02B0A;
+    --accent-soft:rgba(217,58,20,.10); --bg-glow:rgba(217,58,20,.06);
+    --success:#15783A; --warning:#8A5B00; --danger:#C62828; --info:#1D62C9;
+  }
+}
+
+/* Mode rendiment (08 §9): sense degradat de fons ni transicions. */
+:root[data-perf="low"] {
+  --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms;
+}

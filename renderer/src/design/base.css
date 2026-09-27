@@ -1,0 +1,33 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; }
+
+html {
+  font-family: var(--font);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  font-optical-sizing: auto;
+}
+
+body {
+  color: var(--text);
+  background: var(--bg);
+  background-image: radial-gradient(1200px 600px at 85% -10%, var(--bg-glow), transparent 60%);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  /* Canviar de tema (08 §2) recalcula tots els tokens de color a l'instant; sense això la pàgina
+     sencera feia un salt sec. `--dur-base` ja és 0ms en mode rendiment (tokens.css), no cal
+     repetir la condició aquí. */
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+}
+:root[data-perf="low"] body {
+  background-image: none;
+}
+
+#app {
+  height: 100%;
+}
+
+a { color: var(--accent); }
+
+::selection { background: var(--accent-soft); }
