@@ -99,6 +99,37 @@ const DEFAULT_CONFIG = {
     authenticationDatabase: {},
     modConfigurations: [],
     javaConfig: {},
+    // D26 (06 §8.2, 01 §3.1.1): preferència del **jugador** per versió (`shared`/`separate`) — no
+    // s'ha de confondre amb `Version.dataSharing` (l'`forcedSeparate` de l'admin, ve de la
+    // distribució, no viu aquí). `root: null` = arrel per defecte (`commonDir/shared-data`);
+    // ruta absoluta explícita quan l'usuari tria la `.minecraft` del sistema (07 §6.2).
+    dataSharing: {
+        root: null,
+        preferences: {}
+    },
+    // 2.4 (07 §5, «no llegit»): timestamp (ms) de l'última vegada que el jugador ha vist l'arxiu de
+    // notícies per font (`'global'` o l'id del servidor) — un article és «nou» si el seu `date` és
+    // posterior. Mapa dinàmic (com `javaConfig`), mai un esquema fix.
+    newsRead: {},
+    // 2.5 (06 §6, store `ui`): tema/rendiment/mida/barra lateral/idioma de la UI nova — abans només
+    // vivia en memòria (`window.hellmc.config` mock), es perdia a cada reinici. `devMode` (07 §6,
+    // «mode desenvolupador, ocult per defecte»): el valor persisteix igual, només la UI que el
+    // revela (Launcher) el manté amagat fins que es desbloqueja (Sobre, clicar la versió).
+    ui: {
+        theme: 'system',
+        performance: 'auto',
+        uiScale: 100,
+        sidebarCollapsed: false,
+        language: 'en',
+        devMode: false
+    },
+    // 2.5 (07 §6, «Java»: «valors globals per defecte»): seed per a `defaultJavaConfig` quan es
+    // crea l'entrada d'una versió **nova** — `null` = segueix detectant/preguntant per versió com
+    // fins ara (cap canvi de comportament si l'usuari no l'ha tocat mai). No s'ha de confondre amb
+    // `javaConfig[versionId].executable` (per versió, 06 §5 `config.getVersion`/`setVersion`).
+    globalJavaConfig: {
+        executable: null
+    },
     schemaVersion: CONFIG_SCHEMA_VERSION
 }
 
@@ -193,7 +224,7 @@ function validateKeySet(srcObj, destObj) {
     if (srcObj == null) {
         srcObj = {}
     }
-    const validationBlacklist = ['authenticationDatabase', 'javaConfig', 'lastVersionByServer']
+    const validationBlacklist = ['authenticationDatabase', 'javaConfig', 'lastVersionByServer', 'dataSharing', 'newsRead']
     const keys = Object.keys(srcObj)
     for (let i = 0; i < keys.length; i++) {
         if (typeof destObj[keys[i]] === 'undefined') {
@@ -563,6 +594,93 @@ exports.setModConfiguration = function (versionid, configuration) {
     cfgs.push(configuration)
 }
 
+/**
+ * D26 (06 §8.2): whether the player wants THIS version's shareable data (saves, resourcepacks,
+ * shaderpacks, screenshots, options.txt, optionsof.txt, servers.dat, hotbar.nbt — 01 §3.1.1) linked
+ * against the shared root, or kept as a real separate folder. Defaults to shared (`true`) unless the
+ * player has explicitly turned it off before. Callers still need to check the admin's
+ * `Version.dataSharing === 'forcedSeparate'` separately — that one is never overridden by this.
+ *
+ * @param {string} versionid The id of the version.
+ * @returns {boolean} True if the player wants this version's data shared.
+ */
+exports.getDataSharingPreference = function (versionid) {
+    const pref = config.dataSharing.preferences[versionid]
+    return pref !== undefined ? pref : true
+}
+
+/**
+ * Set the player's data-sharing preference for a specific version.
+ *
+ * @param {string} versionid The id of the version.
+ * @param {boolean} shared True to link against the shared root, false to keep it separate.
+ */
+exports.setDataSharingPreference = function (versionid, shared) {
+    config.dataSharing.preferences[versionid] = shared
+}
+
+/**
+ * D26 (07 §6.2): root folder that every `shared` version links its shareable data against. A single
+ * global root, not per-version. `null` (the default) resolves to `<commonDir>/shared-data`, HellMC's
+ * own folder — isolated from any other Minecraft install (06 §8.2, kept apart from the "system
+ * .minecraft" option on purpose so opting in to sharing never touches an existing install unasked).
+ *
+ * @returns {string} The absolute path of the shared-data root.
+ */
+exports.getSharedDataRoot = function () {
+    return config.dataSharing.root != null ? config.dataSharing.root : path.join(exports.getCommonDirectory(), 'shared-data')
+}
+
+/**
+ * Set the shared-data root. Pass `null` to go back to HellMC's own default folder.
+ *
+ * @param {string|null} root The absolute path to use, or `null` for the default.
+ */
+exports.setSharedDataRoot = function (root) {
+    config.dataSharing.root = root
+}
+
+/**
+ * 2.5 (06 §6, store `ui`): tema/rendiment/mida/barra lateral/idioma/mode desenvolupador de la UI
+ * nova. Un sol objecte pla (no un mapa per id com `javaConfig`) — `window.hellmc.config.get/set`
+ * en llegeix/escriu el bloc sencer.
+ *
+ * @returns {Object} El bloc `ui` complet.
+ */
+exports.getUiConfig = function () {
+    return config.ui
+}
+
+/**
+ * @param {Object} patch Claus a actualitzar (`Object.assign` superficial, no substitueix el bloc
+ * sencer) — perquè un `config.set({ui: {theme: 'dark'}})` des del renderer mai esborri la resta
+ * de claus que no ha tocat.
+ */
+exports.setUiConfig = function (patch) {
+    Object.assign(config.ui, patch)
+}
+
+/**
+ * 2.4 (07 §5): when the player last saw a news source's archive, as a Unix ms timestamp. `0` if
+ * never (every article counts as unread).
+ *
+ * @param {string} sourceId `'global'` or a server id.
+ * @returns {number}
+ */
+exports.getNewsLastSeen = function (sourceId) {
+    return config.newsRead[sourceId] ?? 0
+}
+
+/**
+ * Set when the player last saw a news source's archive.
+ *
+ * @param {string} sourceId `'global'` or a server id.
+ * @param {number} timestamp Unix ms timestamp.
+ */
+exports.setNewsLastSeen = function (sourceId, timestamp) {
+    config.newsRead[sourceId] = timestamp
+}
+
 // User Configurable Settings
 
 // Java Settings
@@ -579,7 +697,7 @@ function defaultJavaConfig8(ram) {
     return {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
-        executable: null,
+        executable: config.globalJavaConfig.executable,
         jvmOptions: [
             '-XX:+UseConcMarkSweepGC',
             '-XX:+CMSIncrementalMode',
@@ -593,7 +711,7 @@ function defaultJavaConfig17(ram) {
     return {
         minRAM: resolveSelectedRAM(ram),
         maxRAM: resolveSelectedRAM(ram),
-        executable: null,
+        executable: config.globalJavaConfig.executable,
         jvmOptions: [
             '-XX:+UnlockExperimentalVMOptions',
             '-XX:+UseG1GC',
@@ -710,6 +828,24 @@ exports.getJVMOptions = function (versionid) {
  */
 exports.setJVMOptions = function (versionid, jvmOptions) {
     config.javaConfig[versionid].jvmOptions = jvmOptions
+}
+
+/**
+ * 2.5 (07 §6 «Java», valors globals): ruta de l'executable Java usada com a llavor en crear
+ * l'entrada d'una versió nova (`defaultJavaConfig*`, dalt) — no toca cap versió ja configurada.
+ *
+ * @returns {string|null} L'executable global, o `null` si no se n'ha triat cap.
+ */
+exports.getGlobalJavaExecutable = function () {
+    return config.globalJavaConfig.executable
+}
+
+/**
+ * @param {string|null} executable Ruta de l'executable, o `null` per tornar a «cap» (auto-detecció
+ * normal per versió).
+ */
+exports.setGlobalJavaExecutable = function (executable) {
+    config.globalJavaConfig.executable = executable
 }
 
 // Game Settings

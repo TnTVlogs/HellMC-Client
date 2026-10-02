@@ -53,6 +53,40 @@
 .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .icon-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Input (primer ús real: formulari de compte offline, 2.1) */
+.input {
+  height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  transition: border-color var(--dur-fast) var(--ease);
+}
+.input::placeholder { color: var(--text-faint); }
+.input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
+.input:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Tabs (primer ús real: VersionDetail, 2.3) */
+.tab {
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.tab:hover { color: var(--text); }
+.tab[data-active] { color: var(--accent); border-color: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 /* Card */
 .card {
   background: var(--surface-1);

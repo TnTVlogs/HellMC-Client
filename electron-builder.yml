@@ -31,11 +31,11 @@ win:
       arch: 'x64'
   icon: 'app/assets/images/SealCircle.ico'
 
+# oneClick: true (Discord-style) — no install wizard ever, fresh install or silent
+# auto-update, no "choose install folder"/elevation prompts (those options only apply
+# to the multi-step wizard, incompatible with oneClick, so they're dropped here).
 nsis:
-  oneClick: false
-  perMachine: false
-  allowElevation: true
-  allowToChangeInstallationDirectory: true
+  oneClick: true
 
 mac:
   target:

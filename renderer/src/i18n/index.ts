@@ -9,7 +9,7 @@ function resolvePath(obj: unknown, path: string[]): unknown {
   return path.reduce<unknown>((acc, segment) => (acc != null && typeof acc === 'object' ? (acc as Record<string, unknown>)[segment] : undefined), obj)
 }
 
-/** `t('common.hello')`, `t('common.distroSummary', { versions: 3, servers: 1 })`. */
+/** `t('nav.home')`, `t('home.playingAs', { name: 'Steve' })`. */
 export function t(key: string, params?: Record<string, string | number>): string {
   const raw = resolvePath(messages[language.value], key.split('.'))
   if (typeof raw !== 'string') {

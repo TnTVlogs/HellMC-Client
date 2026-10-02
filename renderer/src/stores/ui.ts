@@ -19,6 +19,13 @@ export const perfMode = signal<PerformanceMode>('auto')
 export const uiScale = signal<number>(100)
 export const sidebarCollapsed = signal<boolean>(false)
 export const language = signal<Language>(detectLanguage())
+/** 07 §6 «Launcher»: persisteix igual de normal; la UI que el mostra es manté amagada fins que
+ * es desbloqueja (Sobre, clicar la versió uns quants cops, `views/settings/AboutSection.tsx`). */
+export const devMode = signal<boolean>(false)
+/** Només de sessió (mai `config.json`): un cop clicada la versió prou vegades a Sobre, el
+ * interruptor de `devMode` apareix a Launcher per a la resta de la sessió — tornar a obrir l'app
+ * torna a amagar-lo (sense desbloquejar, el valor de `devMode` en si no es toca). */
+export const devModeRevealed = signal<boolean>(false)
 
 /** 08 §9 criteri (b): maquinari fluix si <= 4 nuclis lògics i <= 4 GB de RAM total. Es calcula un
  * cop en arrencar (no canvia en calent) i només s'aplica quan `perfMode` és `auto`. */
@@ -41,6 +48,7 @@ export async function loadUiConfig(): Promise<void> {
   uiScale.value = config.ui.uiScale
   sidebarCollapsed.value = config.ui.sidebarCollapsed
   language.value = config.ui.language
+  devMode.value = config.ui.devMode
   loaded = true
 }
 
@@ -54,7 +62,8 @@ function persist(): void {
       performance: perfMode.value,
       uiScale: uiScale.value,
       sidebarCollapsed: sidebarCollapsed.value,
-      language: language.value
+      language: language.value,
+      devMode: devMode.value
     }
   })
 }
@@ -74,8 +83,18 @@ export function setLanguage(next: Language): void {
   persist()
 }
 
+export function setUiScale(next: number): void {
+  uiScale.value = next
+  persist()
+}
+
 export function setSidebarCollapsed(next: boolean): void {
   sidebarCollapsed.value = next
+  persist()
+}
+
+export function setDevMode(next: boolean): void {
+  devMode.value = next
   persist()
 }
 

@@ -2,6 +2,11 @@ import { render } from 'preact'
 import { App } from './app'
 import { hellmc } from './api'
 import { loadUiConfig } from './stores/ui'
+import { loadDistro } from './stores/distro'
+import { loadSelection } from './stores/selection'
+import { loadAccounts } from './stores/account'
+import { loadInstances } from './stores/instances'
+import { loadArchive } from './stores/news'
 import './design/tokens.css'
 import './design/base.css'
 import './design/components.css'
@@ -12,6 +17,10 @@ document.documentElement.dataset.platform = hellmc.system.platform
 
 render(<App />, document.getElementById('app')!)
 
-// No bloqueja el primer render (06 §6): els signals de `stores/ui` ja tenen valors per defecte;
-// això només els corregeix quan `config.get()` respon.
+// No bloqueja el primer render (06 §6): els signals de cada store ja tenen valors per defecte
+// raonables; això només els corregeix quan les crides responen.
 void loadUiConfig()
+void loadDistro().then(loadSelection)
+void loadAccounts()
+void loadInstances()
+void loadArchive()

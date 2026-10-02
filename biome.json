@@ -1,0 +1,57 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+	"files": {
+		"includes": [
+			"**/*.js",
+			"**/*.mjs",
+			"**/*.cjs",
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.mts",
+			"!dist",
+			"!renderer-dist",
+			"!app/assets/js/vendor"
+		]
+	},
+	"formatter": {
+		"enabled": false
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "none",
+			"correctness": {
+				"preset": "recommended",
+				"noUnusedFunctionParameters": "off"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["app/assets/js/scripts/*.js"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUndeclaredVariables": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"renderer/**/*.ts",
+				"renderer/**/*.tsx",
+				"renderer/**/*.mts"
+			],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedVariables": "off",
+						"noUndeclaredVariables": "off"
+					}
+				}
+			}
+		}
+	]
+}

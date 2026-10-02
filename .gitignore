@@ -4,6 +4,7 @@
 /target/
 /logs/
 /dist/
+/renderer-dist/
 package-lock.json
 .claude/
 /newDocs/

@@ -31,3 +31,14 @@ body {
 a { color: var(--accent); }
 
 ::selection { background: var(--accent-soft); }
+
+/* Markdown renderitzat (canvis de versió, 07 §4.2 — `marked` + sanititzat amb DOMPurify abans de
+   pintar-lo, primer ús real: `VersionDetail`, 2.3). Mínim, no un sistema tipogràfic sencer. */
+.markdown-body { color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.6; }
+.markdown-body :is(h1, h2, h3) { color: var(--text); margin: var(--space-4) 0 var(--space-2); }
+.markdown-body :first-child { margin-top: 0; }
+.markdown-body code { background: var(--surface-2); padding: 0 4px; border-radius: var(--radius-sm); font-size: .9em; }
+.markdown-body pre { background: var(--surface-2); padding: var(--space-3); border-radius: var(--radius-md); overflow-x: auto; }
+.markdown-body pre code { background: none; padding: 0; }
+.markdown-body ul, .markdown-body ol { padding-left: var(--space-5); }
+.markdown-body img { max-width: 100%; height: auto; border-radius: var(--radius-md); }

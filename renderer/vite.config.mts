@@ -11,10 +11,10 @@ export default defineConfig({
   build: {
     outDir: '../renderer-dist',
     emptyOutDir: true,
-    // Electron 39 empaqueta un Chromium prou recent com per no necessitar cap polyfill; el valor
+    // Electron 44 empaqueta Chromium 152 (comprovat amb `process.versions.chrome`); el valor
     // exacte no és crític (esbuild el fa servir només per decidir quina sintaxi pot deixar tal
     // qual), s'ajustarà si canvia la versió d'Electron.
-    target: 'chrome130'
+    target: 'chrome152'
   },
   server: {
     port: 5173,

@@ -4,6 +4,11 @@
  *
  * mods:  [{ id, required: boolean, dependencies: string[] }]   (id = Module.id from the distribution)
  * state: Map<id, boolean>  enabled flag of every OPTIONAL mod (required mods are always enabled)
+ *
+ * 2.3 (Fase 2): `renderer/src/utils/modgroups.ts` és un port TS fidel d'aquest fitxer (el renderer
+ * nou és Vite ESM, aquest és CJS/UMD — no hi ha una manera neta d'importar-lo des de tots dos
+ * costats). **Mantenir sincronitzats** — qualsevol canvi de comportament aquí també toca aquell
+ * fitxer i `test/modgroups.test.js`.
  */
 (function (root, factory) {
     if (typeof module === 'object' && module.exports) module.exports = factory()
