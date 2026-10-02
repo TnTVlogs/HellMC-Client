@@ -5,7 +5,7 @@ import preact from '@preact/preset-vite'
 // pur), rutes relatives perquè es carrega amb `file://` un cop empaquetat, i la sortida fora de
 // `dist/` (ja usada per electron-builder).
 export default defineConfig({
-  root: __dirname,
+  root: import.meta.dirname,
   base: './',
   plugins: [preact()],
   build: {
