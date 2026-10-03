@@ -424,3 +424,7 @@ input.field { min-width: 0; }
 
 .sicon.vicon { width: 40px; height: 40px; border: 0; border-radius: 10px; font-size: 1rem; }
 .page-head > .sicon { width: 56px; height: 56px; border: 0; }
+
+/* Menú flotant per sobre de tot (Popover.tsx): el fons invisible el tanca en clicar a fora. */
+.popover-backdrop { position: fixed; inset: 0; z-index: 1500; background: transparent; }
+.popover-menu { position: fixed; z-index: 1501; overflow-y: auto; box-shadow: var(--shadow-2); background: var(--surface-2); outline: none; }

@@ -1,12 +1,12 @@
 import type { ComponentChildren } from 'preact'
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { Flame, Gamepad2, Globe, Home, Layers, MessageCircle, Newspaper, Plus, Server, Settings, type LucideIcon } from 'lucide-preact'
 import { navigate, route, type RouteName } from '../router'
 import { t } from '../i18n'
 import { hellmc } from '../api'
 import { Button } from './Button'
-import { Card } from './Card'
 import { ConfirmDialog } from './ConfirmDialog'
+import { Popover } from './Popover'
 import { Avatar, Banner, RingProgress, StatusDot } from './ui'
 import { instances, killInstance } from '../stores/instances'
 import { unreadCount } from '../stores/news'
@@ -47,23 +47,26 @@ function TaskIndicator() {
 function InstancesIndicator() {
   const list = instances.value
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   if (list.length === 0) return null
   const confirmingInstance = confirmingId != null ? list.find((i) => i.id === confirmingId) ?? null : null
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       {open && (
-        <Card style={{ position: 'absolute', bottom: '100%', left: 0, minWidth: 240, marginBottom: 'var(--space-2)', zIndex: 10, padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-          {list.map((instance) => (
-            <div key={instance.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
-              <span class="small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{instance.versionId}</span>
-              <Button size="sm" variant="danger" onClick={() => setConfirmingId(instance.id)}>{t('instances.forceClose')}</Button>
-            </div>
-          ))}
-        </Card>
+        <Popover anchor={triggerRef.current} onClose={() => setOpen(false)} width={300}>
+          <div style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+            {list.map((instance) => (
+              <div key={instance.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
+                <span class="small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{instance.versionId}</span>
+                <Button size="sm" variant="danger" onClick={() => { setOpen(false); setConfirmingId(instance.id) }}>{t('instances.forceClose')}</Button>
+              </div>
+            ))}
+          </div>
+        </Popover>
       )}
-      <button type="button" class="nav-item" title={t('instances.running', { count: list.length })} onClick={() => setOpen((v) => !v)}>
+      <button ref={triggerRef} type="button" class="nav-item" title={t('instances.running', { count: list.length })} onClick={() => setOpen((v) => !v)}>
         <Gamepad2 size={20} />
         <span class="nav-label">{t('instances.running', { count: list.length })}</span>
       </button>
@@ -99,14 +102,16 @@ function MinecraftStatus() {
 /** 07 §8.4: compte actiu a la barra lateral + menú per canviar/afegir; engranatge a Configuració. */
 function AccountZone() {
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const account = selectedAccount.value
   const name = account?.displayName ?? '—'
   const kind = account == null ? '' : account.type === 'microsoft' ? 'Microsoft' : t('ui.offlineLabel')
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       {open && (
-        <Card style={{ position: 'absolute', bottom: '100%', left: 0, minWidth: 240, marginBottom: 'var(--space-2)', zIndex: 10, padding: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Popover anchor={triggerRef.current} onClose={() => setOpen(false)} width={280}>
+          <div style={{ padding: 'var(--space-2)', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {accounts.value.map((a) => (
             <button key={a.uuid} type="button" class="nav-item" style={{ height: 48, width: '100%' }}
               aria-current={a.uuid === account?.uuid ? 'true' : undefined}
@@ -121,10 +126,11 @@ function AccountZone() {
           <button type="button" class="nav-item" style={{ width: '100%' }} onClick={() => { setOpen(false); navigate('/settings/account') }}>
             <Plus size={20} /><span>{t('ui.addAccount')}</span>
           </button>
-        </Card>
+          </div>
+        </Popover>
       )}
       <div class="account">
-        <button type="button" onClick={() => setOpen((v) => !v)} title={name} aria-label={t('ui.switchAccount')}
+        <button ref={triggerRef} type="button" onClick={() => setOpen((v) => !v)} title={name} aria-label={t('ui.switchAccount')}
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', background: 'none', border: 0, padding: 0, cursor: 'pointer', minWidth: 0, flex: 1, textAlign: 'left' }}>
           <Avatar name={name} />
           <div class="who"><b>{name}</b><span class="muted xs">{kind}</span></div>
