@@ -105,6 +105,7 @@ export interface Messages {
   }
   boot: {
     updateRequired: {
+      download: string
       restart: string
       none: string
       ready: string
@@ -215,6 +216,8 @@ export interface Messages {
       devModeHint: string
     }
     updates: {
+      download: string
+      manualMac: string
       channelHelp: string
       channel: string
       title: string
@@ -476,6 +479,7 @@ const en: Messages = {
   },
   boot: {
     updateRequired: {
+      download: 'Download the update',
       restart: 'Restart and install',
       none: 'No update found yet. Try again in a moment.',
       ready: 'Update ready. Restart the launcher to install it.',
@@ -586,6 +590,8 @@ const en: Messages = {
       devModeHint: 'Click the version number in About a few times to reveal this.'
     },
     updates: {
+      download: 'Download the update',
+      manualMac: 'Update {version} available. On macOS it must be downloaded and installed manually.',
       channelHelp: 'Receive beta versions before everyone else.',
       channel: 'Pre-release versions',
       title: 'Updates',

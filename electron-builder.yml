@@ -38,6 +38,9 @@ win:
 nsis:
   oneClick: true
 
+# macOS sense signatura (Developer ID): no hi ha actualització automàtica, només avís + descàrrega manual
+# (vegeu index.js i docs 12 C3c). Si algun dia es signa, cal afegir aquí el target 'zip' (és el que llegeix
+# electron-updater) i tornar a activar `autoDownload` a darwin.
 mac:
   target:
     - target: 'dmg'

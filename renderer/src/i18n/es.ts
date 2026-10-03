@@ -105,6 +105,7 @@ const es: Messages = {
   },
   boot: {
     updateRequired: {
+      download: 'Descargar la actualización',
       restart: 'Reiniciar e instalar',
       none: 'Aún no hay actualización. Inténtalo en un momento.',
       ready: 'Actualización lista. Reinicia el launcher para instalarla.',
@@ -215,6 +216,8 @@ const es: Messages = {
       devModeHint: 'Haz clic varias veces en el número de versión en Acerca de para revelar esto.'
     },
     updates: {
+      download: 'Descargar la actualización',
+      manualMac: 'Actualización {version} disponible. En macOS hay que descargarla e instalarla a mano.',
       channelHelp: 'Recibe versiones beta antes que nadie.',
       channel: 'Versiones preliminares',
       title: 'Actualizaciones',

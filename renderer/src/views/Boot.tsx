@@ -49,14 +49,14 @@ export function NeedNetwork() {
 /** 07 §2.4: la distribució exigeix un client més nou → bloqueig amb «Actualitza el client». L'updater
  * (`electron-updater`) baixa en silenci; aquí només es força la comprovació i es mostra l'estat. */
 export function UpdateRequired() {
-  type S = 'idle' | 'checking' | 'none' | 'downloading' | 'ready'
+  type S = 'idle' | 'checking' | 'none' | 'downloading' | 'ready' | 'manual'
   const [status, setStatus] = useState<S>('idle')
   const [percent, setPercent] = useState(0)
 
   useEffect(() => hellmc.updater.onEvent((e) => {
     if (e.type === 'checking-for-update') setStatus('checking')
     else if (e.type === 'update-not-available') setStatus('none')
-    else if (e.type === 'update-available') setStatus('downloading')
+    else if (e.type === 'update-available') setStatus(hellmc.system.platform === 'darwin' ? 'manual' : 'downloading')
     else if (e.type === 'download-progress') { setStatus('downloading'); setPercent(Math.round(e.info?.percent ?? 0)) }
     else if (e.type === 'update-downloaded') setStatus('ready')
   }), [])
@@ -66,7 +66,8 @@ export function UpdateRequired() {
   const line = status === 'checking' ? t('boot.updateRequired.checking')
     : status === 'none' ? t('boot.updateRequired.none')
     : status === 'downloading' ? t('boot.updateRequired.downloading', { percent })
-    : status === 'ready' ? t('boot.updateRequired.ready') : null
+    : status === 'ready' ? t('boot.updateRequired.ready')
+    : status === 'manual' ? t('settings.updates.manualMac', { version: '' }) : null
 
   return (
     <div class="app-shell" style={{ gridTemplateRows: 'minmax(0, 1fr)' }}>
@@ -76,7 +77,9 @@ export function UpdateRequired() {
           <div class="logo"><Download size={36} /></div>
           <div><h1 id="ur-title">{t('boot.updateRequired.title')}</h1><p class="muted" style={{ marginTop: 8 }}>{t('boot.updateRequired.body')}</p></div>
           {line != null && <p class="muted small" aria-live="polite">{line}</p>}
-          {status === 'ready'
+          {status === 'manual'
+            ? <Button variant="primary" size="lg" onClick={() => void hellmc.system.openExternal('https://github.com/TnTVlogs/HellMC-Client/releases/latest')}>{t('boot.updateRequired.download')}</Button>
+            : status === 'ready'
             ? <Button variant="primary" size="lg" onClick={() => void hellmc.updater.install()}>{t('boot.updateRequired.restart')}</Button>
             : <Button variant="primary" size="lg" disabled={status === 'checking' || status === 'downloading'} onClick={() => void hellmc.updater.check()}>{t('boot.updateRequired.check')}</Button>}
         </section>

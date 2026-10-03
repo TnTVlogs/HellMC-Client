@@ -7,6 +7,9 @@ import { Card } from '../../components/Card'
 import { Banner, Progress } from '../../components/ui'
 import { hellmc } from '../../api'
 
+const RELEASES_URL = 'https://github.com/TnTVlogs/HellMC-Client/releases/latest'
+const IS_MAC = hellmc.system.platform === 'darwin'
+
 type Status = 'idle' | 'checking' | 'upToDate' | 'available' | 'downloading' | 'ready' | 'error'
 
 /**
@@ -42,7 +45,7 @@ export function UpdatesSection() {
     switch (status) {
       case 'checking': return t('settings.updates.checking')
       case 'upToDate': return t('settings.updates.upToDate')
-      case 'available': return t('settings.updates.available', { version: version ?? '' })
+      case 'available': return IS_MAC ? t('settings.updates.manualMac', { version: version ?? '' }) : t('settings.updates.available', { version: version ?? '' })
       case 'downloading': return t('settings.updates.downloading', { percent })
       case 'ready': return `${t('settings.updates.ready')} ${t('settings.updates.readyHint')}`
       case 'error': return t('settings.updates.error', { message: errorMessage ?? '' })
@@ -58,6 +61,7 @@ export function UpdatesSection() {
           ? <Banner tone="warn">{statusLine}</Banner>
           : <Banner tone="info" icon={Info}>{statusLine}</Banner>
       )}
+      {IS_MAC && status === 'available' && <div><Button variant="primary" size="sm" onClick={() => void hellmc.system.openExternal(RELEASES_URL)}>{t('settings.updates.download')}</Button></div>}
       {status === 'downloading' && <Progress value={percent} />}
       {status === 'checking' && <Progress value={null} />}
       <Card>

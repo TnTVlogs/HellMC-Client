@@ -17,7 +17,7 @@ const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('.
 // sempre, també en una actualització silenciosa — `isSilent` de `quitAndInstall` només
 // suprimeix la UI de l'INSTAL·LADOR, no evita l'assistent si el paquet es va construir amb
 // `oneClick:false`); canviat a `oneClick: true`. Amb això, `autoDownload` (ja `true` per
-// defecte a win/linux, nomes `false` a `darwin` —Squirrel.Mac no té el mateix suport silenciós)
+// defecte; a `darwin` es manté `false`: l'app no està signada i només s'avisa, vegeu més avall)
 // + `autoInstallOnAppQuit` (per defecte `true`, només desactivat a `isDev`) ja basten: es
 // baixa en segon pla sense preguntar i s'instal·la sola el proper cop que l'app es tanqui del
 // tot, sense cap diàleg «Reinicia ara?».
@@ -38,8 +38,11 @@ function configureAutoUpdater(allowPrerelease) {
         autoUpdater.autoInstallOnAppQuit = false
         autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml')
     }
+    // macOS sense signatura (Developer ID): Squirrel.Mac no instal·laria res. Només s'avisa que hi ha una
+    // versió nova (`update-available`) i la interfície porta a la pàgina de descàrrega; no es baixa res.
     if (process.platform === 'darwin') {
         autoUpdater.autoDownload = false
+        autoUpdater.autoInstallOnAppQuit = false
     }
     autoUpdater.removeAllListeners()
     autoUpdater.on('checking-for-update', () => {

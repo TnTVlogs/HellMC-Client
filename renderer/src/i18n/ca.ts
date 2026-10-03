@@ -105,6 +105,7 @@ const ca: Messages = {
   },
   boot: {
     updateRequired: {
+      download: "Descarrega l'actualització",
       restart: 'Reinicia i instal·la',
       none: 'Encara no hi ha cap actualització. Torna-ho a provar d’aquí una estona.',
       ready: 'Actualització llesta. Reinicia el launcher per instal·lar-la.',
@@ -215,6 +216,8 @@ const ca: Messages = {
       devModeHint: 'Clica unes quantes vegades el número de versió a Sobre per revelar això.'
     },
     updates: {
+      download: "Descarrega l'actualització",
+      manualMac: "Actualització {version} disponible. A macOS s'ha de descarregar i instal·lar a mà.",
       channelHelp: 'Rep versions beta abans que ningú.',
       channel: 'Versions preliminars',
       title: 'Actualitzacions',
