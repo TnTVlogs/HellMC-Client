@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { Box, Check, ExternalLink, Info, Lock, Play, Search, ShieldCheck, Trash2, Download } from 'lucide-preact'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { Tabs } from '../components/Tabs'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Toggle } from '../components/Toggle'
+import { Banner, Chip, Progress } from '../components/ui'
 import { navigate } from '../router'
 import { distro } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
@@ -16,48 +18,44 @@ import { hellmc, type VersionSettings, type JavaInfo, type JavaDownloadProgress,
 import { formatBytes } from '../utils/format'
 import { build as buildModGroup, type ModGroupState } from '../utils/modgroups'
 
-// 07 §4.2: pestanyes Resum + Java/memòria + Fitxers + Mods.
+// 07 §4.2: pestanyes Resum + Mods + Java/memòria + Fitxers. Marcat i classes del prototip.
 
 function FilesTab({ versionId }: { versionId: string }) {
   const status = statuses.value[versionId]
-  if (status == null) {
-    return <p style={{ color: 'var(--text-muted)' }}>{t('home.loadingDistro')}</p>
-  }
+  if (status == null) return <p class="muted">{t('home.loadingDistro')}</p>
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.files.path')}</span>
-        <span style={{ color: 'var(--text)', wordBreak: 'break-all' }}>{status.path}</span>
-        {!status.installed && (
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>{t('versionDetail.files.notInstalled')}</span>
-        )}
+    <Card>
+      <div class="set-row">
+        <div class="l">
+          <b>{t('versionDetail.files.path')}</b>
+          <span class="num" style={{ wordBreak: 'break-all' }}>{status.path}</span>
+          {!status.installed && <span style={{ display: 'block' }}>{t('versionDetail.files.notInstalled')}</span>}
+        </div>
+        <Button size="sm" disabled={!status.installed} onClick={() => void hellmc.system.openPath(status.path)}>
+          <ExternalLink size={16} /> {t('versionDetail.files.openFolder')}
+        </Button>
       </div>
       {status.installed && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.files.size')}</span>
-          <span style={{ color: 'var(--text)' }}>{formatBytes(status.sizeBytes)}</span>
-        </div>
+        <div class="set-row"><div class="l"><b>{t('versionDetail.files.size')}</b><span>{formatBytes(status.sizeBytes)}</span></div></div>
       )}
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={!status.installed}
-        style={{ alignSelf: 'flex-start' }}
-        onClick={() => void hellmc.system.openPath(status.path)}
-      >
-        {t('versionDetail.files.openFolder')}
-      </Button>
-    </div>
+    </Card>
   )
 }
 
-// `ready` es mostra només l'instant entre extreure i que `handleDownload` netegi l'estat — es
-// reaprofita el text d'«Extraient» en comptes d'una clau pròpia per a una fracció de segon.
+// `ready` es mostra només l'instant entre extreure i que `handleDownload` netegi l'estat.
 const DOWNLOAD_PHASE_KEYS: Record<JavaDownloadProgress['phase'], string> = {
   'fetching-jdk': 'versionDetail.java.phase.fetchingJdk',
   'downloading-java': 'versionDetail.java.phase.downloadingJava',
   'extracting-java': 'versionDetail.java.phase.extractingJava',
   ready: 'versionDetail.java.phase.extractingJava'
+}
+
+/** `"2G"`/`"2048M"` → GB (enter, mínim 1). */
+function toGb(value: string): number {
+  const m = /^(\d+(?:\.\d+)?)\s*([GMgm])?/.exec(value.trim())
+  if (m == null) return 1
+  const n = Number.parseFloat(m[1])
+  return Math.max(1, Math.round(m[2]?.toUpperCase() === 'M' ? n / 1024 : n))
 }
 
 function JavaMemoryTab({ versionId }: { versionId: string }) {
@@ -67,27 +65,38 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
   const [downloading, setDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState<JavaDownloadProgress | null>(null)
   const [downloadFailed, setDownloadFailed] = useState(false)
+  const [totalGb, setTotalGb] = useState(16)
+  const [jvm, setJvm] = useState('')
+  const [minGb, setMinGb] = useState(1)
+  const [maxGb, setMaxGb] = useState(2)
 
   useEffect(() => {
-    void hellmc.config.getVersion(versionId).then(setSettings)
+    void hellmc.config.getVersion(versionId).then((s) => {
+      setSettings(s)
+      setJvm(s.jvmOptions.join(' '))
+      setMinGb(toGb(s.minRAM))
+      setMaxGb(toGb(s.maxRAM))
+    })
+    void hellmc.system.memory().then((m) => setTotalGb(Math.max(2, Math.floor(m.totalMb / 1024))))
   }, [versionId])
 
-  // Progrés en viu de `hellmc:java-download-progress` (fases fetching-jdk/downloading-java/
-  // extracting-java) — filtrat per `versionId` perquè un altre `VersionDetail` obert no interfereixi.
+  // Progrés en viu de `hellmc:java-download-progress`, filtrat per `versionId`.
   useEffect(() => {
     return hellmc.java.onDownloadProgress((vId, p) => {
       if (vId === versionId) setDownloadProgress(p)
     })
   }, [versionId])
 
+  async function reload() {
+    setSettings(await hellmc.config.getVersion(versionId))
+  }
+
   async function handleDetect() {
     setDetecting(true)
     try {
       const info = await hellmc.java.detect(versionId)
       setJavaInfo(info)
-      if (info.available) {
-        setSettings(await hellmc.config.getVersion(versionId))
-      }
+      if (info.available) await reload()
     } finally {
       setDetecting(false)
     }
@@ -97,11 +106,10 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
     const picked = await hellmc.java.pick()
     if (picked == null) return
     await hellmc.config.setVersion(versionId, { executable: picked })
-    setSettings(await hellmc.config.getVersion(versionId))
+    await reload()
   }
 
-  // 2.3: només ofert un cop `detect` ja ha confirmat que no n'hi ha cap de compatible (mateix
-  // moment que l'app antiga, `landing.js:asyncSystemScan`, ofereix el diàleg de baixada).
+  // Només ofert un cop `detect` ja ha confirmat que no n'hi ha cap de compatible.
   async function handleDownload() {
     setDownloading(true)
     setDownloadFailed(false)
@@ -109,7 +117,7 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
     try {
       const info = await hellmc.java.download(versionId)
       setJavaInfo(info)
-      setSettings(await hellmc.config.getVersion(versionId))
+      await reload()
     } catch {
       setDownloadFailed(true)
     } finally {
@@ -118,62 +126,73 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
     }
   }
 
-  async function handleRamChange(field: 'minRAM' | 'maxRAM', value: string) {
-    await hellmc.config.setVersion(versionId, { [field]: value })
-    setSettings(await hellmc.config.getVersion(versionId))
+  async function commitRam(field: 'minRAM' | 'maxRAM', gb: number) {
+    await hellmc.config.setVersion(versionId, { [field]: `${gb}G` })
+    await reload()
   }
 
-  if (settings == null) {
-    return <p style={{ color: 'var(--text-muted)' }}>{t('home.loadingDistro')}</p>
+  async function commitJvm() {
+    await hellmc.config.setVersion(versionId, { jvmOptions: jvm.split(/\s+/).filter(Boolean) })
+    await reload()
   }
+
+  if (settings == null) return <p class="muted">{t('home.loadingDistro')}</p>
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.java.executable')}</span>
-        <span style={{ color: 'var(--text)' }}>{settings.executable ?? t('versionDetail.java.notConfigured')}</span>
-        {javaInfo != null && !javaInfo.available && (
-          <span style={{ color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>{t('versionDetail.java.noneFound')}</span>
-        )}
-        {downloadFailed && (
-          <span style={{ color: 'var(--danger)', fontSize: 'var(--fs-sm)' }}>{t('versionDetail.java.downloadFailed')}</span>
-        )}
-        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-          <Button variant="secondary" size="sm" disabled={detecting || downloading} onClick={() => void handleDetect()}>
+    <div class="card pad spanel" style={{ maxWidth: 'none' }}>
+      <div class="slider-row">
+        <label for="ram-min">{t('versionDetail.java.minRam')}</label>
+        <input id="ram-min" type="range" min={1} max={totalGb} value={minGb}
+          onInput={(e) => { const v = Number((e.target as HTMLInputElement).value); setMinGb(v); if (v > maxGb) setMaxGb(v) }}
+          onChange={() => { void commitRam('minRAM', minGb); if (minGb > maxGb) void commitRam('maxRAM', minGb) }} />
+        <span class="num">{minGb} GB</span>
+      </div>
+      <div class="slider-row">
+        <label for="ram-max">{t('versionDetail.java.maxRam')}</label>
+        <input id="ram-max" type="range" min={1} max={totalGb} value={maxGb}
+          onInput={(e) => { const v = Number((e.target as HTMLInputElement).value); setMaxGb(v); if (v < minGb) setMinGb(v) }}
+          onChange={() => { void commitRam('maxRAM', maxGb); if (maxGb < minGb) void commitRam('minRAM', maxGb) }} />
+        <span class="num">{maxGb} GB</span>
+      </div>
+
+      <div class="set-row" style={{ paddingInline: 0 }}>
+        <div class="l">
+          <b>{t('versionDetail.java.executable')}</b>
+          <span style={{ wordBreak: 'break-all' }}>{settings.executable ?? t('versionDetail.java.notConfigured')}</span>
+          {javaInfo != null && !javaInfo.available && <span style={{ display: 'block', color: 'var(--danger)' }}>{t('versionDetail.java.noneFound')}</span>}
+          {downloadFailed && <span style={{ display: 'block', color: 'var(--danger)' }}>{t('versionDetail.java.downloadFailed')}</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Button size="sm" disabled={detecting || downloading} onClick={() => void handleDetect()}>
             {detecting ? t('versionDetail.java.detecting') : t('versionDetail.java.autoDetect')}
           </Button>
-          <Button variant="ghost" size="sm" disabled={downloading} onClick={() => void handlePick()}>{t('versionDetail.java.chooseManually')}</Button>
+          <Button size="sm" variant="ghost" disabled={downloading} onClick={() => void handlePick()}>{t('versionDetail.java.chooseManually')}</Button>
           {javaInfo != null && !javaInfo.available && (
-            <Button variant="primary" size="sm" disabled={downloading} onClick={() => void handleDownload()}>
-              {t('versionDetail.java.downloadAuto')}
+            <Button size="sm" variant="primary" disabled={downloading} onClick={() => void handleDownload()}>
+              <Download size={16} /> {t('versionDetail.java.downloadAuto')}
             </Button>
           )}
         </div>
-        {downloading && downloadProgress != null && (
-          <span style={{ color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>
-            {t(DOWNLOAD_PHASE_KEYS[downloadProgress.phase])}
-            {downloadProgress.phase === 'downloading-java' ? ` — ${downloadProgress.percent}%` : ''}
-          </span>
-        )}
       </div>
+      {downloading && downloadProgress != null && (
+        <div class="pc-progress on" style={{ display: 'flex' }}>
+          <div class="row"><span>{t(DOWNLOAD_PHASE_KEYS[downloadProgress.phase])}</span>
+            <span class="num">{downloadProgress.phase === 'downloading-java' ? `${downloadProgress.percent}%` : ''}</span></div>
+          <Progress value={downloadProgress.phase === 'downloading-java' ? downloadProgress.percent : null} />
+        </div>
+      )}
 
-      <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.java.minRam')}</span>
-          <input class="input" value={settings.minRAM} onChange={(e) => void handleRamChange('minRAM', (e.target as HTMLInputElement).value)} />
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.java.maxRam')}</span>
-          <input class="input" value={settings.maxRAM} onChange={(e) => void handleRamChange('maxRAM', (e.target as HTMLInputElement).value)} />
-        </label>
+      <div class="field-row">
+        <label for="jvm-args">{t('ui.jvmArgs')}</label>
+        <input id="jvm-args" class="field" value={jvm} onInput={(e) => setJvm((e.target as HTMLInputElement).value)} onBlur={() => void commitJvm()} />
       </div>
+      <p class="muted small">{t('ui.ramHint', { total: totalGb })}</p>
     </div>
   )
 }
 
-// 07 §4.4 (D26): interruptor per versió, sota les accions de Resum. Amagat del tot si la versió és
-// `forcedSeparate` (l'admin la fixa, 01 §3.1.1) — en el seu lloc un text fix explicant per què, mai
-// l'interruptor desactivat (podria semblar que el jugador el pot canviar si insisteix).
+// 07 §4.4 (D26): interruptor per versió. Amagat del tot si la versió és `forcedSeparate` — en el seu
+// lloc un text fix explicant per què.
 function DataSharingToggle({ versionId }: { versionId: string }) {
   const [pref, setPref] = useState<DataSharingPreference | null>(null)
 
@@ -189,34 +208,31 @@ function DataSharingToggle({ versionId }: { versionId: string }) {
   if (pref == null) return null
 
   if (pref.forced) {
-    return (
-      <p style={{ margin: 0, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }} title={t('versionDetail.dataSharing.forcedTooltip')}>
-        {t('versionDetail.dataSharing.forcedNotice')}
-      </p>
-    )
+    return <p class="muted small" title={t('versionDetail.dataSharing.forcedTooltip')}>{t('versionDetail.dataSharing.forcedNotice')}</p>
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', cursor: 'pointer' }}>
+    <Card>
+      <div class="set-row">
+        <div class="l">
+          <b>{t('versionDetail.dataSharing.title')}</b>
+          <span>{t('versionDetail.dataSharing.help')}</span>
+          <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('versionDetail.dataSharing.changeNotice')}</span>
+        </div>
         <Toggle checked={pref.shared} onChange={(v) => void handleChange(v)} label={t('versionDetail.dataSharing.title')} />
-        <span style={{ color: 'var(--text)' }}>{t('versionDetail.dataSharing.title')}</span>
-      </label>
-      <p style={{ margin: 0, fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>{t('versionDetail.dataSharing.help')}</p>
-      <p style={{ margin: 0, fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.dataSharing.changeNotice')}</p>
-    </div>
+      </div>
+    </Card>
   )
 }
 
-// 07 §4.2 pt.2 (`docs/mod-dependency-groups`): mods opcionals com a grup (D1-D6). La lògica del graf
-// (`utils/modgroups.ts`) és un port TS de `app/assets/js/modgroups.js`, ja provat i en ús real
-// (`ProcessBuilder.enforceModDependencies` l'aplica a cada llançament des de la sessió 2026-09-24) —
-// aquí només cal la UI, mai reimplementar l'algorisme. Llista **plana** sempre (D5): mai subgrups.
+// 07 §4.2 pt.2 (`docs/mod-dependency-groups`): mods opcionals com a grup. La lògica del graf
+// (`utils/modgroups.ts`) és un port TS de `app/assets/js/modgroups.js`, ja en ús real
+// (`ProcessBuilder.enforceModDependencies`). Llista **plana** sempre (D5).
 function ModsTab({ versionId }: { versionId: string }) {
   const [mods, setMods] = useState<ModInfo[] | null>(null)
   const [state, setState] = useState<ModGroupState>(new Map())
   const [search, setSearch] = useState('')
-  const [note, setNote] = useState<string | null>(null)
+  const [note, setNote] = useState<{ id: string; text: string } | null>(null)
 
   const graph = useMemo(() => (mods != null ? buildModGroup(mods.map((m) => ({ id: m.id, required: m.required, dependencies: m.dependencies }))) : null), [mods])
   const byId = useMemo(() => (mods != null ? new Map(mods.map((m) => [m.id, m])) : null), [mods])
@@ -228,10 +244,7 @@ function ModsTab({ versionId }: { versionId: string }) {
       if (cancelled) return
       const initial: ModGroupState = new Map(list.filter((m) => !m.required).map((m) => [m.id, rawState[m.key] === true]))
       const g = buildModGroup(list.map((m) => ({ id: m.id, required: m.required, dependencies: m.dependencies })))
-      // Coherència en obrir la pestanya (05-client.md §3.5): una configuració antiga pot tenir un
-      // mod activat amb una dependència desactivada (p. ex. distribució nova amb dependències que
-      // no existien quan es va desar l'estat). Es força i es persisteix de seguida, no s'espera a
-      // cap acció del jugador.
+      // Coherència en obrir la pestanya (05-client.md §3.5): es força i es persisteix de seguida.
       const forced = g.normalize(initial)
       setMods(list)
       setState(initial)
@@ -258,7 +271,7 @@ function ModsTab({ versionId }: { versionId: string }) {
     if (graph == null || mods == null) return
     const next = new Map(state)
     const changed = checked ? graph.enable(next, mod.id) : graph.disable(next, mod.id)
-    if (changed == null) return // xarxa de seguretat: l'interruptor ja hauria d'estar desactivat
+    if (changed == null) return // xarxa de seguretat: l'interruptor ja hauria d'estar bloquejat
     setState(next)
     const patch: Record<string, boolean> = {}
     for (const cid of changed) {
@@ -267,67 +280,57 @@ function ModsTab({ versionId }: { versionId: string }) {
     }
     await hellmc.mods.setState(versionId, patch)
     const others = changed.filter((cid) => cid !== mod.id)
-    setNote(others.length > 0 ? t(checked ? 'versionDetail.mods.alsoEnabled' : 'versionDetail.mods.alsoDisabled', { list: nameList(others) }) : null)
+    setNote(others.length > 0 ? { id: mod.id, text: t(checked ? 'versionDetail.mods.alsoEnabled' : 'versionDetail.mods.alsoDisabled', { list: nameList(others) }) } : null)
   }
 
-  if (mods == null || graph == null) {
-    return <p style={{ color: 'var(--text-muted)' }}>{t('home.loadingDistro')}</p>
-  }
-  if (mods.length === 0) {
-    return <p style={{ color: 'var(--text-muted)' }}>{t('versionDetail.mods.empty')}</p>
-  }
+  if (mods == null || graph == null) return <p class="muted">{t('home.loadingDistro')}</p>
+  if (mods.length === 0) return <p class="muted">{t('versionDetail.mods.empty')}</p>
 
   const query = search.trim().toLowerCase()
   const visible = query === '' ? mods : mods.filter((m) => m.name.toLowerCase().includes(query))
+  const optional = visible.filter((m) => !m.required)
+  const required = visible.filter((m) => m.required)
   const optionalCount = mods.filter((m) => !m.required).length
   const enabledCount = mods.filter((m) => !m.required && state.get(m.id) === true).length
 
+  const row = (m: ModInfo) => {
+    const enabled = m.required || state.get(m.id) === true
+    const blockers = !m.required && enabled ? graph.blockers(state, m.id) : []
+    const blocked = blockers.length > 0
+    return (
+      <div key={m.id} class="mod">
+        <div class="mod-ico">{m.required ? <Lock size={16} /> : <Box size={16} />}</div>
+        <div class="info">
+          <b>{m.name}</b>
+          {blocked && <span class="note">{t('versionDetail.mods.blocked', { list: nameList(blockers) })}</span>}
+          {note?.id === m.id && !blocked && <span class="note">{note.text}</span>}
+        </div>
+        <Toggle checked={enabled} disabled={m.required} blocked={blocked} onChange={(v) => { if (!blocked) void handleToggle(m, v) }} label={m.name}
+          title={blocked ? t('versionDetail.mods.blocked', { list: nameList(blockers) }) : undefined} />
+      </div>
+    )
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
-        <input
-          class="input"
-          placeholder={t('versionDetail.mods.search')}
-          value={search}
-          onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
-          style={{ flex: '1 1 200px' }}
-        />
-        {optionalCount > 0 && (
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>
-            {t('versionDetail.mods.count', { enabled: enabledCount, total: optionalCount })}
-          </span>
-        )}
+    <>
+      <Banner tone="info" icon={Info}>{t('ui.modsHint')}</Banner>
+      <div class="section-title" style={{ marginTop: 'var(--space-4)' }}>
+        <h2>{t('ui.optional')}</h2>
+        {optionalCount > 0 && <span class="muted small">{t('versionDetail.mods.count', { enabled: enabledCount, total: optionalCount })}</span>}
+        <span class="spacer" />
+        <div class="search"><Search size={18} />
+          <input class="field" placeholder={t('versionDetail.mods.search')} aria-label={t('versionDetail.mods.search')} value={search}
+            onInput={(e) => setSearch((e.target as HTMLInputElement).value)} />
+        </div>
       </div>
-
-      {note != null && (
-        <p style={{ margin: 0, fontSize: 'var(--fs-sm)', color: 'var(--accent)' }}>{note}</p>
+      {optional.length > 0 && <Card>{optional.map(row)}</Card>}
+      {required.length > 0 && (
+        <>
+          <div class="section-title" style={{ marginTop: 'var(--space-6)' }}><h2>{t('ui.requiredMods')}</h2><span class="muted small">{t('ui.alwaysOn')}</span></div>
+          <Card>{required.map(row)}</Card>
+        </>
       )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        {visible.map((m) => {
-          const enabled = m.required || state.get(m.id) === true
-          const blockers = !m.required && enabled ? graph.blockers(state, m.id) : []
-          const blocked = blockers.length > 0
-          return (
-            <Card key={m.id} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
-                <span style={{ color: 'var(--text)' }}>{m.name}</span>
-                {m.required ? (
-                  <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>{t('versionDetail.mods.required')}</span>
-                ) : (
-                  <Toggle checked={enabled} disabled={blocked} onChange={(v) => void handleToggle(m, v)} label={m.name} />
-                )}
-              </div>
-              {blocked && (
-                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
-                  {t('versionDetail.mods.blocked', { list: nameList(blockers) })}
-                </span>
-              )}
-            </Card>
-          )
-        })}
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -341,16 +344,12 @@ export function VersionDetail({ id }: { id: string }) {
     void refreshStatus(id)
   }, [id])
 
-  if (d == null) {
-    return <p style={{ color: 'var(--text-muted)' }}>{t('home.loadingDistro')}</p>
-  }
+  if (d == null) return <p class="muted">{t('home.loadingDistro')}</p>
   if (version == null) {
     return (
-      <Card>
-        <p style={{ margin: 0, color: 'var(--text-muted)' }}>{t('versionDetail.notFound')}</p>
-        <Button variant="secondary" style={{ marginTop: 'var(--space-3)' }} onClick={() => navigate('#/versions')}>
-          {t('versionDetail.back')}
-        </Button>
+      <Card pad>
+        <p class="muted">{t('versionDetail.notFound')}</p>
+        <Button style={{ marginTop: 'var(--space-3)' }} onClick={() => navigate('/versions')}>{t('versionDetail.back')}</Button>
       </Card>
     )
   }
@@ -359,25 +358,56 @@ export function VersionDetail({ id }: { id: string }) {
   const taskProgress = progress.value[id]
   const isBusy = busy.value[id] === true
   const availableServers = d.servers.filter((s) => s.versions.some((v) => v.id === id))
+  // Sanititzat amb DOMPurify abans de pintar (07 §4.2) — mai HTML cru sense passar-hi.
   const changelogHtml = version.changelog != null ? DOMPurify.sanitize(marked.parse(version.changelog, { async: false })) : null
 
   async function handlePlayWithoutServer() {
     await selectServer(null)
     await selectVersion(id)
-    navigate('#/')
+    navigate('/home')
     await launch({ serverId: null, versionId: id })
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <Button variant="ghost" size="sm" style={{ alignSelf: 'flex-start' }} onClick={() => navigate('#/versions')}>
-        {t('versionDetail.back')}
-      </Button>
+    <>
+      <div><a class="small" href="#/versions">← {t('nav.versions')}</a></div>
+      <div class="page-head">
+        <div class="grow">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <h1>{version.name}</h1>
+            {status?.installed === true && (status.needsUpdate ? <Chip tone="warn">{t('versions.updateAvailable')}</Chip> : <Chip tone="ok" icon={Check}>{t('versions.installed')}</Chip>)}
+            {status != null && !status.installed && <Chip>{t('versions.notInstalled')}</Chip>}
+          </div>
+          <p>
+            Minecraft {version.minecraftVersion} · {version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''} · {t('ui.revision')} {version.version}
+            {status?.installed === true ? ` · ${formatBytes(status.sizeBytes)}` : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {status?.installed !== true && (
+            <Button variant="primary" disabled={isBusy} onClick={() => void install(id)}><Download size={18} /> {t('versions.install')}</Button>
+          )}
+          {status?.installed === true && (
+            <>
+              <Button disabled={isBusy} onClick={() => void verify(id)}><ShieldCheck size={18} /> {t('versionDetail.verify')}</Button>
+              <Button variant="danger" disabled={isBusy} onClick={() => setConfirmingUninstall(true)}><Trash2 size={18} /> {t('versionDetail.uninstall')}</Button>
+              <Button variant="primary" disabled={isBusy} onClick={() => void handlePlayWithoutServer()}><Play size={18} fill="currentColor" /> {t('ui.playWithoutServer')}</Button>
+            </>
+          )}
+        </div>
+      </div>
 
-      <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{version.name}</h1>
-      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
-        {version.minecraftVersion} · {version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''} · {version.version}
-      </span>
+      {isBusy && (
+        <Card pad>
+          <div class="pc-progress on" style={{ display: 'flex' }}>
+            <div class="row">
+              <span>{taskProgress?.message != null ? t(`home.phase.${taskProgress.message}`) : t('ui.working')}</span>
+              <span class="num">{taskProgress != null && taskProgress.percent > 0 ? `${Math.round(taskProgress.percent)}%` : ''}</span>
+            </div>
+            <Progress value={taskProgress != null && taskProgress.percent > 0 ? taskProgress.percent : null} />
+          </div>
+        </Card>
+      )}
 
       <Tabs
         active={tab}
@@ -391,69 +421,47 @@ export function VersionDetail({ id }: { id: string }) {
       />
 
       {tab === 'summary' && (
-        <Card style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          <p style={{ margin: 0, color: 'var(--text-muted)' }}>{version.description}</p>
-
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-            {status?.installed !== true && (
-              <Button variant="primary" disabled={isBusy} onClick={() => void install(id)}>{t('versions.install')}</Button>
-            )}
-            {status?.installed === true && (
-              <>
-                <Button variant="primary" disabled={isBusy} onClick={() => void handlePlayWithoutServer()}>{t('home.play')}</Button>
-                <Button variant="secondary" disabled={isBusy} onClick={() => void verify(id)}>{t('versionDetail.verify')}</Button>
-                <Button variant="danger" disabled={isBusy} onClick={() => setConfirmingUninstall(true)}>{t('versionDetail.uninstall')}</Button>
-              </>
-            )}
+        <div class="detail">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-section)' }}>
+            <div class="prose">
+              <p>{version.description}</p>
+              {changelogHtml != null && (
+                <>
+                  <h2>{t('versionDetail.changelog')}</h2>
+                  <div class="markdown-body" dangerouslySetInnerHTML={{ __html: changelogHtml }} />
+                </>
+              )}
+            </div>
+            <DataSharingToggle versionId={id} />
           </div>
-
-          {isBusy && taskProgress != null && (
-            <span style={{ color: 'var(--text-muted)' }}>
-              {t(`home.phase.${taskProgress.message}`)} — {Math.round(taskProgress.percent)}%
-            </span>
-          )}
-
-          {status?.installed === true && !isBusy && (
-            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>
-              {formatBytes(status.sizeBytes)}{status.needsUpdate ? ` · ${t('versions.updateAvailable')}` : ''}
-            </span>
-          )}
-
-          <DataSharingToggle versionId={id} />
-
-          {availableServers.length > 0 && (
-            <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-              {availableServers.map((s) => (
-                <Button key={s.id} variant="ghost" size="sm" onClick={() => navigate(`#/servers/${s.id}`)}>{s.name}</Button>
-              ))}
+          <aside class="aside">
+            {availableServers.length > 0 && (
+              <div class="card pad">
+                <h3 style={{ marginBottom: 'var(--space-3)' }}>{t('ui.availableAt')}</h3>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {availableServers.map((s, i) => (
+                    <button key={s.id} type="button" class={`chip${i === 0 ? ' accent' : ''}`} onClick={() => navigate(`/servers/${s.id}`)}>{s.name}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div class="card pad">
+              <div class="kv"><span>Minecraft</span><span>{version.minecraftVersion}</span></div>
+              <div class="kv"><span>Loader</span><span>{version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''}</span></div>
+              {version.javaOptions?.suggestedMajor != null && <div class="kv"><span>{t('ui.suggestedJava')}</span><span>{version.javaOptions.suggestedMajor}</span></div>}
+              {status != null && (
+                <div class="kv"><span>{t('ui.folder')}</span>
+                  <a href="#" onClick={(e) => { e.preventDefault(); if (status.installed) void hellmc.system.openPath(status.path) }}>{t('ui.open')}</a>
+                </div>
+              )}
             </div>
-          )}
-
-          {changelogHtml != null && (
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 'var(--space-4)' }}>
-              <h2 style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--text)', margin: '0 0 var(--space-2)' }}>
-                {t('versionDetail.changelog')}
-              </h2>
-              {/* Sanititzat amb DOMPurify just abans de calcular `changelogHtml` (07 §4.2) — mai HTML cru sense passar-hi. */}
-              <div class="markdown-body" dangerouslySetInnerHTML={{ __html: changelogHtml }} />
-            </div>
-          )}
-        </Card>
+          </aside>
+        </div>
       )}
 
       {tab === 'mods' && <ModsTab versionId={id} />}
-
-      {tab === 'java' && (
-        <Card>
-          <JavaMemoryTab versionId={id} />
-        </Card>
-      )}
-
-      {tab === 'files' && (
-        <Card>
-          <FilesTab versionId={id} />
-        </Card>
-      )}
+      {tab === 'java' && <JavaMemoryTab versionId={id} />}
+      {tab === 'files' && <FilesTab versionId={id} />}
 
       {confirmingUninstall && (
         <ConfirmDialog
@@ -465,6 +473,6 @@ export function VersionDetail({ id }: { id: string }) {
           onConfirm={() => { setConfirmingUninstall(false); void uninstall(id) }}
         />
       )}
-    </div>
+    </>
   )
 }

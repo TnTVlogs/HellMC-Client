@@ -15,28 +15,34 @@ and [HellMC-Distribution-Types](https://github.com/TnTVlogs/HellMC-Distribution-
 
 ## Features
 
-* 🔒 Full account management.
+* 🔒 Account management.
   * Add multiple accounts and easily switch between them.
-  * Microsoft (OAuth 2.0) + Mojang (Yggdrasil) authentication fully supported.
-  * Credentials are never stored and transmitted directly to Mojang.
+  * Microsoft (OAuth 2.0) sign-in, or an offline account (just a username) to play without a connection.
+  * Credentials are never stored and are sent directly to Microsoft.
+* 🖥️ Servers and versions.
+  * Pick a server and a version, or play any version without a server.
+  * Live player count (direct ping), per-version install, verify and uninstall.
+  * Optional mods with dependency groups, per-version Java and memory settings.
 * 📂 Efficient asset management.
-  * Receive client updates as soon as we release them.
   * Files are validated before launch. Corrupt or incorrect files will be redownloaded.
-* ☕ **Automatic Java validation.**
+* ☕ **Automatic Java detection and download.**
   * You do not need to have Java installed to run the launcher.
-* 📰 News feed natively built into the launcher.
-* ⚙️ Intuitive settings management, including a Java control panel.
-* Supports all of our servers.
-
-**Requirements**
-* [Node.js](https://nodejs.org/) v22 (for development)
-
-  * Switch between server configurations with ease.
-  * View the player count of the selected server.
-* Automatic updates. That's right, the launcher updates itself.
-*  View the status of Mojang's services.
+* 📰 News feed (global and per server), with an in-app reader and offline cache.
+* 🌐 English, Spanish and Catalan; dark, light and system themes.
+* Silent automatic updates (Discord-style).
 
 This is not an exhaustive list. Download and install the launcher to gauge all it can do!
+
+## Development
+
+* [Node.js](https://nodejs.org/) v22
+* `npm install`
+* `npm run dev` — Vite + Electron with hot reload for the interface (`renderer/`).
+* `npm start` — builds the interface and runs the app. `npm run dist` builds the installer.
+* `npm run lint` — Biome.
+
+The interface lives in `renderer/` (Preact + Vite + TypeScript); the main process is `index.js` and the
+bridge exposed to the interface is `src-node/preload.js` (`window.hellmc`).
 
 #### Necesitas ayuda? [Contáctanos en discord](https://discord.gg/yScnSw7cFt)
 

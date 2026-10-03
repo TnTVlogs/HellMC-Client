@@ -6,10 +6,8 @@ import { Toggle } from '../../components/Toggle'
 import { hellmc, type DataSharingRoot, type GameSettings } from '../../api'
 
 /**
- * 07 §6 «Joc» (completa, 2.5): resolució/pantalla completa/autoconnect/launch detached/carpeta de
- * dades + l'arrel de dades compartides (D26, §6.2, ja hi era des de 2.3 §14). `ProcessBuilder` ja
- * llegeix tots aquests camps directament de `ConfigManager` (`api.ts` `GameSettings`) — persistir-
- * los aquí n'hi ha prou, no calia tocar `launch.start`.
+ * 07 §6 «Joc»: resolució/pantalla completa/autoconnect/launch detached/carpeta de dades + l'arrel
+ * de dades compartides (D26, §6.2). `ProcessBuilder` ja llegeix aquests camps de `ConfigManager`.
  */
 function GeneralGameSection() {
   const [settings, setSettings] = useState<GameSettings | null>(null)
@@ -39,68 +37,33 @@ function GeneralGameSection() {
 
   return (
     <Card>
-      <h2 style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--text)', margin: 0 }}>
-        {t('settings.game.title')}
-      </h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', marginTop: 'var(--space-4)' }}>
-        <div>
-          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', margin: '0 0 var(--space-2)' }}>
-            {t('settings.game.resolution')}
-          </p>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-            <input
-              class="input"
-              type="number"
-              min={0}
-              aria-label={t('settings.game.width')}
-              value={width}
-              onInput={(e) => setWidth((e.target as HTMLInputElement).value)}
-              onBlur={() => void patch({ resWidth: Number.parseInt(width, 10) })}
-              style={{ width: 90 }}
-            />
-            <span style={{ color: 'var(--text-faint)' }}>×</span>
-            <input
-              class="input"
-              type="number"
-              min={0}
-              aria-label={t('settings.game.height')}
-              value={height}
-              onInput={(e) => setHeight((e.target as HTMLInputElement).value)}
-              onBlur={() => void patch({ resHeight: Number.parseInt(height, 10) })}
-              style={{ width: 90 }}
-            />
-          </div>
+      <div class="set-row">
+        <div class="l"><b>{t('settings.game.resolution')}</b><span>{t('ui.descResolution')}</span></div>
+        <input class="field sm" type="number" min={0} style={{ width: 84 }} aria-label={t('settings.game.width')} value={width}
+          onInput={(e) => setWidth((e.target as HTMLInputElement).value)} onBlur={() => void patch({ resWidth: Number.parseInt(width, 10) })} />
+        <span class="faint">×</span>
+        <input class="field sm" type="number" min={0} style={{ width: 84 }} aria-label={t('settings.game.height')} value={height}
+          onInput={(e) => setHeight((e.target as HTMLInputElement).value)} onBlur={() => void patch({ resHeight: Number.parseInt(height, 10) })} />
+      </div>
+      <div class="set-row">
+        <div class="l"><b>{t('settings.game.fullscreen')}</b><span>{t('ui.descFullscreen')}</span></div>
+        <Toggle checked={settings.fullscreen} onChange={(v) => void patch({ fullscreen: v })} label={t('settings.game.fullscreen')} />
+      </div>
+      <div class="set-row">
+        <div class="l"><b>{t('settings.game.autoConnect')}</b><span>{t('ui.descAutoConnect')}</span></div>
+        <Toggle checked={settings.autoConnect} onChange={(v) => void patch({ autoConnect: v })} label={t('settings.game.autoConnect')} />
+      </div>
+      <div class="set-row">
+        <div class="l"><b>{t('settings.game.launchDetached')}</b><span>{t('ui.descDetached')}</span></div>
+        <Toggle checked={settings.launchDetached} onChange={(v) => void patch({ launchDetached: v })} label={t('settings.game.launchDetached')} />
+      </div>
+      <div class="set-row">
+        <div class="l">
+          <b>{t('settings.game.dataDirectory')}</b>
+          <span class="num" style={{ wordBreak: 'break-all' }}>{settings.dataDirectory}</span>
+          <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('settings.game.dataDirectoryRestartHint')}</span>
         </div>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Toggle checked={settings.fullscreen} onChange={(v) => void patch({ fullscreen: v })} label={t('settings.game.fullscreen')} />
-          <span style={{ color: 'var(--text)' }}>{t('settings.game.fullscreen')}</span>
-        </label>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Toggle checked={settings.autoConnect} onChange={(v) => void patch({ autoConnect: v })} label={t('settings.game.autoConnect')} />
-          <span style={{ color: 'var(--text)' }}>{t('settings.game.autoConnect')}</span>
-        </label>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <Toggle checked={settings.launchDetached} onChange={(v) => void patch({ launchDetached: v })} label={t('settings.game.launchDetached')} />
-          <span style={{ color: 'var(--text)' }}>{t('settings.game.launchDetached')}</span>
-        </label>
-
-        <div>
-          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', margin: '0 0 var(--space-2)' }}>
-            {t('settings.game.dataDirectory')}
-          </p>
-          <p style={{ color: 'var(--text)', margin: '0 0 var(--space-2)', wordBreak: 'break-all' }}>
-            {settings.dataDirectory}
-          </p>
-          <Button variant="secondary" size="sm" onClick={() => void handlePickDataDirectory()}>
-            {t('settings.game.dataDirectoryChange')}
-          </Button>
-          <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)', margin: 'var(--space-2) 0 0' }}>
-            {t('settings.game.dataDirectoryRestartHint')}
-          </p>
-        </div>
+        <Button size="sm" onClick={() => void handlePickDataDirectory()}>{t('settings.game.dataDirectoryChange')}</Button>
       </div>
     </Card>
   )
@@ -120,34 +83,27 @@ function SharedDataRootSection() {
 
   return (
     <Card>
-      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)', margin: '0 0 var(--space-2)' }}>
-        {t('settings.game.sharedDataRoot')}
-      </p>
-      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-        <Button variant={root?.mode === 'hellmc' ? 'secondary' : 'ghost'} size="sm" onClick={() => void handleChange('hellmc')}>
-          {t('settings.game.sharedDataRootHellmc')}
-        </Button>
-        <Button variant={root?.mode === 'system' ? 'secondary' : 'ghost'} size="sm" onClick={() => void handleChange('system')}>
-          {t('settings.game.sharedDataRootSystem')}
-        </Button>
+      <div class="set-row">
+        <div class="l">
+          <b>{t('settings.game.sharedDataRoot')}</b>
+          <span>{t('settings.game.sharedDataRootHelp')}</span>
+          {root != null && <span class="num" style={{ display: 'block', wordBreak: 'break-all', color: 'var(--text-faint)' }}>{root.path}</span>}
+        </div>
+        <div class="seg">
+          <button type="button" aria-pressed={root?.mode === 'hellmc'} onClick={() => void handleChange('hellmc')}>{t('settings.game.sharedDataRootHellmc')}</button>
+          <button type="button" aria-pressed={root?.mode === 'system'} onClick={() => void handleChange('system')}>{t('settings.game.sharedDataRootSystem')}</button>
+        </div>
       </div>
-      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)', margin: 'var(--space-2) 0 0' }}>
-        {t('settings.game.sharedDataRootHelp')}
-      </p>
-      {root != null && (
-        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)', margin: 'var(--space-1) 0 0', wordBreak: 'break-all' }}>
-          {root.path}
-        </p>
-      )}
     </Card>
   )
 }
 
 export function GameSection() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+    <section class="spanel">
+      <h2>{t('settings.nav.game')}</h2>
       <GeneralGameSection />
       <SharedDataRootSection />
-    </div>
+    </section>
   )
 }

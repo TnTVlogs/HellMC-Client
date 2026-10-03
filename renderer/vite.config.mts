@@ -16,6 +16,11 @@ export default defineConfig({
     // qual), s'ajustarà si canvia la versió d'Electron.
     target: 'chrome152'
   },
+  test: {
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts']
+  },
   server: {
     port: 5173,
     strictPort: true

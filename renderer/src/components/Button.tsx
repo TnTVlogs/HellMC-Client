@@ -6,10 +6,12 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 export interface ButtonProps extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'size'> {
   variant?: ButtonVariant
   size?: ButtonSize
+  block?: boolean
 }
 
-/** 08 §7: `primary`/`secondary`/`ghost`/`danger`, `sm 32`/`md 40`/`lg 52`. */
-export function Button({ variant = 'primary', size = 'md', class: cls, type = 'button', ...rest }: ButtonProps) {
-  const classes = ['btn', `btn-${variant}`, `btn-${size}`, cls].filter(Boolean).join(' ')
+/** 08 §7: `primary`/`secondary`/`ghost`/`danger`, `sm 32`/`md 40`/`lg 52` (classes del prototip). */
+export function Button({ variant = 'secondary', size = 'md', block, class: cls, type = 'button', ...rest }: ButtonProps) {
+  const classes = ['btn', variant === 'secondary' ? '' : variant, size === 'md' ? '' : size, block ? 'block' : '', cls]
+    .filter(Boolean).join(' ')
   return <button type={type} class={classes} {...rest} />
 }

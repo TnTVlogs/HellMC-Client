@@ -125,6 +125,11 @@ effect(() => {
   hellmc.window.setTitleBarOverlay(effectiveTheme.value)
 })
 
+// 08 §11: diàlegs i menús natius segueixen el tema de l'app (`nativeTheme.themeSource`).
+effect(() => {
+  hellmc.window.setNativeTheme(theme.value)
+})
+
 // 08 §9: `data-perf="low"` quan `perfMode` és `on`, o `auto` i (maquinari fluix o
 // `prefers-reduced-motion`).
 effect(() => {

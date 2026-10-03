@@ -12,7 +12,7 @@ const dataPath = path.join(sysRoot, '.hellmcclient')
 const electron = require('electron')
 
 function getApp() {
-    return process.type === 'renderer' ? require('@electron/remote').app : electron.app
+    return electron.app
 }
 
 exports.getLauncherDirectory = function () {
@@ -34,7 +34,7 @@ function getConfigPath() {
 const configPathLEGACY = path.join(dataPath, 'config.json')
 
 // 01-terminologia-i-dades.md §5.1: bump when the persisted config shape changes.
-const CONFIG_SCHEMA_VERSION = 1
+const CONFIG_SCHEMA_VERSION = 2 // 01 §5.1: 2 = Fase 2 (`lastPlay`, comptes `offline`)
 
 exports.getAbsoluteMinRAM = function (ram) {
     if (ram?.minimum != null) {
@@ -197,11 +197,23 @@ exports.load = function () {
  * @returns {Object} The migrated config.
  */
 function migrateLegacyConfig(rawConfig, configPath) {
-    if (rawConfig != null && rawConfig.lastPlay == null && Object.prototype.hasOwnProperty.call(rawConfig, 'selectedServer')) {
-        fs.copyFileSync(configPath, `${configPath}.bak-v1`)
+    if (rawConfig == null) return rawConfig
+    const needsLastPlay = rawConfig.lastPlay == null && Object.prototype.hasOwnProperty.call(rawConfig, 'selectedServer')
+    const accounts = rawConfig.authenticationDatabase != null ? Object.values(rawConfig.authenticationDatabase) : []
+    const needsAccountType = accounts.some((a) => a.type === 'mojang')
+    if (needsLastPlay || needsAccountType) {
+        // Còpia de seguretat abans de migrar (01 §5.1 pt.3); només la primera vegada.
+        if (!fs.existsSync(`${configPath}.bak-v1`)) fs.copyFileSync(configPath, `${configPath}.bak-v1`)
+    }
+    if (needsLastPlay) {
         rawConfig.lastPlay = { serverId: null, versionId: rawConfig.selectedServer }
         delete rawConfig.selectedServer
     }
+    // 07 §7.4 / 09 P1: el «compte Mojang» (només un nom, sense contrasenya) és un compte `offline`.
+    for (const account of accounts) {
+        if (account.type === 'mojang') account.type = 'offline'
+    }
+    rawConfig.schemaVersion = CONFIG_SCHEMA_VERSION
     return rawConfig
 }
 
@@ -413,7 +425,7 @@ exports.getAuthAccount = function (uuid) {
  */
 exports.updateMojangAuthAccount = function (uuid, accessToken) {
     config.authenticationDatabase[uuid].accessToken = accessToken
-    config.authenticationDatabase[uuid].type = 'mojang' // For gradual conversion.
+    config.authenticationDatabase[uuid].type = 'offline'
     return config.authenticationDatabase[uuid]
 }
 
@@ -430,7 +442,7 @@ exports.updateMojangAuthAccount = function (uuid, accessToken) {
 exports.addMojangAuthAccount = function (uuid, accessToken, username, displayName) {
     config.selectedAccount = uuid
     config.authenticationDatabase[uuid] = {
-        type: 'mojang',
+        type: 'offline',
         accessToken,
         username: username.trim(),
         uuid: uuid.trim(),

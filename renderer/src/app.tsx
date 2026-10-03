@@ -7,10 +7,21 @@ import { ServerDetail } from './views/ServerDetail'
 import { Versions } from './views/Versions'
 import { VersionDetail } from './views/VersionDetail'
 import { News } from './views/News'
+import { Loading, NeedNetwork, UpdateRequired } from './views/Boot'
+import { Welcome } from './views/Welcome'
+import { clientOutdated, distro, distroLoading } from './stores/distro'
+import { accounts, accountsLoaded } from './stores/account'
 
 /** 06 §12 pas 1-2: shell (barra de títol + barra lateral, 08 §8) + router (06 §7). Totes les
  * pestanyes de nivell superior ja són reals; Configuració (2.5) encara és parcial (Aparença + Joc). */
 export function App() {
+  // 07 §8 (2.6): flux inicial abans del Shell — càrrega, «Connecta't per començar» (sense
+  // distribució ni cache), benvinguda/login (cap compte configurat).
+  if (distroLoading.value || !accountsLoaded.value) return <Loading />
+  if (distro.value == null) return <NeedNetwork />
+  if (clientOutdated.value) return <UpdateRequired />
+  if (accounts.value.length === 0) return <Welcome />
+
   let view
   switch (route.value.name) {
     case 'servers':

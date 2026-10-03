@@ -1,14 +1,7 @@
 'use strict'
 
-// 06 §12 pas 2: `window.hellmc`, en paral·lel al `launcherAPI` antic (`app/assets/js/preload-bridge.js`,
-// que no es toca). Només el fa servir la finestra de proves del renderer nou
-// (`openRendererTestWindow`, `index.js`); l'app antiga (EJS) no carrega aquest fitxer.
-//
-// 2.1-2.4: `distro`/`selection`/`auth`/`launch`/`status`/`versions`/`java`/`config.get|setVersion`/
-// `news` ja són reals (IPC cap a `index.js`, que reutilitza la mateixa lògica que
-// `preload-bridge.js` quan n'hi ha — veure `11-progres-fase2.md` §6/§7/§8/§9). Encara mock:
-// `config.get|set` (tema/idioma, 2.5), `updater`/`discord`. Els controls de finestra (`window.*`)
-// ja eren reals des del pas 2 (calien de seguida per la barra de títol pròpia, 08 §8).
+// `window.hellmc` (06 §5): únic pont entre el renderer (Vite+Preact) i el procés principal
+// (`index.js`, handlers `hellmc:*`). Cada mètode és IPC real; el renderer mai té accés a Node.
 
 const { contextBridge, ipcRenderer } = require('electron')
 // 2.5: mateixos opcodes que l'app antiga per a la finestra d'OAuth de Microsoft
@@ -149,13 +142,16 @@ const hellmcApi = {
         markRead: () => ipcRenderer.invoke('hellmc:news-mark-read')
     },
     status: {
-        ping: (address) => ipcRenderer.invoke('hellmc:status-ping', address)
+        ping: (address) => ipcRenderer.invoke('hellmc:status-ping', address),
+        minecraft: () => ipcRenderer.invoke('hellmc:status-minecraft')
     },
     system: {
         memory: () => ipcRenderer.invoke('hellmc:system-memory'),
         openPath: (p) => ipcRenderer.invoke('hellmc:open-path', p),
         openExternal: (url) => ipcRenderer.invoke('hellmc:open-external', url),
         openThirdPartyLicenses: () => ipcRenderer.invoke('hellmc:open-third-party-licenses'),
+        openLgplLicense: () => ipcRenderer.invoke('hellmc:open-lgpl-license'),
+        isClientOutdated: (minClientVersion) => ipcRenderer.invoke('hellmc:system-client-outdated', minClientVersion),
         platform: process.platform,
         // Síncron (`sendSync`, demanat un sol cop en carregar el preload) perquè sigui correcte
         // també en un paquet empaquetat — `process.env.npm_package_version` (valor antic) només
@@ -167,15 +163,15 @@ const hellmcApi = {
         maximizeToggle: () => ipcRenderer.send('hellmc:window-maximize-toggle'),
         close: () => ipcRenderer.send('hellmc:window-close'),
         onMaximizeChange: (cb) => maximizeChangeEmitter.subscribe(cb),
-        setTitleBarOverlay: (effectiveTheme) => ipcRenderer.send('hellmc:set-titlebar-overlay', effectiveTheme)
+        setTitleBarOverlay: (effectiveTheme) => ipcRenderer.send('hellmc:set-titlebar-overlay', effectiveTheme),
+        setNativeTheme: (theme) => ipcRenderer.send('hellmc:set-native-theme', theme)
     },
     updater: {
         check: () => ipcRenderer.invoke('hellmc:updater-check'),
         install: () => ipcRenderer.invoke('hellmc:updater-install'),
+        getPrerelease: () => ipcRenderer.invoke('hellmc:updater-get-prerelease'),
+        setPrerelease: (allow) => ipcRenderer.invoke('hellmc:updater-set-prerelease', allow),
         onEvent: (cb) => updaterEventEmitter.subscribe(cb)
-    },
-    discord: {
-        setActivity: () => { /* no-op (mock) */ }
     }
 }
 

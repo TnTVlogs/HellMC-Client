@@ -2,7 +2,7 @@ import { signal } from '@preact/signals'
 
 // Router hash mínim (06 §7). Només les rutes de nivell superior de moment (2.0); `:id` es
 // suporta a `params` perquè `#/servers/:id`/`#/versions/:id` (2.2/2.3) no calgui tocar això.
-export type RouteName = 'home' | 'servers' | 'versions' | 'news' | 'settings' | 'welcome' | 'login'
+export type RouteName = 'home' | 'servers' | 'versions' | 'news' | 'settings'
 
 export interface Route {
   name: RouteName
@@ -22,10 +22,6 @@ function parseHash(hash: string): Route {
       return { name: 'news', params: {} }
     case 'settings':
       return { name: 'settings', params: { section: second ?? 'account' } }
-    case 'welcome':
-      return { name: 'welcome', params: {} }
-    case 'login':
-      return { name: 'login', params: {} }
     case 'home':
     default:
       return { name: 'home', params: {} }

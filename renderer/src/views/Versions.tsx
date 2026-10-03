@@ -1,70 +1,123 @@
-import { useEffect } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
+import { Check, Download, Play, RefreshCw, Search } from 'lucide-preact'
 import { t } from '../i18n'
-import { Card } from '../components/Card'
 import { Button } from '../components/Button'
+import { Card } from '../components/Card'
+import { Chip, Progress } from '../components/ui'
 import { navigate } from '../router'
 import { distro, distroLoading } from '../stores/distro'
-import { statuses, refreshStatus, install } from '../stores/versions'
+import { selectServer, selectVersion } from '../stores/selection'
+import { launch } from '../stores/launch'
+import { statuses, refreshStatus, install, progress, busy } from '../stores/versions'
 import { formatBytes } from '../utils/format'
 
-// 07 §4.1: llistat de totes les versions publicades. Targetes (no taula) — coherent amb
-// `Servers.tsx`, i la informació per versió (nom/MC/loader/estat/mida) hi cap bé sense columnes.
+// 07 §4.1: taula de versions (targetes apilades en compacte, 08 §6.3), cerca, filtre i accions per
+// fila. Estructura i classes del prototip.
+
+type Filter = 'all' | 'installed' | 'updates'
 
 export function Versions() {
   const d = distro.value
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<Filter>('all')
 
   useEffect(() => {
     if (d == null) return
-    for (const version of d.versions) {
-      void refreshStatus(version.id)
-    }
+    for (const version of d.versions) void refreshStatus(version.id)
   }, [d])
 
+  const rows = (d?.versions ?? [])
+    .filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()))
+    .filter((v) => {
+      const s = statuses.value[v.id]
+      if (filter === 'installed') return s?.installed === true
+      if (filter === 'updates') return s?.needsUpdate === true
+      return true
+    })
+
+  const updatable = (d?.versions ?? []).filter((v) => statuses.value[v.id]?.needsUpdate === true)
+
+  async function play(versionId: string) {
+    await selectServer(null)
+    await selectVersion(versionId)
+    navigate('/home')
+    await launch({ serverId: null, versionId })
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{t('nav.versions')}</h1>
+    <>
+      <div class="page-head">
+        <div class="grow"><h1>{t('nav.versions')}</h1><p>{t('ui.versionsSubtitle')}</p></div>
+        <div class="search">
+          <Search size={18} />
+          <input class="field" placeholder={t('ui.searchVersion')} aria-label={t('ui.search')} value={query}
+            onInput={(e) => setQuery((e.target as HTMLInputElement).value)} />
+        </div>
+      </div>
 
-      {distroLoading.value && <p style={{ color: 'var(--text-muted)' }}>{t('home.loadingDistro')}</p>}
-      {d != null && d.versions.length === 0 && !distroLoading.value && (
-        <p style={{ color: 'var(--text-muted)' }}>{t('versions.empty')}</p>
-      )}
+      <div class="filters" role="group" aria-label={t('ui.filter')}>
+        <button type="button" class="chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>{t('ui.allF')}</button>
+        <button type="button" class="chip" aria-pressed={filter === 'installed'} onClick={() => setFilter('installed')}>{t('ui.installedF')}</button>
+        <button type="button" class="chip" aria-pressed={filter === 'updates'} onClick={() => setFilter('updates')}>{t('ui.withUpdate')}</button>
+        <span style={{ flex: 1 }} />
+        <Button size="sm" disabled={updatable.length === 0} onClick={() => updatable.forEach((v) => void install(v.id))}>
+          <RefreshCw size={16} /> {t('ui.updateAll')}
+        </Button>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
-        {d?.versions.map((version) => {
+      {distroLoading.value && <p class="muted">{t('home.loadingDistro')}</p>}
+      {d != null && d.versions.length === 0 && !distroLoading.value && <p class="muted">{t('versions.empty')}</p>}
+
+      <Card class="vtable" aria-label={t('nav.versions')}>
+        <div class="vrow head">
+          <span>{t('serverDetail.version')}</span><span>{t('ui.mcLoader')}</span><span>{t('ui.revision')}</span>
+          <span>{t('ui.state')}</span><span>{t('ui.size')}</span><span />
+        </div>
+        {rows.map((version) => {
           const status = statuses.value[version.id]
+          const isBusy = busy.value[version.id] === true
+          const pct = progress.value[version.id]?.percent
+          const servers = (d?.servers ?? []).filter((s) => s.versions.some((e) => e.id === version.id))
           return (
-            <Card
-              key={version.id}
-              interactive
-              onClick={() => navigate(`#/versions/${version.id}`)}
-              style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', cursor: 'pointer' }}
-            >
-              <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--text)' }}>{version.name}</span>
-              <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-muted)' }}>
-                {version.minecraftVersion} · {version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-faint)' }}>
-                  {status == null
-                    ? '…'
-                    : status.installed
-                      ? (status.needsUpdate ? t('versions.updateAvailable') : `${t('versions.installed')} · ${formatBytes(status.sizeBytes)}`)
-                      : t('versions.notInstalled')}
-                </span>
-                {status != null && !status.installed && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={(e) => { e.stopPropagation(); void install(version.id) }}
-                  >
-                    {t('versions.install')}
-                  </Button>
+            <div key={version.id} class="vrow">
+              <div class="name">
+                <b>{version.name}</b>
+                <div class="xs-chips">
+                  {servers.length === 0
+                    ? <Chip>{t('ui.noServer')}</Chip>
+                    : servers.map((s, i) => <Chip key={s.id} tone={i === 0 ? 'accent' : undefined}>{s.name}</Chip>)}
+                </div>
+              </div>
+              <div class="mc muted small">{version.minecraftVersion} · {version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''}</div>
+              <div class="rev num">{version.version}</div>
+              <div class="st">
+                {isBusy ? (
+                  <>
+                    <Chip tone="info" icon={Download}>{t('ui.working')}{pct != null && pct > 0 ? ` ${Math.round(pct)}%` : ''}</Chip>
+                    <Progress value={pct != null && pct > 0 ? pct : null} />
+                  </>
+                ) : status == null ? <Chip>…</Chip>
+                  : status.installed
+                    ? status.needsUpdate ? <Chip tone="warn" icon={RefreshCw}>{t('versions.updateAvailable')}</Chip> : <Chip tone="ok" icon={Check}>{t('versions.installed')}</Chip>
+                    : <Chip>{t('versions.notInstalled')}</Chip>}
+              </div>
+              <div class="size num muted">{status?.installed ? formatBytes(status.sizeBytes) : '—'}</div>
+              <div class="acts">
+                <a class="btn sm" href={`#/versions/${version.id}`}>{t('ui.details')}</a>
+                {status?.installed && !status.needsUpdate && !isBusy && (
+                  <Button size="sm" variant="primary" onClick={() => void play(version.id)}><Play size={16} fill="currentColor" /> {t('home.play')}</Button>
+                )}
+                {status?.installed && status.needsUpdate && !isBusy && (
+                  <Button size="sm" onClick={() => void install(version.id)}>{t('ui.update')}</Button>
+                )}
+                {status != null && !status.installed && !isBusy && (
+                  <Button size="sm" onClick={() => void install(version.id)}><Download size={16} /> {t('versions.install')}</Button>
                 )}
               </div>
-            </Card>
+            </div>
           )
         })}
-      </div>
-    </div>
+      </Card>
+    </>
   )
 }

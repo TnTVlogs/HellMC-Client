@@ -1,51 +1,39 @@
 import { useEffect, useState } from 'preact/hooks'
+import { Info } from 'lucide-preact'
 import { t } from '../../i18n'
 import { Button } from '../../components/Button'
+import { Toggle } from '../../components/Toggle'
 import { Card } from '../../components/Card'
+import { Banner, Progress } from '../../components/ui'
 import { hellmc } from '../../api'
 
 type Status = 'idle' | 'checking' | 'upToDate' | 'available' | 'downloading' | 'ready' | 'error'
 
 /**
- * 07 §6 «Actualitzacions»: petició explícita de l'usuari (2026-10-02) — «com el de Discord», mai
- * cap assistent ni cap «Reinstal·la ara?» — només informatiu. El main process (`index.js`) ja
- * comprova en silenci a l'arrencada + cada hora i instal·la sola en tancar (`autoInstallOnAppQuit`,
- * `nsis.oneClick`) — aquesta pantalla només hi afegeix un botó «Comprova ara» (07 §6 ho demana
- * explícitament) i mostra l'estat en viu. **Deliberadament no hi ha cap botó «Instal·la i
- * reinicia»**: forçar un tancament mentre l'usuari és a la pantalla contradiria «que es faci sola».
+ * 07 §6 «Actualitzacions»: «com el de Discord» — mai cap assistent ni cap «Reinstal·la ara?». El
+ * procés principal (`index.js`) comprova en silenci a l'arrencada + cada hora i instal·la sol en
+ * tancar (`autoInstallOnAppQuit`, `nsis.oneClick`); aquí només hi ha «Comprova ara» i l'estat en
+ * viu. **Deliberadament sense «Instal·la i reinicia»**: forçar un tancament contradiu «que es faci sol».
  */
 export function UpdatesSection() {
   const [status, setStatus] = useState<Status>('idle')
   const [percent, setPercent] = useState(0)
   const [version, setVersion] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [prerelease, setPrerelease] = useState(false)
 
   useEffect(() => {
     const unsubscribe = hellmc.updater.onEvent((event) => {
       switch (event.type) {
-        case 'checking-for-update':
-          setStatus('checking')
-          break
-        case 'update-not-available':
-          setStatus('upToDate')
-          break
-        case 'update-available':
-          setStatus('available')
-          setVersion(event.info?.version ?? null)
-          break
-        case 'download-progress':
-          setStatus('downloading')
-          setPercent(Math.round(event.info?.percent ?? 0))
-          break
-        case 'update-downloaded':
-          setStatus('ready')
-          break
-        case 'error':
-          setStatus('error')
-          setErrorMessage(event.info?.message ?? null)
-          break
+        case 'checking-for-update': setStatus('checking'); break
+        case 'update-not-available': setStatus('upToDate'); break
+        case 'update-available': setStatus('available'); setVersion(event.info?.version ?? null); break
+        case 'download-progress': setStatus('downloading'); setPercent(Math.round(event.info?.percent ?? 0)); break
+        case 'update-downloaded': setStatus('ready'); break
+        case 'error': setStatus('error'); setErrorMessage(event.info?.message ?? null); break
       }
     })
+    void hellmc.updater.getPrerelease().then(setPrerelease)
     void hellmc.updater.check()
     return unsubscribe
   }, [])
@@ -56,35 +44,33 @@ export function UpdatesSection() {
       case 'upToDate': return t('settings.updates.upToDate')
       case 'available': return t('settings.updates.available', { version: version ?? '' })
       case 'downloading': return t('settings.updates.downloading', { percent })
-      case 'ready': return t('settings.updates.ready')
+      case 'ready': return `${t('settings.updates.ready')} ${t('settings.updates.readyHint')}`
       case 'error': return t('settings.updates.error', { message: errorMessage ?? '' })
       default: return null
     }
   })()
 
   return (
-    <Card>
-      <h2 style={{ margin: 0, fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--text)' }}>
-        {t('settings.updates.title')}
-      </h2>
-      <p style={{ color: 'var(--text-faint)', margin: 'var(--space-2) 0 var(--space-4)' }}>
-        {t('settings.updates.currentVersion')}: {hellmc.system.appVersion}
-      </p>
-
+    <section class="spanel">
+      <h2>{t('settings.updates.title')}</h2>
       {statusLine != null && (
-        <p style={{ color: status === 'error' ? 'var(--danger)' : 'var(--text)', margin: '0 0 var(--space-2)' }}>
-          {statusLine}
-        </p>
+        status === 'error'
+          ? <Banner tone="warn">{statusLine}</Banner>
+          : <Banner tone="info" icon={Info}>{statusLine}</Banner>
       )}
-      {status === 'ready' && (
-        <p style={{ color: 'var(--text-faint)', fontSize: 'var(--fs-sm)', margin: '0 0 var(--space-4)' }}>
-          {t('settings.updates.readyHint')}
-        </p>
-      )}
-
-      <Button variant="secondary" size="sm" disabled={status === 'checking'} onClick={() => void hellmc.updater.check()}>
-        {t('settings.updates.checkNow')}
-      </Button>
-    </Card>
+      {status === 'downloading' && <Progress value={percent} />}
+      {status === 'checking' && <Progress value={null} />}
+      <Card>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.updates.currentVersion')}</b><span class="num">{hellmc.system.appVersion}</span></div>
+          <Button size="sm" disabled={status === 'checking'} onClick={() => void hellmc.updater.check()}>{t('settings.updates.checkNow')}</Button>
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.updates.channel')}</b><span>{t('settings.updates.channelHelp')}</span></div>
+          <Toggle checked={prerelease} label={t('settings.updates.channel')}
+            onChange={(v) => void hellmc.updater.setPrerelease(v).then((effective) => { setPrerelease(effective); void hellmc.updater.check() })} />
+        </div>
+      </Card>
+    </section>
   )
 }

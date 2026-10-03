@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import DOMPurify from 'dompurify'
+import { ExternalLink } from 'lucide-preact'
 import { t } from '../i18n'
 import { language } from '../stores/ui'
 import { items, sources, fromCache, fetchedAt, loading, loadArchive, markRead } from '../stores/news'
 import { hellmc, type NewsArchiveItem } from '../api'
-import { Card } from '../components/Card'
 import { Button } from '../components/Button'
-import { Tabs } from '../components/Tabs'
+import { Art } from '../components/ui'
 
-// 07 §5: arxiu complet + lector. `stores/news.ts` ja carrega l'arxiu en arrencar l'app (`main.tsx`)
-// perquè el comptador de la barra lateral funcioni sense obrir aquesta pestanya primer — aquí només
-// es rellegeix el store i es filtra/pinta.
+// 07 §5: arxiu complet + lector (dues columnes a ≥ 1100 px, llista que obre el lector en estret).
+// `stores/news.ts` ja carrega l'arxiu en arrencar (`main.tsx`) perquè el comptador de la barra
+// lateral funcioni sense obrir aquesta pestanya primer.
 
-// DOMPurify és una instància **compartida** amb tot el renderer (VersionDetail.tsx també la fa
-// servir per al changelog) — aquest hook és global un cop registrat, no només d'aquesta vista.
-// Intencionat: qualsevol HTML extern sanititzat a l'app es beneficia igual de «només imatges https»
-// i «enllaços amb target/rel segurs» (07 §5), no calia dur el mateix hook a dos llocs.
+// DOMPurify és una instància compartida amb tot el renderer; el hook és global un cop registrat:
+// qualsevol HTML extern sanititzat es beneficia de «només imatges https» i «enllaços segurs».
 let sanitizeHooksRegistered = false
 function ensureSanitizeHooks() {
   if (sanitizeHooksRegistered) return
@@ -39,6 +37,10 @@ const ARTICLE_ALLOWED_TAGS = [
 ]
 
 function formatDate(ms: number): string {
+  return new Intl.DateTimeFormat(language.value, { dateStyle: 'medium' }).format(new Date(ms))
+}
+
+function formatDateTime(ms: number): string {
   return new Intl.DateTimeFormat(language.value, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms))
 }
 
@@ -55,91 +57,80 @@ function ArticleReader({ item, onBack }: { item: NewsArchiveItem; onBack: () => 
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <Button variant="ghost" size="sm" style={{ alignSelf: 'flex-start' }} onClick={onBack}>{t('news.back')}</Button>
-      <Card style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-        <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{item.title}</h1>
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>
-          {formatDate(item.date)}
-          {item.author != null ? ` · ${item.author}` : ''}
-          {' · '}{item.source.name ?? t('news.global')}
-        </span>
-        {/* Sanititzat amb DOMPurify (llista blanca d'etiquetes, imatges https només) just abans —
-            mai HTML cru de l'RSS sense passar-hi. */}
-        <div class="markdown-body" onClick={handleContentClick} dangerouslySetInnerHTML={{ __html: html }} />
-        <Button variant="secondary" size="sm" style={{ alignSelf: 'flex-start' }} onClick={() => void hellmc.system.openExternal(item.url)}>
-          {t('news.openWeb')}
-        </Button>
-      </Card>
-    </div>
+    <article class="card reader">
+      <Art seed={item.id} />
+      <div class="rb">
+        <div>
+          <button type="button" class="link-btn reader-back" onClick={onBack}>← {t('news.back')}</button>
+          <span class="meta">{formatDate(item.date)} · {item.source.name ?? t('news.global')}{item.author != null ? ` · ${item.author}` : ''}</span>
+          <h1 style={{ marginTop: 6, fontSize: 'var(--fs-2xl)', letterSpacing: '-.02em' }}>{item.title}</h1>
+        </div>
+        {/* Sanititzat amb DOMPurify (llista blanca d'etiquetes, imatges https només) just a sobre. */}
+        <div class="prose markdown-body" style={{ maxWidth: 'none' }} onClick={handleContentClick} dangerouslySetInnerHTML={{ __html: html }} />
+        <div>
+          <Button size="sm" onClick={() => void hellmc.system.openExternal(item.url)}><ExternalLink size={16} /> {t('news.openWeb')}</Button>
+        </div>
+      </div>
+    </article>
   )
 }
 
 export function News() {
   const [filter, setFilter] = useState('all')
-  const [selected, setSelected] = useState<NewsArchiveItem | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // En estret (< 1100 px) la llista i el lector no caben junts: en triar un article, el lector la substitueix.
+  const [reading, setReading] = useState(false)
 
   useEffect(() => {
     if (items.value.length === 0 && !loading.value) void loadArchive()
-    // Marca com a llegit en **sortir** de la pestanya, no en entrar-hi (07 §5): mentre el jugador
-    // hi és, encara ha de poder veure quins articles eren nous; el comptador de la barra només
-    // s'ha de buidar quan de veritat ha acabat de mirar-los.
+    // Marca com a llegit en **sortir** de la pestanya (07 §5): mentre hi és encara ha de veure quins
+    // articles eren nous.
     return () => { void markRead() }
   }, [])
 
-  const tabItems = [
-    { id: 'all', label: t('news.filterAll') },
-    ...sources.value.map((s) => ({ id: s.id, label: s.name ?? t('news.global') }))
-  ]
   const visible = filter === 'all' ? items.value : items.value.filter((i) => i.source.id === filter)
-
-  if (selected != null) {
-    return <ArticleReader item={selected} onBack={() => setSelected(null)} />
-  }
+  const selected = visible.find((i) => i.id === selectedId) ?? visible[0] ?? null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 600, color: 'var(--text)', margin: 0 }}>{t('news.title')}</h1>
-        <Button variant="ghost" size="sm" disabled={loading.value} onClick={() => void loadArchive()}>
-          {t('news.refresh')}
-        </Button>
+    <>
+      <div class="page-head">
+        <div class="grow">
+          <h1>{t('news.title')}</h1>
+          {fetchedAt.value != null && (
+            <p>{fromCache.value ? t('news.offlineBanner', { date: formatDateTime(fetchedAt.value) }) : t('ui.lastUpdate', { date: formatDateTime(fetchedAt.value) })}</p>
+          )}
+        </div>
+        {sources.value.length > 1 && (
+          <div class="seg" role="group" aria-label={t('ui.source')}>
+            <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>{t('news.filterAll')}</button>
+            {sources.value.map((s) => (
+              <button key={s.id} type="button" aria-pressed={filter === s.id} onClick={() => setFilter(s.id)}>{s.name ?? t('news.global')}</button>
+            ))}
+          </div>
+        )}
+        <Button size="sm" variant="ghost" disabled={loading.value} onClick={() => void loadArchive()}>{t('news.refresh')}</Button>
       </div>
 
-      {tabItems.length > 1 && <Tabs active={filter} onChange={setFilter} items={tabItems} />}
+      {loading.value && items.value.length === 0 && <p class="muted">{t('news.loading')}</p>}
+      {!loading.value && visible.length === 0 && <p class="muted">{t('news.empty')}</p>}
 
-      {fromCache.value && fetchedAt.value != null && (
-        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-faint)' }}>
-          {t('news.offlineBanner', { date: formatDate(fetchedAt.value) })}
-        </span>
+      {visible.length > 0 && (
+        <div class={`newsview${reading ? ' reading' : ''}`}>
+          <div class="nlist" style={{ display: 'flex', flexDirection: 'column', gap: 2 }} role="list">
+            {visible.map((item) => (
+              <div key={item.id} class="article-item" role="listitem" tabIndex={0} aria-current={selected?.id === item.id ? 'true' : undefined}
+                onClick={() => { setSelectedId(item.id); setReading(true) }} onKeyDown={(e) => { if (e.key === 'Enter') { setSelectedId(item.id); setReading(true) } }}>
+                <Art seed={item.id} class="thumb" />
+                <div>
+                  <h3 class={item.unread ? 'unread' : ''}>{item.title}</h3>
+                  <span class="meta">{formatDate(item.date)} · {item.source.name ?? t('news.global')}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {selected != null && <ArticleReader item={selected} onBack={() => setReading(false)} />}
+        </div>
       )}
-
-      {loading.value && items.value.length === 0 && (
-        <p style={{ color: 'var(--text-muted)' }}>{t('news.loading')}</p>
-      )}
-
-      {!loading.value && visible.length === 0 && (
-        <p style={{ color: 'var(--text-muted)' }}>{t('news.empty')}</p>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-        {visible.map((item) => (
-          <Card key={item.id} interactive style={{ cursor: 'pointer' }} onClick={() => setSelected(item)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              {item.unread && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />}
-              <span style={{ fontSize: 'var(--fs-md)', fontWeight: 600, color: 'var(--text)' }}>{item.title}</span>
-            </div>
-            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-faint)', marginTop: 'var(--space-1)' }}>
-              {formatDate(item.date)}
-              {item.author != null ? ` · ${item.author}` : ''}
-              {' · '}{item.source.name ?? t('news.global')}
-            </div>
-            {item.summary != null && (
-              <p style={{ margin: 'var(--space-2) 0 0', color: 'var(--text-muted)', fontSize: 'var(--fs-sm)' }}>{item.summary}</p>
-            )}
-          </Card>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }

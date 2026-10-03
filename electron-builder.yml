@@ -17,12 +17,13 @@ asar: true
 compression: 'maximum'
 
 files:
-  - '!{dist,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc,.eslintrc.json}'
+  - '!{dist,renderer,test,biome.json,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc}'
 
 extraResources:
   - 'libraries'
   - 'NOTICE'
   - 'LICENSE.txt'
+  - 'LICENSE-LGPL-3.0.txt'
   - 'THIRD_PARTY_LICENSES.txt'
 
 win: 

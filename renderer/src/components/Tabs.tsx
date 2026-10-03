@@ -9,21 +9,12 @@ export interface TabsProps {
   onChange: (id: string) => void
 }
 
-/** 08 §7 (primer ús real, `VersionDetail`, 2.3): fila de botons, sense contingut propi — el pare
- * decideix què renderitzar per `active`. */
+/** 08 §7: fila de pestanyes (`.tabs`), el pare decideix què renderitzar per `active`. */
 export function Tabs({ items, active, onChange }: TabsProps) {
   return (
-    <div role="tablist" style={{ display: 'flex', gap: 'var(--space-1)', borderBottom: '1px solid var(--border)' }}>
+    <div class="tabs" role="tablist">
       {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="tab"
-          aria-selected={item.id === active}
-          class="tab"
-          data-active={item.id === active ? '' : undefined}
-          onClick={() => onChange(item.id)}
-        >
+        <button key={item.id} type="button" role="tab" aria-selected={item.id === active} onClick={() => onChange(item.id)}>
           {item.label}
         </button>
       ))}

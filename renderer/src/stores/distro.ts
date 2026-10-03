@@ -9,6 +9,13 @@ import { hellmc } from '../api'
 export const distro = signal<Distribution | null>(null)
 export const distroLoading = signal(true)
 export const distroError = signal<string | null>(null)
+/** 07 §2.4: la distribució exigeix un client més nou (`minClientVersion`) → pantalla de bloqueig. */
+export const clientOutdated = signal(false)
+
+async function checkOutdated(): Promise<void> {
+  const min = distro.value?.minClientVersion
+  clientOutdated.value = min != null ? await hellmc.system.isClientOutdated(min) : false
+}
 
 /** Es crida un cop en arrencar (`main.tsx`). */
 export async function loadDistro(): Promise<void> {
@@ -16,6 +23,7 @@ export async function loadDistro(): Promise<void> {
   distroError.value = null
   try {
     distro.value = await hellmc.distro.get()
+    await checkOutdated()
   } catch (err) {
     distroError.value = err instanceof Error ? err.message : String(err)
   } finally {
@@ -30,6 +38,7 @@ export async function refreshDistro(): Promise<void> {
     const { distribution } = await hellmc.distro.refresh()
     distro.value = distribution
     distroError.value = null
+    await checkOutdated()
   } catch (err) {
     distroError.value = err instanceof Error ? err.message : String(err)
   }

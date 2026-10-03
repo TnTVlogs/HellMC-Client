@@ -12,43 +12,36 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build:renderer && electron .",
     "dev:renderer": "vite --config renderer/vite.config.mts",
-    "dev:electron": "wait-on tcp:5173 && cross-env RENDERER_DEV_SERVER=1 OPEN_RENDERER_TEST=1 electron .",
+    "dev:electron": "wait-on tcp:5173 && cross-env RENDERER_DEV_SERVER=1 electron .",
     "dev": "concurrently -k -n vite,electron \"npm:dev:renderer\" \"npm:dev:electron\"",
     "build:renderer": "vite build --config renderer/vite.config.mts",
-    "dist": "electron-builder build",
+    "dist": "npm run build:renderer && electron-builder build",
     "dist:win": "npm run dist -- -w",
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
-    "lint": "biome lint ."
+    "lint": "biome lint .",
+    "test": "vitest run --config renderer/vite.config.mts && node test/modgroups.test.js"
   },
   "engines": {
     "node": "22.x.x"
   },
   "dependencies": {
-    "@electron/remote": "^2.1.3",
     "@preact/signals": "^2.11.2",
     "adm-zip": "^0.6.1",
     "discord-rpc-patch": "^4.0.1",
     "dompurify": "^3.4.16",
-    "ejs": "^6.0.1",
-    "ejs-electron": "^3.0.0",
     "electron-updater": "^6.7.3",
     "fs-extra": "^11.3.3",
-    "github-syntax-dark": "^0.5.0",
-    "got": "^16.0.0",
     "hellmc-core": "file:../HellMC-Core",
     "hellmc-distribution-types": "file:../HellMC-Distribution-Types",
-    "jquery": "^4.0.0",
-    "lodash.merge": "^4.6.2",
+    "lucide-preact": "^1.51.0",
     "marked": "^18.0.14",
     "mcstatus-util": "^5.4.6",
     "preact": "^10.24.3",
     "rss-parser": "^3.13.0",
-    "semver": "^7.7.3",
-    "toml": "^5.0.0",
-    "uuid": "^14.0.2"
+    "semver": "^7.7.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
@@ -57,8 +50,10 @@
     "cross-env": "^10.1.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.4.0",
+    "jsdom": "^29.1.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
+    "vitest": "^5.0.3",
     "wait-on": "^9.5.0"
   },
   "repository": {

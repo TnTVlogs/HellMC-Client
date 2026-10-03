@@ -8,9 +8,142 @@ export interface Messages {
     versions: string
     news: string
     settings: string
+    discord: string
+    website: string
+  }
+  ui: {
+    svcAuth: string
+    svcServices: string
+    svcSession: string
+    minecraftChecking: string
+    minecraftDown: string
+    minecraftPartial: string
+    minecraftOk: string
+    aboutServer: string
+    aboutTitle: string
+    accounts: string
+    addAccount: string
+    all: string
+    allF: string
+    alwaysOn: string
+    assetsCredits: string
+    availableAt: string
+    changeServer: string
+    copyAddress: string
+    credits: string
+    descAutoConnect: string
+    descDetached: string
+    descFullscreen: string
+    descLanguage: string
+    descPerformance: string
+    descResolution: string
+    descScale: string
+    descSidebar: string
+    descTheme: string
+    details: string
+    diskSize: string
+    featured: string
+    filter: string
+    filterByTag: string
+    folder: string
+    installedF: string
+    jvmArgs: string
+    lastUpdate: string
+    main: string
+    mcLoader: string
+    modsHint: string
+    noConnection: string
+    noServer: string
+    offlineLabel: string
+    open: string
+    optional: string
+    pickVersion: string
+    playWithoutServer: string
+    players: string
+    ramHint: string
+    requiredMods: string
+    rescan: string
+    revision: string
+    search: string
+    searchServer: string
+    searchVersion: string
+    serverNews: string
+    serversSubtitle: string
+    size: string
+    social: string
+    source: string
+    state: string
+    suggestedJava: string
+    switchAccount: string
+    update: string
+    updateAll: string
+    versionLabel: string
+    versionSettings: string
+    versionsAvailable: string
+    versionsSubtitle: string
+    viewAllNews: string
+    withUpdate: string
+    working: string
+    installAndPlay: string
+    updateAndPlay: string
   }
   placeholder: {
     comingSoon: string
+  }
+  auth: {
+    error: {
+      NO_PROFILE: string
+      NO_XBOX_ACCOUNT: string
+      XBL_BANNED: string
+      UNDER_18: string
+      UNKNOWN: string
+    }
+  }
+  network: {
+    offline: string
+    sessionInvalid: string
+  }
+  boot: {
+    updateRequired: {
+      restart: string
+      none: string
+      ready: string
+      downloading: string
+      checking: string
+      check: string
+      body: string
+      title: string
+    }
+    starting: string
+    needNetworkTitle: string
+    needNetworkBody: string
+    retry: string
+  }
+  welcome: {
+    title: string
+    subtitle: string
+    start: string
+    language: string
+    theme: string
+    themeSystem: string
+    themeDark: string
+    themeLight: string
+    loginTitle: string
+    loginSubtitle: string
+    microsoftContinue: string
+    microsoftHint: string
+    offlineLink: string
+    offlineTitle: string
+    offlineSubtitle: string
+    offlineUsername: string
+    offlinePlay: string
+    offlineHint: string
+    microsoftLink: string
+    invalidUsername: string
+    waitingTitle: string
+    waitingBody: string
+    cancel: string
+    retry: string
   }
   settings: {
     nav: {
@@ -22,6 +155,12 @@ export interface Messages {
       about: string
     }
     account: {
+      status: {
+        checking: string
+        invalid: string
+        offline: string
+        ok: string
+      }
       microsoftTitle: string
       microsoftConnect: string
       offlineTitle: string
@@ -76,6 +215,8 @@ export interface Messages {
       devModeHint: string
     }
     updates: {
+      channelHelp: string
+      channel: string
       title: string
       currentVersion: string
       checkNow: string
@@ -93,6 +234,7 @@ export interface Messages {
       coreNotice: string
       nebulaNotice: string
       thirdPartyLicenses: string
+      lgplLicense: string
       website: string
       source: string
       support: string
@@ -106,9 +248,15 @@ export interface Messages {
     playingAs: string
     play: string
     cancel: string
-    noAccount: string
-    offlineUsernamePlaceholder: string
-    addOfflineAccount: string
+    offlineAccountWarning: string
+    authInvalidTitle: string
+    authInvalidBody: string
+    authInvalidAction: string
+    needNetworkTitle: string
+    needNetworkBody: string
+    close: string
+    retry: string
+    microsoftOffline: string
     phase: {
       idle: string
       starting: string
@@ -230,10 +378,143 @@ const en: Messages = {
     servers: 'Servers',
     versions: 'Versions',
     news: 'News',
-    settings: 'Settings'
+    settings: 'Settings',
+    discord: 'Discord',
+    website: 'Website'
+  },
+  ui: {
+    svcAuth: 'Authentication',
+    svcServices: 'Profile & skins',
+    svcSession: 'Sessions',
+    minecraftChecking: 'Checking Minecraft services…',
+    minecraftDown: 'Minecraft services unreachable',
+    minecraftPartial: 'Some Minecraft services unreachable',
+    minecraftOk: 'Minecraft services online',
+    aboutServer: 'About the server',
+    aboutTitle: 'About HellMC Client',
+    accounts: 'Accounts',
+    addAccount: 'Add account',
+    all: 'All',
+    allF: 'All',
+    alwaysOn: 'Always active',
+    assetsCredits: 'Icons: Lucide (ISC). Interface font: system fonts.',
+    availableAt: 'Available at',
+    changeServer: 'Change server',
+    copyAddress: 'Copy address',
+    credits: 'Credits and licenses',
+    descAutoConnect: 'Join the server when the game opens (only if you picked a server)',
+    descDetached: 'The game stays open if you close the launcher',
+    descFullscreen: 'Start the game in fullscreen',
+    descLanguage: 'Interface language',
+    descPerformance: 'Turns off animations and effects on low-end computers',
+    descResolution: 'Size of the game window',
+    descScale: 'Scales the whole launcher',
+    descSidebar: 'Show only icons in the sidebar',
+    descTheme: 'Follow the system or pick one',
+    details: 'Details',
+    diskSize: 'Size on disk',
+    featured: 'Featured',
+    filter: 'Filter',
+    filterByTag: 'Filter by tag',
+    folder: 'Folder',
+    installedF: 'Installed',
+    jvmArgs: 'JVM arguments',
+    lastUpdate: 'Last update: {date}',
+    main: 'Main',
+    mcLoader: 'Minecraft · loader',
+    modsHint: 'Turn off a mod and the dependencies only it needs are turned off too; a dependency stays locked while any enabled mod needs it. The list is flat, with no subgroups.',
+    noConnection: 'No connection',
+    noServer: 'No server',
+    offlineLabel: 'Offline',
+    open: 'Open',
+    optional: 'Optional',
+    pickVersion: 'Pick a version',
+    playWithoutServer: 'Play without a server',
+    players: 'players',
+    ramHint: 'Total system memory: {total} GB. Leaving at least 2 GB free is recommended.',
+    requiredMods: 'Required',
+    rescan: 'Scan again',
+    revision: 'Revision',
+    search: 'Search',
+    searchServer: 'Search a server…',
+    searchVersion: 'Search a version…',
+    serverNews: 'Server news',
+    serversSubtitle: 'Pick where to play and with which version. You can also play without a server.',
+    size: 'Size',
+    social: 'Social links',
+    source: 'Source',
+    state: 'Status',
+    suggestedJava: 'Suggested Java',
+    switchAccount: 'Switch account',
+    update: 'Update',
+    updateAll: 'Update all',
+    versionLabel: 'Version',
+    versionSettings: 'Version settings',
+    versionsAvailable: 'Available versions',
+    versionsSubtitle: 'Manage what you have installed. Every version can be played without a server.',
+    viewAllNews: 'See all news →',
+    withUpdate: 'With update',
+    working: 'Working…',
+    installAndPlay: 'Install and play',
+    updateAndPlay: 'Update and play'
   },
   placeholder: {
     comingSoon: 'Coming soon.'
+  },
+  auth: {
+    error: {
+      NO_PROFILE: 'This Microsoft account has no Minecraft: Java Edition profile. Set it up at minecraft.net.',
+      NO_XBOX_ACCOUNT: 'This Microsoft account has no Xbox account associated.',
+      XBL_BANNED: 'Xbox Live is not available in the country of this Microsoft account.',
+      UNDER_18: 'Accounts for users under 18 must be added to a Family by an adult.',
+      UNKNOWN: 'Unknown error while signing in. Check the console for details.'
+    }
+  },
+  network: {
+    offline: 'Offline: showing saved data. Online servers will not be available.',
+    sessionInvalid: 'Your account session is no longer valid. Go to Settings › Account and sign in again.'
+  },
+  boot: {
+    updateRequired: {
+      restart: 'Restart and install',
+      none: 'No update found yet. Try again in a moment.',
+      ready: 'Update ready. Restart the launcher to install it.',
+      downloading: 'Downloading update… {percent}%',
+      checking: 'Checking…',
+      check: 'Check for updates',
+      body: 'This version of HellMC Client is too old for the current distribution. Update to keep playing.',
+      title: 'Update required',
+    },
+    starting: 'Starting…',
+    needNetworkTitle: 'Connect to start',
+    needNetworkBody: 'HellMC needs an internet connection the first time it runs.',
+    retry: 'Try again'
+  },
+  welcome: {
+    title: 'Welcome to HellMC',
+    subtitle: 'Play on our servers with everything installed and kept up to date automatically.',
+    start: 'Get started',
+    language: 'Language',
+    theme: 'Theme',
+    themeSystem: 'System',
+    themeDark: 'Dark',
+    themeLight: 'Light',
+    loginTitle: 'Sign in',
+    loginSubtitle: 'You need a Microsoft account with Minecraft: Java Edition.',
+    microsoftContinue: 'Continue with Microsoft',
+    microsoftHint: 'A Microsoft window will open. We never store your password.',
+    offlineLink: 'No connection? Play offline',
+    offlineTitle: 'Offline mode',
+    offlineSubtitle: 'Without a Microsoft account you can only play single-player or on servers that do not require authentication.',
+    offlineUsername: 'Username',
+    offlinePlay: 'Play offline',
+    offlineHint: 'No internet connection needed. Your identifier (UUID) is generated from the name.',
+    microsoftLink: 'I have a Microsoft account',
+    invalidUsername: 'Use 3–16 letters, numbers or underscores.',
+    waitingTitle: 'Waiting for the Microsoft window…',
+    waitingBody: 'Complete the sign-in in the window that just opened.',
+    cancel: 'Cancel',
+    retry: 'Try again'
   },
   settings: {
     nav: {
@@ -245,6 +526,12 @@ const en: Messages = {
       about: 'About'
     },
     account: {
+      status: {
+        checking: 'Validating…',
+        invalid: 'Session expired: sign in again',
+        offline: 'Offline: could not validate',
+        ok: 'Session valid',
+      },
       microsoftTitle: 'Microsoft account',
       microsoftConnect: 'Add Microsoft account',
       offlineTitle: 'Offline account',
@@ -299,6 +586,8 @@ const en: Messages = {
       devModeHint: 'Click the version number in About a few times to reveal this.'
     },
     updates: {
+      channelHelp: 'Receive beta versions before everyone else.',
+      channel: 'Pre-release versions',
       title: 'Updates',
       currentVersion: 'Current version',
       checkNow: 'Check now',
@@ -316,6 +605,7 @@ const en: Messages = {
       coreNotice: 'Uses HellMC-Core, a modified fork of helios-core (LGPL-3.0).',
       nebulaNotice: 'Distribution server based on Nebula (Daniel D. Scalzi, MIT).',
       thirdPartyLicenses: 'Third-party licenses',
+      lgplLicense: 'LGPL-3.0 license (HellMC-Core)',
       website: 'Website',
       source: 'Source code',
       support: 'Support'
@@ -329,9 +619,15 @@ const en: Messages = {
     playingAs: 'Playing as {name}',
     play: 'Play',
     cancel: 'Cancel',
-    noAccount: 'Add an offline account to start playing.',
-    offlineUsernamePlaceholder: 'Username',
-    addOfflineAccount: 'Add account',
+    offlineAccountWarning: 'Offline account: you can only join servers that do not require authentication.',
+    authInvalidTitle: 'Sign in again',
+    authInvalidBody: 'Your account session is no longer valid.',
+    authInvalidAction: 'Go to Account',
+    needNetworkTitle: 'Connection required',
+    needNetworkBody: 'An internet connection is needed to install or update this version.',
+    close: 'Close',
+    retry: 'Try again',
+    microsoftOffline: 'No connection: you will not be able to join online servers.',
     phase: {
       idle: 'Idle',
       starting: 'Starting…',

@@ -7,6 +7,7 @@ import { loadSelection } from './stores/selection'
 import { loadAccounts } from './stores/account'
 import { loadInstances } from './stores/instances'
 import { loadArchive } from './stores/news'
+import { initNetwork } from './stores/network'
 import './design/tokens.css'
 import './design/base.css'
 import './design/components.css'
@@ -24,3 +25,4 @@ void loadDistro().then(loadSelection)
 void loadAccounts()
 void loadInstances()
 void loadArchive()
+initNetwork()

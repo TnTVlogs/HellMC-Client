@@ -50,7 +50,7 @@ export interface Account {
   displayName: string
 }
 
-export type AuthStatus = 'ok' | 'expired' | 'offline' | 'invalid'
+export type AuthStatus = 'ok' | 'offline' | 'invalid'
 
 export interface LaunchProgress {
   phase: string
@@ -166,11 +166,6 @@ export interface UpdaterEvent {
   info?: { percent?: number; message?: string; version?: string }
 }
 
-export interface Activity {
-  details?: string
-  state?: string
-}
-
 export interface HellMCApi {
   distro: {
     get(): Promise<Distribution>
@@ -280,13 +275,19 @@ export interface HellMCApi {
   }
   status: {
     ping(address: string): Promise<{ online: boolean; players?: { online: number; max: number }; latencyMs?: number }>
+    /** 07 §1.1: accessibilitat dels serveis de Minecraft (sessions/perfil/autenticació). */
+    minecraft(): Promise<{ services: { id: 'session' | 'services' | 'auth'; ok: boolean }[] }>
   }
   system: {
     memory(): Promise<{ totalMb: number; freeMb: number }>
+    /** 07 §2.4: `true` si la distribució exigeix una versió de client superior (només en un paquet real). */
+    isClientOutdated(minClientVersion: string): Promise<boolean>
     openPath(p: string): Promise<void>
     openExternal(url: string): Promise<void>
     /** 2.5 (Sobre > «Llicències de tercers», D23): `THIRD_PARTY_LICENSES.txt`, mai dins l'asar. */
     openThirdPartyLicenses(): Promise<void>
+    /** Text de la LGPL-3.0 de `HellMC-Core` (02 §3/§7.2). */
+    openLgplLicense(): Promise<void>
     platform: 'win32' | 'darwin' | 'linux'
     appVersion: string
   }
@@ -298,14 +299,16 @@ export interface HellMCApi {
     /** 08 §8.2: recolora els botons natius de finestra (`titleBarOverlay`, Windows/Linux) perquè
      * segueixin el tema en calent. No fa res a macOS (semàfors natius, sense overlay). */
     setTitleBarOverlay(effectiveTheme: 'dark' | 'light'): void
+    /** 08 §11: `nativeTheme.themeSource` (diàlegs/menús natius segueixen el tema de l'app). */
+    setNativeTheme(theme: 'system' | 'dark' | 'light'): void
   }
   updater: {
     check(): Promise<void>
     install(): void
+    /** 07 §6: canal d'actualitzacions (estable / versions preliminars). */
+    getPrerelease(): Promise<boolean>
+    setPrerelease(allow: boolean): Promise<boolean>
     onEvent(cb: (e: UpdaterEvent) => void): Unsubscribe
-  }
-  discord: {
-    setActivity(a: Activity | null): void
   }
 }
 

@@ -11,15 +11,22 @@ import { hellmc } from '../api'
 
 export const accounts = signal<Account[]>([])
 export const selectedUuid = signal<string | null>(null)
+/** `false` fins que `loadAccounts()` respon el primer cop: l'arrencada (2.6) no pot decidir entre
+ * «benvinguda» i «Inici» sense saber si hi ha comptes. */
+export const accountsLoaded = signal(false)
 
 export const selectedAccount = computed<Account | null>(() =>
   accounts.value.find((a) => a.uuid === selectedUuid.value) ?? null
 )
 
 export async function loadAccounts(): Promise<void> {
-  const result = await hellmc.auth.accounts()
-  accounts.value = result.accounts
-  selectedUuid.value = result.selectedUuid
+  try {
+    const result = await hellmc.auth.accounts()
+    accounts.value = result.accounts
+    selectedUuid.value = result.selectedUuid
+  } finally {
+    accountsLoaded.value = true
+  }
 }
 
 export async function selectAccount(uuid: string): Promise<void> {

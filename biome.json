@@ -9,8 +9,7 @@
 			"**/*.tsx",
 			"**/*.mts",
 			"!dist",
-			"!renderer-dist",
-			"!app/assets/js/vendor"
+			"!renderer-dist"
 		]
 	},
 	"formatter": {
@@ -27,17 +26,6 @@
 		}
 	},
 	"overrides": [
-		{
-			"includes": ["app/assets/js/scripts/*.js"],
-			"linter": {
-				"rules": {
-					"correctness": {
-						"noUnusedVariables": "off",
-						"noUndeclaredVariables": "off"
-					}
-				}
-			}
-		},
 		{
 			"includes": [
 				"renderer/**/*.ts",

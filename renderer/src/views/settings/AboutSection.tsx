@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks'
+import { Flame } from 'lucide-preact'
 import { t } from '../../i18n'
 import { Button } from '../../components/Button'
-import { Card } from '../../components/Card'
 import { hellmc } from '../../api'
 import { devModeRevealed } from '../../stores/ui'
 
@@ -16,12 +16,14 @@ const LINKS = {
 
 const REVEAL_CLICKS = 7
 
+function ExtLink({ href, children }: { href: string; children: string }) {
+  return <a href={href} onClick={(e) => { e.preventDefault(); void hellmc.system.openExternal(href) }}>{children}</a>
+}
+
 /**
- * 07 §6.1 «Sobre → Crèdits i llicències» (D23): atribució exacta ja escrita a `README.md`
- * (fork de HeliosLauncher, HellMC-Core/helios-core, Nebula) — reutilitzada aquí, mai a la
- * pantalla de càrrega (restricció explícita de D23). Clicar el número de versió unes quantes
- * vegades revela el mode desenvolupador a Launcher (07 §6, «ocult per defecte») — mateix patró
- * conegut (Android/Chrome «Build number»), sense cap altre lloc per desbloquejar-lo.
+ * 07 §6.1 «Sobre → Crèdits i llicències» (D23): atribució exacta (fork de HeliosLauncher,
+ * HellMC-Core/helios-core, Nebula) — mai a la pantalla de càrrega. Clicar el número de versió
+ * diverses vegades revela el mode desenvolupador a Launcher (patró «Build number» d'Android).
  */
 export function AboutSection() {
   const [clicks, setClicks] = useState(0)
@@ -29,61 +31,42 @@ export function AboutSection() {
   function handleVersionClick() {
     const next = clicks + 1
     setClicks(next)
-    if (next >= REVEAL_CLICKS) {
-      devModeRevealed.value = true
-    }
+    if (next >= REVEAL_CLICKS) devModeRevealed.value = true
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      <Card>
-        <h2 style={{ margin: 0, fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--text)' }}>HellMC Client</h2>
-        <p
-          onClick={handleVersionClick}
-          style={{ margin: 'var(--space-2) 0 var(--space-4)', color: 'var(--text-faint)', cursor: 'default', userSelect: 'none' }}
-        >
-          {t('settings.updates.currentVersion')}: {hellmc.system.appVersion}
-        </p>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-          <Button variant="secondary" size="sm" onClick={() => void hellmc.system.openExternal(LINKS.website)}>
-            {t('settings.about.website')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => void hellmc.system.openExternal(LINKS.source)}>
-            {t('settings.about.source')}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => void hellmc.system.openExternal(LINKS.support)}>
-            {t('settings.about.support')}
-          </Button>
+    <section class="spanel">
+      <h2>{t('ui.aboutTitle')}</h2>
+      <div class="card pad" style={{ display: 'flex', gap: 'var(--space-5)', alignItems: 'center' }}>
+        <div class="welcome" style={{ padding: 0, width: 'auto' }}>
+          <div class="logo" style={{ width: 64, height: 64 }}><Flame size={36} fill="currentColor" /></div>
         </div>
-      </Card>
+        <div>
+          <b>HellMC Client</b>
+          <div class="muted small num" onClick={handleVersionClick} style={{ cursor: 'default', userSelect: 'none' }}>
+            {t('ui.versionLabel')} {hellmc.system.appVersion}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+            <Button size="sm" onClick={() => void hellmc.system.openExternal(LINKS.website)}>{t('settings.about.website')}</Button>
+            <Button size="sm" onClick={() => void hellmc.system.openExternal(LINKS.source)}>{t('settings.about.source')}</Button>
+            <Button size="sm" onClick={() => void hellmc.system.openExternal(LINKS.support)}>{t('settings.about.support')}</Button>
+          </div>
+        </div>
+      </div>
 
-      <Card>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', color: 'var(--text-muted)' }}>
-          <p style={{ margin: 0 }}>
-            {t('settings.about.forkNotice')}{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); void hellmc.system.openExternal(LINKS.heliosLauncher) }}>
-              {LINKS.heliosLauncher}
-            </a>
-          </p>
-          <p style={{ margin: 0 }}>
-            {t('settings.about.coreNotice')}{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); void hellmc.system.openExternal(LINKS.heliosCore) }}>
-              {LINKS.heliosCore}
-            </a>
-          </p>
-          <p style={{ margin: 0 }}>
-            {t('settings.about.nebulaNotice')}{' '}
-            <a href="#" onClick={(e) => { e.preventDefault(); void hellmc.system.openExternal(LINKS.nebula) }}>
-              {LINKS.nebula}
-            </a>
-          </p>
+      <div class="card pad credits">
+        <h3>{t('ui.credits')}</h3>
+        <p>{t('settings.about.forkNotice')} <ExtLink href={LINKS.heliosLauncher}>HeliosLauncher</ExtLink></p>
+        <ul>
+          <li>{t('settings.about.coreNotice')} <ExtLink href={LINKS.heliosCore}>helios-core</ExtLink></li>
+          <li>{t('settings.about.nebulaNotice')} <ExtLink href={LINKS.nebula}>Nebula</ExtLink></li>
+          <li>{t('ui.assetsCredits')}</li>
+        </ul>
+        <div style={{ display: 'flex', gap: 8, marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
+          <Button size="sm" onClick={() => void hellmc.system.openThirdPartyLicenses()}>{t('settings.about.thirdPartyLicenses')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openLgplLicense()}>{t('settings.about.lgplLicense')}</Button>
         </div>
-        <div style={{ marginTop: 'var(--space-4)' }}>
-          <Button variant="ghost" size="sm" onClick={() => void hellmc.system.openThirdPartyLicenses()}>
-            {t('settings.about.thirdPartyLicenses')}
-          </Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </section>
   )
 }
