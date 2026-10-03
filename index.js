@@ -570,27 +570,28 @@ ipcMain.handle('hellmc:game-data-directory-pick', async (event) => {
 // amb el que ve del `distribution.json` (`discord` global + `server.discord`) i els textos traduïts.
 const PRESENCE_MOD_RE = /hellmc[_-]presence/i
 const PRESENCE_TEXTS = {
-    en: { menu: 'In the main menu', singleplayer: 'Playing singleplayer', joining: 'Loading…', joined: 'Playing on {server}', playingAt: 'Playing on {ip}', localServer: 'Local server' },
-    es: { menu: 'En el menú principal', singleplayer: 'Jugando en solitario', joining: 'Cargando…', joined: 'Jugando en {server}', playingAt: 'Jugando en {ip}', localServer: 'Servidor local' },
-    ca: { menu: 'Al menú principal', singleplayer: 'Jugant en solitari', joining: 'Carregant…', joined: 'Jugant a {server}', playingAt: 'Jugant a {ip}', localServer: 'Servidor local' }
+    en: { menu: 'In the main menu', singleplayer: 'Playing singleplayer', joining: 'Loading…', joined: 'Playing on {server}', playingAt: 'Playing on {ip}', localServer: 'Local server', titleSingleplayer: 'Singleplayer', titleMultiplayer: 'Multiplayer (3rd-party Server)' },
+    es: { menu: 'En el menú principal', singleplayer: 'Jugando en solitario', joining: 'Cargando…', joined: 'Jugando en {server}', playingAt: 'Jugando en {ip}', localServer: 'Servidor local', titleSingleplayer: 'Un jugador', titleMultiplayer: 'Multijugador (servidor de terceros)' },
+    ca: { menu: 'Al menú principal', singleplayer: 'Jugant en solitari', joining: 'Carregant…', joined: 'Jugant a {server}', playingAt: 'Jugant a {ip}', localServer: 'Servidor local', titleSingleplayer: 'Un jugador', titleMultiplayer: 'Multijugador (servidor de tercers)' }
 }
 function writePresenceConfig(gameDir, rawDistribution, rawServer, version) {
     const gen = rawDistribution.discord
     const file = path.join(gameDir, 'hellmc-presence.json')
-    if (gen?.clientId == null) {
-        fs.rmSync(file, { force: true }) // sense Discord configurat: el mod no fa res
-        return
-    }
+    // Sense Discord configurat el fitxer s'escriu igualment (sense `clientId`): el mod no fa Rich Presence, però sí el
+    // títol i la icona de la finestra. Sense fitxer, el mod no fa res.
     const language = ConfigManager.getUiConfig()?.language
     const serv = rawServer?.discord
     const config = {
-        clientId: gen.clientId,
+        clientId: gen?.clientId ?? null,
         versionName: version.name,
+        // Títol de la finestra del joc: «HellMC Client <versió de Minecraft> - Singleplayer…».
+        windowTitle: 'HellMC Client',
+        minecraftVersion: version.minecraftVersion,
         serverName: rawServer?.name ?? null,
         serverShortId: serv?.shortId ?? null,
         // Mateixa assignació que feia el launcher antic (`discordwrapper.js`).
-        largeImageKey: gen.smallImageKey,
-        largeImageText: gen.smallImageText,
+        largeImageKey: gen?.smallImageKey ?? null,
+        largeImageText: gen?.smallImageText ?? null,
         smallImageKey: serv?.largeImageKey ?? null,
         smallImageText: serv?.largeImageText ?? null,
         startTimestamp: Date.now(),
