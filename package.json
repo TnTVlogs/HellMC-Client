@@ -22,7 +22,7 @@
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
     "lint": "biome lint .",
-    "test": "vitest run --config renderer/vite.config.mts && node test/modgroups.test.js"
+    "test": "vitest run --config renderer/vite.config.mts && node test/modgroups.test.js && node test/serversdat.test.js"
   },
   "engines": {
     "node": "22.x.x"

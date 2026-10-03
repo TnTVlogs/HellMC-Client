@@ -117,6 +117,7 @@ const DistroManager = require('./app/assets/js/distromanager')
 const { DistroAPI } = DistroManager
 const ProcessBuilder = require('./app/assets/js/processbuilder')
 const DataSharing = require('./app/assets/js/datasharing')
+const ServersDat = require('./app/assets/js/serversdat')
 const { FullRepair, DistributionIndexProcessor, MojangIndexProcessor, downloadFile } = require('hellmc-core/dl')
 // 2.3 (JDK auto-download): `validateLocalFile` viu a `hellmc-core/common` (no a `hellmc-core/dl`
 // amb la resta d'utilitats de descàrrega) — mateix mòdul que `FullRepair`.
@@ -871,6 +872,12 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         const gameDir = getVersionInstanceDir(selectedVersion.rawVersion.id)
         fs.mkdirSync(gameDir, { recursive: true })
         await DataSharing.applyDataSharing(gameDir, selectedVersion.rawVersion, selectedVersion.rawVersion.id)
+
+        // El servidor al qual es juga s'afegeix a la llista de «Multijugador» (`servers.dat`) si encara no hi és. Si la
+        // versió comparteix dades, el fitxer és el mateix per a totes: en jugar a diversos servidors hi queden tots.
+        // Va després de `applyDataSharing` perquè el fitxer ja sigui l'enllaç compartit. No bloqueja mai el llançament.
+        const serversDatResult = ServersDat.ensureServer(gameDir, server)
+        devLog(`servers.dat: ${serversDatResult.status}${serversDatResult.reason ? ` (${serversDatResult.reason})` : ''}`)
 
         writePresenceConfig(gameDir, distro.rawDistribution, server, selectedVersion.rawVersion)
 
