@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks'
-import { Flame, Info, User, Wifi } from 'lucide-preact'
+import { Info, User, Wifi } from 'lucide-preact'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
+import { BrandFlame } from '../components/BrandFlame'
 import { Banner } from '../components/ui'
 import { hellmc } from '../api'
 import { language, setLanguage, theme, setTheme } from '../stores/ui'
@@ -71,7 +72,7 @@ export function Welcome() {
         {step === 'welcome' && (
           <section class="card welcome" aria-labelledby="w-title">
             <Steps n={1} />
-            <div class="logo"><Flame size={40} fill="currentColor" /></div>
+            <div class="logo"><BrandFlame size={40} /></div>
             <div><h1 id="w-title">{t('welcome.title')}</h1><p class="muted" style={{ marginTop: 8 }}>{t('welcome.subtitle')}</p></div>
             <div class="row">
               <div class="field-row" style={{ textAlign: 'left' }}>

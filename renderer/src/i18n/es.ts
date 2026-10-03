@@ -270,7 +270,21 @@ const es: Messages = {
       launching: 'Iniciando el juego…',
       ready: 'Iniciado',
       closed: 'Cerrado',
-      error: 'Error'
+      error: 'Error',
+      'preparing-java': "Preparando Java…",
+      'downloading-java': "Descargando Java…",
+      'extracting-java': "Extrayendo Java…"
+    },
+    errors: {
+      NO_ACCOUNT: "No hay ninguna cuenta seleccionada.",
+      VERSION_NOT_FOUND: "No se ha encontrado esta versión en la distribución.",
+      AUTH_INVALID: "La sesión de la cuenta ya no es válida. Vuelve a iniciar sesión.",
+      JAVA_NOT_CONFIGURED: "No se ha podido configurar Java para esta versión. Elige uno en Configuración > Java.",
+      JAVA_SETUP_FAILED: "No se ha podido preparar Java automáticamente. Inténtalo de nuevo o elige uno en Configuración > Java.",
+      NEEDS_NETWORK: "Se necesita conexión a internet para continuar.",
+      LAUNCH_FAILED: "No se ha podido iniciar el juego.",
+      SPAWN_FAILED: "No se ha podido abrir el proceso del juego.",
+      ALREADY_RUNNING: "Esta versión ya se está ejecutando o iniciando."
     }
   },
   servers: {

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks'
-import { Flame } from 'lucide-preact'
 import { t } from '../../i18n'
 import { Button } from '../../components/Button'
+import { BrandFlame } from '../../components/BrandFlame'
 import { hellmc } from '../../api'
 import { devModeRevealed } from '../../stores/ui'
 
@@ -39,7 +39,7 @@ export function AboutSection() {
       <h2>{t('ui.aboutTitle')}</h2>
       <div class="card pad" style={{ display: 'flex', gap: 'var(--space-5)', alignItems: 'center' }}>
         <div class="welcome" style={{ padding: 0, width: 'auto' }}>
-          <div class="logo" style={{ width: 64, height: 64 }}><Flame size={36} fill="currentColor" /></div>
+          <div class="logo" style={{ width: 64, height: 64 }}><BrandFlame size={36} /></div>
         </div>
         <div>
           <b>HellMC Client</b>

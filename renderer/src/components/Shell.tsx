@@ -1,12 +1,13 @@
 import type { ComponentChildren } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { Flame, Gamepad2, Globe, Home, Layers, MessageCircle, Newspaper, Plus, Server, Settings, type LucideIcon } from 'lucide-preact'
+import { Gamepad2, Globe, Home, Layers, MessageCircle, Newspaper, Plus, Server, Settings, type LucideIcon } from 'lucide-preact'
 import { navigate, route, type RouteName } from '../router'
 import { t } from '../i18n'
 import { hellmc } from '../api'
 import { Button } from './Button'
 import { ConfirmDialog } from './ConfirmDialog'
 import { Popover } from './Popover'
+import { BrandFlame } from './BrandFlame'
 import { Avatar, Banner, RingProgress, StatusDot } from './ui'
 import { instances, killInstance } from '../stores/instances'
 import { unreadCount } from '../stores/news'
@@ -165,7 +166,7 @@ export function Shell({ children }: { children: ComponentChildren }) {
   return (
     <div class={`app-shell${sidebarCollapsed.value ? ' sidebar-collapsed' : ''}`}>
       <div class="titlebar">
-        <div class="brand"><Flame size={18} fill="currentColor" /><span>HellMC</span></div>
+        <div class="brand"><BrandFlame size={20} /><span>HellMC</span></div>
         <div class="spacer" />
       </div>
       <div class="shell">

@@ -270,7 +270,21 @@ const ca: Messages = {
       launching: 'Iniciant el joc…',
       ready: 'Iniciat',
       closed: 'Tancat',
-      error: 'Error'
+      error: 'Error',
+      'preparing-java': "Preparant Java…",
+      'downloading-java': "Baixant Java…",
+      'extracting-java': "Extraient Java…"
+    },
+    errors: {
+      NO_ACCOUNT: "No hi ha cap compte seleccionat.",
+      VERSION_NOT_FOUND: "No s'ha trobat aquesta versió a la distribució.",
+      AUTH_INVALID: "La sessió del compte ja no és vàlida. Torna a iniciar sessió.",
+      JAVA_NOT_CONFIGURED: "No s'ha pogut configurar Java per a aquesta versió. Tria'n un a Configuració > Java.",
+      JAVA_SETUP_FAILED: "No s'ha pogut preparar Java automàticament. Torna-ho a provar o tria'n un a Configuració > Java.",
+      NEEDS_NETWORK: "Cal connexió a internet per continuar.",
+      LAUNCH_FAILED: "No s'ha pogut iniciar el joc.",
+      SPAWN_FAILED: "No s'ha pogut obrir el procés del joc.",
+      ALREADY_RUNNING: "Aquesta versió ja s'està executant o iniciant."
     }
   },
   servers: {

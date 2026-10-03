@@ -271,6 +271,20 @@ export interface Messages {
       ready: string
       closed: string
       error: string
+      'preparing-java': string
+      'downloading-java': string
+      'extracting-java': string
+    }
+    errors: {
+      NO_ACCOUNT: string
+      VERSION_NOT_FOUND: string
+      AUTH_INVALID: string
+      JAVA_NOT_CONFIGURED: string
+      JAVA_SETUP_FAILED: string
+      NEEDS_NETWORK: string
+      LAUNCH_FAILED: string
+      SPAWN_FAILED: string
+      ALREADY_RUNNING: string
     }
   }
   servers: {
@@ -644,7 +658,21 @@ const en: Messages = {
       launching: 'Launching…',
       ready: 'Launched',
       closed: 'Closed',
-      error: 'Error'
+      error: 'Error',
+      'preparing-java': "Preparing Java…",
+      'downloading-java': "Downloading Java…",
+      'extracting-java': "Extracting Java…"
+    },
+    errors: {
+      NO_ACCOUNT: "No account selected.",
+      VERSION_NOT_FOUND: "This version was not found in the distribution.",
+      AUTH_INVALID: "The account session is no longer valid. Sign in again.",
+      JAVA_NOT_CONFIGURED: "Java could not be configured for this version. Pick one in Settings > Java.",
+      JAVA_SETUP_FAILED: "Java could not be prepared automatically. Try again or pick one in Settings > Java.",
+      NEEDS_NETWORK: "An internet connection is required to continue.",
+      LAUNCH_FAILED: "The game could not be started.",
+      SPAWN_FAILED: "The game process could not be opened.",
+      ALREADY_RUNNING: "This version is already running or starting."
     }
   },
   servers: {

@@ -86,6 +86,13 @@ function NewsColumn() {
   )
 }
 
+/** Text de l'error de llançament en l'idioma actiu (el missatge del procés principal és en anglès, només per al registre). */
+function errorText(code: string | undefined, fallback: string): string {
+  const key = `home.errors.${code ?? ''}`
+  const translated = t(key)
+  return translated === key ? fallback : translated
+}
+
 function PlayCard() {
   const selection = effectiveSelection.value
   const d = distro.value
@@ -172,7 +179,7 @@ function PlayCard() {
           <Progress value={progress.percent > 0 ? progress.percent : null} />
         </div>
 
-        {progress.phase === 'error' && progress.error != null && !showDialog && <p class="error-text">{progress.error.message}</p>}
+        {progress.phase === 'error' && progress.error != null && !showDialog && <p class="error-text">{errorText(progress.error.code, progress.error.message)}</p>}
 
         <div class="pc-actions">
           {busy ? (

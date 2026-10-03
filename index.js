@@ -766,11 +766,18 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         return
     }
 
-    const launchState = { repair: null }
+    // Cancel·lació: `hellmc:launch-cancel` marca `cancelled`, mata el procés de reparació i rebutja `cancelledPromise`;
+    // cada pas llarg es competeix amb ella (`step`) perquè el flux pari a l'instant en comptes de continuar
+    // verificant/baixant i acabar obrint el joc igualment.
+    const launchState = { repair: null, cancelled: false, cancel: () => {} }
+    const cancelledPromise = new Promise((_, reject) => { launchState.cancel = () => reject(new Error('LAUNCH_CANCELLED')) })
+    cancelledPromise.catch(() => { /* només serveix per al race de `step` */ })
+    const step = (promise) => Promise.race([promise, cancelledPromise])
+    const throwIfCancelled = () => { if (launchState.cancelled) throw new Error('LAUNCH_CANCELLED') }
     launchingTargets.set(key, launchState)
     try {
         send({ phase: 'refreshing-distribution', percent: 0 })
-        const distro = await DistroAPI.refreshDistributionOrFallback()
+        const distro = await step(DistroAPI.refreshDistributionOrFallback())
         const selectedVersion = distro.getVersionById(target.versionId)
         if (selectedVersion == null) {
             send({ phase: 'error', percent: 0, error: { code: 'VERSION_NOT_FOUND', message: `Version ${target.versionId} not found in distribution.` } })
@@ -790,14 +797,26 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         devLog(`launch-start target=${JSON.stringify(target)} server=${server?.id ?? null}`)
 
         send({ phase: 'validating-account', percent: 0 })
-        const authStatus = await AuthManager.validateSelectedStatus()
+        const authStatus = await step(AuthManager.validateSelectedStatus())
         if (authStatus === 'invalid') {
             send({ phase: 'error', percent: 0, error: { code: 'AUTH_INVALID', message: 'Account session is no longer valid. Sign in again.' } })
             return
         }
 
         ConfigManager.ensureJavaConfig(selectedVersion.rawVersion.id, selectedVersion.effectiveJavaOptions, selectedVersion.rawVersion.javaOptions?.ram)
-        const storedJavaExecutable = ConfigManager.getJavaExecutable(selectedVersion.rawVersion.id)
+        let storedJavaExecutable = null
+        try {
+            storedJavaExecutable = await step(resolveJavaExecutable(selectedVersion, (phase, percent) => {
+                if (launchState.cancelled || phase === 'ready') return
+                send({ phase: phase === 'fetching-jdk' ? 'preparing-java' : phase, percent })
+            }))
+        } catch (javaErr) {
+            if (launchState.cancelled) throw javaErr
+            devLog('auto-java failed: ' + javaErr?.message)
+            const isNetwork = /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed|network/i.test(String(javaErr?.code ?? '') + ' ' + String(javaErr?.message ?? ''))
+            send({ phase: 'error', percent: 0, error: { code: isNetwork ? 'NEEDS_NETWORK' : 'JAVA_SETUP_FAILED', message: javaErr?.message || String(javaErr) } })
+            return
+        }
         if (!storedJavaExecutable) {
             send({ phase: 'error', percent: 0, error: { code: 'JAVA_NOT_CONFIGURED', message: 'No Java executable configured for this version yet.' } })
             return
@@ -832,18 +851,19 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         )
         launchState.repair = repair
         repair.spawnReceiver()
-        await repair.verifyFiles((percent) => send({ phase: 'verifying-files', percent }))
+        await step(repair.verifyFiles((percent) => { if (!launchState.cancelled) send({ phase: 'verifying-files', percent }) }))
 
         send({ phase: 'downloading', percent: 0 })
-        await repair.download((percent) => send({ phase: 'downloading', percent }))
+        await step(repair.download((percent) => { if (!launchState.cancelled) send({ phase: 'downloading', percent }) }))
         repair.destroyReceiver()
         launchState.repair = null
 
+        throwIfCancelled()
         send({ phase: 'launching', percent: 100 })
         const mojangProcessor = new MojangIndexProcessor(ConfigManager.getCommonDirectory(), selectedVersion.rawVersion.minecraftVersion)
         const distroProcessor = new DistributionIndexProcessor(ConfigManager.getCommonDirectory(), distro, selectedVersion.rawVersion.id)
-        const modLoaderData = await distroProcessor.loadModLoaderVersionJson(selectedVersion)
-        const versionData = await mojangProcessor.getVersionJson()
+        const modLoaderData = await step(distroProcessor.loadModLoaderVersionJson(selectedVersion))
+        const versionData = await step(mojangProcessor.getVersionJson())
 
         // D26 (06 §8.2): mateix punt on l'app antiga sincronitza `mods/` — `ProcessBuilder.build()`
         // (§93 avall) fa `fs.ensureDirSync(gameDir)` ell mateix, però cal `gameDir` ja creat *abans*
@@ -854,6 +874,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
 
         writePresenceConfig(gameDir, distro.rawDistribution, server, selectedVersion.rawVersion)
 
+        throwIfCancelled()
         const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, account, app.getVersion(), server)
         const proc = pb.build()
         runningInstances.set(key, { id: key, versionId: target.versionId, serverId: target.serverId, startedAt: Date.now(), proc })
@@ -882,25 +903,34 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
 
         send({ phase: 'ready', percent: 100 })
     } catch (err) {
-        devLog(`launch-start failed: ${err?.stack || err}`)
         if (launchState.repair) {
             launchState.repair.destroyReceiver()
             launchState.repair = null
         }
+        if (launchState.cancelled || err?.message === 'LAUNCH_CANCELLED') {
+            devLog('launch-start cancel·lat per l usuari')
+            return
+        }
+        devLog(`launch-start failed: ${err?.stack || err}`)
         // 07 §11: sense connexió i versió no instal·lada → diàleg «Cal connexió» (no un error genèric).
         const networkCodes = ['ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'ENETUNREACH', 'EHOSTUNREACH']
         const isNetwork = networkCodes.some((c) => err?.code === c || String(err?.message).includes(c))
         send({ phase: 'error', percent: 0, error: { code: isNetwork ? 'NEEDS_NETWORK' : 'LAUNCH_FAILED', message: err?.message || String(err) } })
     } finally {
-        launchingTargets.delete(key)
+        // Només si la clau encara és d'aquest llançament: després d'un cancel·lar, l'usuari pot haver-ne començat un de nou.
+        if (launchingTargets.get(key) === launchState) launchingTargets.delete(key)
     }
 })
 
 ipcMain.handle('hellmc:launch-cancel', (_event, target) => {
     const key = targetKey(target.versionId, target.serverId)
     const state = launchingTargets.get(key)
-    if (state?.repair) {
+    if (state == null) return
+    state.cancelled = true
+    state.cancel()
+    if (state.repair) {
         state.repair.destroyReceiver()
+        state.repair = null
     }
     launchingTargets.delete(key)
 })
@@ -1244,29 +1274,24 @@ ipcMain.handle('hellmc:java-global-set', (_event, executable) => {
 // `downloadFile` (mateix `hellmc-core/dl` que `FullRepair`) el baixa, `extractJdk` el descomprimeix
 // i ja retorna l'**executable** (no l'arrel — a diferència de `discoverBestJvmInstallation`, no cal
 // `javaExecFromRoot` aquí, `JavaGuard.js:extractJdk` ja hi passa per dins).
-ipcMain.handle('hellmc:java-download', async (event, versionId) => {
-    const selectedVersion = await ensureJavaConfigForVersion(versionId)
-    if (selectedVersion == null) {
-        throw new Error(`Version ${versionId} not found in distribution.`)
-    }
+// Baixa i descomprimeix el JDK adequat per a una versió i el desa com a executable seu. Compartit entre
+// `hellmc:java-download` (botó a Configuració) i el flux de Jugar (`resolveJavaExecutable`).
+// `report(phase, percent)`: 'fetching-jdk' | 'downloading-java' | 'extracting-java' | 'ready'.
+async function downloadJdkForVersion(versionId, selectedVersion, report) {
     const { suggestedMajor, supported: semverRange, distribution: jdkDistribution } = selectedVersion.effectiveJavaOptions
-    const sender = event.sender
-    const send = (phase, percent) => {
-        if (!sender.isDestroyed()) sender.send('hellmc:java-download-progress', versionId, { phase, percent })
-    }
     devLog(`java-download ${versionId} suggestedMajor=${suggestedMajor} distribution=${jdkDistribution}`)
 
-    send('fetching-jdk', 0)
+    report('fetching-jdk', 0)
     const asset = await latestOpenJDK(suggestedMajor, ConfigManager.getDataDirectory(), jdkDistribution)
     if (asset == null) {
         throw new Error('JDK_FETCH_FAILED')
     }
 
-    send('downloading-java', 0)
+    report('downloading-java', 0)
     await downloadFile(asset.url, asset.path, (progress) => {
-        send('downloading-java', Math.trunc((progress.percent ?? 0) * 100))
+        report('downloading-java', Math.trunc((progress.percent ?? 0) * 100))
     })
-    send('downloading-java', 100)
+    report('downloading-java', 100)
 
     // `hash` és opcional als `Asset` no rastrejats (`dl/Asset.d.ts`) — aquí sempre hi és (ve
     // d'Adoptium/Corretto), però es comprova igualment per no assumir-ho a cegues.
@@ -1275,7 +1300,7 @@ ipcMain.handle('hellmc:java-download', async (event, versionId) => {
         throw new Error('JAVA_DOWNLOAD_CORRUPTED')
     }
 
-    send('extracting-java', 0)
+    report('extracting-java', 0)
     const newJavaExec = await extractJdk(asset.path)
     devLog(`java-download extracted -> ${newJavaExec}`)
 
@@ -1283,9 +1308,61 @@ ipcMain.handle('hellmc:java-download', async (event, versionId) => {
     ConfigManager.save()
 
     const info = await validateSelectedJvm(newJavaExec, semverRange)
-    send('ready', 100)
+    report('ready', 100)
     return { available: true, path: newJavaExec, version: info?.semverStr }
+}
+
+ipcMain.handle('hellmc:java-download', async (event, versionId) => {
+    const selectedVersion = await ensureJavaConfigForVersion(versionId)
+    if (selectedVersion == null) {
+        throw new Error(`Version ${versionId} not found in distribution.`)
+    }
+    const sender = event.sender
+    return downloadJdkForVersion(versionId, selectedVersion, (phase, percent) => {
+        if (!sender.isDestroyed()) sender.send('hellmc:java-download-progress', versionId, { phase, percent })
+    })
 })
+
+// Proveïdors de JDK de `javaOptions.distribution` → text del `vendor` que informa el JDK instal·lat.
+const JDK_VENDOR_PATTERNS = { TEMURIN: /adoptium|temurin|eclipse/i, CORRETTO: /amazon|corretto/i }
+
+/**
+ * Jugar sense Java configurat (o amb un de no vàlid): es resol sol, sense preguntar.
+ *   1. El Java ja desat per a la versió, si és vàlid per al rang de la versió.
+ *   2. Un JDK instal·lat al PC que compleixi el rang. Si la versió **exigeix** un proveïdor
+ *      (`javaOptions.distribution` explícit), només val un d'aquest proveïdor.
+ *   3. Si no n'hi ha cap, es baixa el que indica la versió (proveïdor i versió major).
+ * Retorna l'executable (ja desat a la config) o llança si no s'ha pogut obtenir.
+ */
+async function resolveJavaExecutable(selectedVersion, report) {
+    const versionId = selectedVersion.rawVersion.id
+    const semverRange = selectedVersion.effectiveJavaOptions.supported
+
+    const stored = ConfigManager.getJavaExecutable(versionId)
+    if (stored) {
+        const normalized = javaExecFromRoot(ensureJavaDirIsRoot(stored))
+        if ((await validateSelectedJvm(normalized, semverRange)) != null) return normalized
+    }
+
+    const requiredVendor = selectedVersion.rawVersion.javaOptions?.distribution
+    const vendorPattern = requiredVendor != null ? JDK_VENDOR_PATTERNS[requiredVendor] : null
+    report('fetching-jdk', 0)
+    const paths = await getValidatableJavaPaths(ConfigManager.getDataDirectory())
+    const details = filterApplicableJavaPaths(await resolveJvmSettings(paths), semverRange)
+    rankApplicableJvms(details)
+    const found = details.find((d) => vendorPattern == null || vendorPattern.test(d.vendor ?? ''))
+    if (found != null) {
+        const executable = javaExecFromRoot(found.path)
+        devLog(`auto-java ${versionId}: instal·lat ${executable} (${found.vendor} ${found.semverStr})`)
+        ConfigManager.setJavaExecutable(versionId, executable)
+        ConfigManager.save()
+        return executable
+    }
+
+    devLog(`auto-java ${versionId}: cap JDK compatible instal·lat (proveïdor ${requiredVendor ?? 'qualsevol'}), es baixa`)
+    const downloaded = await downloadJdkForVersion(versionId, selectedVersion, report)
+    return downloaded.path
+}
 
 // ── 2.4 (bàsic): notícies (RSS global + per servidor, amb cache per a D24 sense connexió) ──────
 function getNewsCachePath() {

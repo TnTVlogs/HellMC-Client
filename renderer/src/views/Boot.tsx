@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks'
-import { Flame, Download, WifiOff } from 'lucide-preact'
+import { Download, WifiOff } from 'lucide-preact'
 import { t } from '../i18n'
 import { hellmc } from '../api'
 import { Button } from '../components/Button'
+import { BrandFlame } from '../components/BrandFlame'
 import { loadDistro, distroLoading } from '../stores/distro'
 import { loadSelection } from '../stores/selection'
 
@@ -17,7 +18,7 @@ export function Loading() {
     <div class="app-shell" style={{ gridTemplateRows: 'minmax(0, 1fr)' }}>
       <div class="center-drag" />
       <main class="center-screen" aria-busy="true" style={{ gap: 'var(--space-5)', justifyItems: 'center', alignContent: 'center' }}>
-        <div class="welcome" style={{ padding: 0 }}><div class="logo"><Flame size={40} fill="currentColor" /></div></div>
+        <div class="welcome" style={{ padding: 0 }}><div class="logo"><BrandFlame size={40} /></div></div>
         <div class="wordmark">Hell<span>MC</span></div>
         <div class="spinner" role="status" />
         <p class="muted" style={{ minHeight: '1.5em' }}>{slow ? t('boot.starting') : ''}</p>
