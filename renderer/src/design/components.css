@@ -169,14 +169,19 @@ button.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--
 .g1 { --g: linear-gradient(135deg, #2a1410, #b53a1b 55%, #f28a3d); }
 .g2 { --g: linear-gradient(135deg, #10202e, #1f6fa8 55%, #56c2e6); }
 .g3 { --g: linear-gradient(135deg, #1c1a2e, #5b3fb0 55%, #b07be8); }
-.g4 { --g: linear-gradient(135deg, #10241a, #1f8a52 55%, #7ad99c); }
+.g4 { --g: linear-gradient(135deg, #10241a, #1b7f4a 55%, #7ad99c); }
 .g5 { --g: linear-gradient(135deg, #2b2b2b, #5a5f68 55%, #a3a9b5); }
+.g6 { --g: linear-gradient(135deg, #2e1020, #b02a6b 55%, #f070a8); }
+.g7 { --g: linear-gradient(135deg, #2b2010, #a35a00 55%, #f2b441); }
+.g8 { --g: linear-gradient(135deg, #0c2528, #0f7a80 55%, #4fd1d1); }
 
 /* ------------------------------------------------------------------ Targeta Jugar */
 .playcard { position: sticky; top: 0; overflow: hidden; display: flex; flex-direction: column; }
 .playcard .art { aspect-ratio: 16 / 6; }
 .playcard .body { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
 .pc-head { display: flex; align-items: center; gap: var(--space-3); margin-top: calc(var(--space-8) * -1); position: relative; z-index: 1; }
+.avatar.g1, .avatar.g2, .avatar.g3, .avatar.g4, .avatar.g5, .avatar.g6, .avatar.g7, .avatar.g8 { background: var(--g); }
+.sicon.img { object-fit: cover; background: var(--surface-2); }
 .sicon { width: 56px; height: 56px; border-radius: 14px; flex: none; display: grid; place-items: center; font-weight: 700; font-size: 1.2rem; color: #fff; border: 3px solid var(--surface-1); background: var(--g); }
 .pc-head .txt { min-width: 0; padding-top: var(--space-6); }
 .pc-head h3 { font-size: var(--fs-lg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -416,3 +421,6 @@ input.field { min-width: 0; }
 
 .tabs, .snav { overflow-y: hidden; }
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+.sicon.vicon { width: 40px; height: 40px; border: 0; border-radius: 10px; font-size: 1rem; }
+.page-head > .sicon { width: 56px; height: 56px; border: 0; }

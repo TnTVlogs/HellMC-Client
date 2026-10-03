@@ -8,7 +8,7 @@ import { Card } from '../components/Card'
 import { Tabs } from '../components/Tabs'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Toggle } from '../components/Toggle'
-import { Banner, Chip, Progress } from '../components/ui'
+import { Banner, Chip, Progress, ServerIcon } from '../components/ui'
 import { navigate } from '../router'
 import { distro } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
@@ -372,6 +372,7 @@ export function VersionDetail({ id }: { id: string }) {
     <>
       <div><a class="small" href="#/versions">← {t('nav.versions')}</a></div>
       <div class="page-head">
+        <ServerIcon name={version.name} seed={version.id} url={version.icon} />
         <div class="grow">
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <h1>{version.name}</h1>

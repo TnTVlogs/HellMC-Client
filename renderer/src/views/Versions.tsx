@@ -3,7 +3,7 @@ import { Check, Download, Play, RefreshCw, Search } from 'lucide-preact'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
-import { Chip, Progress } from '../components/ui'
+import { Chip, Progress, ServerIcon } from '../components/ui'
 import { navigate } from '../router'
 import { distro, distroLoading } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
@@ -80,12 +80,15 @@ export function Versions() {
           const servers = (d?.servers ?? []).filter((s) => s.versions.some((e) => e.id === version.id))
           return (
             <div key={version.id} class="vrow">
-              <div class="name">
-                <b>{version.name}</b>
-                <div class="xs-chips">
-                  {servers.length === 0
-                    ? <Chip>{t('ui.noServer')}</Chip>
-                    : servers.map((s, i) => <Chip key={s.id} tone={i === 0 ? 'accent' : undefined}>{s.name}</Chip>)}
+              <div class="name" style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', minWidth: 0 }}>
+                <ServerIcon name={version.name} seed={version.id} url={version.icon} class="vicon" />
+                <div style={{ minWidth: 0 }}>
+                  <b>{version.name}</b>
+                  <div class="xs-chips">
+                    {servers.length === 0
+                      ? <Chip>{t('ui.noServer')}</Chip>
+                      : servers.map((s, i) => <Chip key={s.id} tone={i === 0 ? 'accent' : undefined}>{s.name}</Chip>)}
+                  </div>
                 </div>
               </div>
               <div class="mc muted small">{version.minecraftVersion} · {version.loader}{version.loaderVersion ? ` ${version.loaderVersion}` : ''}</div>

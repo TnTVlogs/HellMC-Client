@@ -135,7 +135,7 @@ function PlayCard() {
       <Art seed={server?.id ?? 'free'} url={server?.banner} />
       <div class="body">
         <div class="pc-head">
-          <ServerIcon name={name} seed={server?.id ?? 'free'} url={server?.icon} />
+          <ServerIcon name={server?.name ?? version?.name ?? name} seed={server?.id ?? version?.id ?? 'free'} url={server != null ? server.icon : version?.icon} />
           <div class="txt">
             <h3>{name}</h3>
             <div class="status-line">

@@ -1,27 +1,30 @@
 import type { ComponentChildren, JSX } from 'preact'
 import type { LucideIcon } from 'lucide-preact'
+import { useState } from 'preact/hooks'
+import { gradientClass, initialOf } from '../identity'
 
-/** Degradats generats (P14: «degradat de color derivat del nom») — `g1`..`g5` del prototip. */
-export function gradientClass(seed: string): string {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return `g${(h % 5) + 1}`
-}
-
-/** Banner generat o imatge real si n'hi ha (`url`). */
+/** Banner: la imatge si n'hi ha i carrega; si no (sense URL o URL trencada), el degradat de reserva del `seed`. */
 export function Art({ seed, url, class: cls }: { seed: string; url?: string | null; class?: string }) {
-  if (url) {
-    return <div class={`art ${cls ?? ''}`} style={{ background: `center / cover url(${JSON.stringify(url)})` }} />
+  const [failed, setFailed] = useState<string | null>(null)
+  if (url && failed !== url) {
+    return (
+      <div class={`art ${cls ?? ''}`}>
+        <img src={url} alt="" onError={() => setFailed(url)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+    )
   }
   return <div class={`art ${gradientClass(seed)} ${cls ?? ''}`} />
 }
 
-/** Icona quadrada del servidor (inicial sobre degradat). */
+/** Icona quadrada (servidor o versió): la imatge si carrega; si no, la inicial sobre el degradat del `seed`. */
 export function ServerIcon({ name, seed, url, class: cls }: { name: string; seed?: string; url?: string | null; class?: string }) {
-  const style = url ? { background: `center / cover url(${JSON.stringify(url)})` } : undefined
+  const [failed, setFailed] = useState<string | null>(null)
+  if (url && failed !== url) {
+    return <img class={`sicon img ${cls ?? ''}`} src={url} alt="" onError={() => setFailed(url)} aria-hidden="true" />
+  }
   return (
-    <div class={`sicon ${url ? '' : gradientClass(seed ?? name)} ${cls ?? ''}`} style={style} aria-hidden="true">
-      {url ? null : name.trim().charAt(0).toUpperCase()}
+    <div class={`sicon ${gradientClass(seed ?? name)} ${cls ?? ''}`} aria-hidden="true">
+      {initialOf(name)}
     </div>
   )
 }
@@ -74,11 +77,5 @@ export function Banner({ tone = 'warn', icon: Icon, children, action }: { tone?:
 }
 
 export function Avatar({ name, seed }: { name: string; seed?: string }) {
-  const g = gradientClass(seed ?? name)
-  const colors: Record<string, string> = {
-    g1: 'linear-gradient(135deg,#b53a1b,#f28a3d)', g2: 'linear-gradient(135deg,#1f6fa8,#56c2e6)',
-    g3: 'linear-gradient(135deg,#5b3fb0,#b07be8)', g4: 'linear-gradient(135deg,#1f8a52,#7ad99c)',
-    g5: 'linear-gradient(135deg,#5a5f68,#a3a9b5)'
-  }
-  return <div class="avatar" style={{ background: colors[g] }} aria-hidden="true">{name.charAt(0).toUpperCase()}</div>
+  return <div class={`avatar ${gradientClass(seed ?? name)}`} aria-hidden="true">{initialOf(name)}</div>
 }
