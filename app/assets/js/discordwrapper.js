@@ -12,6 +12,19 @@ let genSettings
 let servSettings
 let retryTimer = null
 
+// Les crides del client RPC retornen una promesa que rebutja (i llança de forma síncrona si no hi ha socket) quan Discord
+// es tanca o encara no s'ha connectat: mai ha de quedar sense capturar (UnhandledPromiseRejection).
+function safe(fn) {
+    try {
+        const result = fn()
+        if (result && typeof result.catch === 'function') {
+            result.catch(error => logger.debug('Discord RPC: ' + error.message))
+        }
+    } catch (error) {
+        logger.debug('Discord RPC: ' + error.message)
+    }
+}
+
 // Fase 0: `serv` is null when the launched version isn't tied to a `Server`
 // (no catalog exists yet, see 01-terminologia-i-dades.md §3.3) — RPC then
 // falls back to generic branding instead of a per-server shortId/state.
@@ -25,7 +38,8 @@ exports.initRPC = function (gen, serv, initialDetails = 'In the launcher', initi
     if (client) {
         activity.details = initialDetails
         activity.state = initialState
-        client.setActivity(activity)
+        // Sense connexió (Discord tancat, o encara reintentant) no hi ha socket: l'activitat es guarda i s'envia en `ready`.
+        if (client.user) safe(() => client.setActivity(activity))
         return
     }
 
@@ -44,7 +58,7 @@ exports.initRPC = function (gen, serv, initialDetails = 'In the launcher', initi
 
     client.on('ready', () => {
         logger.info('Discord RPC Connected')
-        client.setActivity(activity)
+        safe(() => client.setActivity(activity))
     })
 
     // Reintents fins que Discord s'obri. El temporitzador es cancel·la a `shutdownRPC` i cada
@@ -74,18 +88,18 @@ exports.initRPC = function (gen, serv, initialDetails = 'In the launcher', initi
 exports.updateDetails = function (details) {
     if (!client || !client.user) return
     activity.details = details
-    client.setActivity(activity)
+    safe(() => client.setActivity(activity))
 }
 
 exports.updateActivity = function (newActivity) {
     if (!client || !client.user) return
     activity = { ...activity, ...newActivity }
-    client.setActivity(activity)
+    safe(() => client.setActivity(activity))
 }
 
 exports.clearActivity = function () {
     if (!client || !client.user) return
-    client.clearActivity()
+    safe(() => client.clearActivity())
 }
 
 exports.shutdownRPC = function () {

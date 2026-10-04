@@ -508,6 +508,17 @@ class ProcessBuilder {
             logger.warn('HellMC-Presence jar not found, launching without the agent:', jar)
             return null
         }
+        // Un jar sense `Premain-Class` (versió antiga del mod) fa que la JVM aborti en arrencar: millor sense agent.
+        try {
+            const manifest = new AdmZip(jar).readAsText('META-INF/MANIFEST.MF')
+            if (!/^Premain-Class:/mi.test(manifest)) {
+                logger.warn('HellMC-Presence jar has no Premain-Class (old version of the mod), launching without the agent:', jar)
+                return null
+            }
+        } catch (err) {
+            logger.warn('Could not read the HellMC-Presence jar, launching without the agent:', err)
+            return null
+        }
         return `-javaagent:${jar}`
     }
 
