@@ -13,6 +13,8 @@ const ModGroups = require('./modgroups')
 
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
+// Mod HellMC-Presence (mateixa expressió que `index.js`): és alhora el mod i el Java agent de la finestra.
+const PRESENCE_MOD_RE = /hellmc[_-]presence/i
 
 /**
  * Only forge and fabric are top level mod loaders.
@@ -489,6 +491,27 @@ class ProcessBuilder {
     }
 
     /**
+     * `-javaagent:` del mod HellMC-Presence (repo `HellMC-Presence`, `client-redesign/06 §8.1`): el mateix jar és el mod i un
+     * Java agent que intercepta `GLFW.glfwSetWindowTitle/glfwCreateWindow/glfwSetWindowIcon`, de manera que la finestra mai
+     * mostra «Minecraft» ni la icona del joc (ni 1-2 s). Sense l'agent el mod ho fa igualment, però amb retard.
+     *
+     * @param {Array.<Object>} mods The mods that will be launched with this process.
+     * @returns {string|null} The JVM argument, or null when the mod is not part of this version (or the jar is missing).
+     */
+    _presenceAgentArg(mods) {
+        const presence = mods.find(m => PRESENCE_MOD_RE.test(m.rawModule.id) || PRESENCE_MOD_RE.test(path.basename(m.getPath())))
+        if (presence == null) {
+            return null
+        }
+        const jar = presence.getPath()
+        if (!fs.existsSync(jar)) {
+            logger.warn('HellMC-Presence jar not found, launching without the agent:', jar)
+            return null
+        }
+        return `-javaagent:${jar}`
+    }
+
+    /**
      * Construct the argument array that will be passed to the JVM process.
      * This function is for 1.13+
      * 
@@ -524,6 +547,12 @@ class ProcessBuilder {
         if (process.platform === 'darwin') {
             args.push('-Xdock:name=HellMCClient')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
+        }
+        // HellMC-Presence com a Java agent: posa el títol i la icona de la finestra des del primer instant (vegeu
+        // `_presenceAgentArg`). Ha d'anar abans de la classe principal.
+        const presenceAgent = this._presenceAgentArg(mods)
+        if (presenceAgent != null) {
+            args.push(presenceAgent)
         }
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.version.rawVersion.id))
         args.push('-Xms' + ConfigManager.getMinRAM(this.version.rawVersion.id))
