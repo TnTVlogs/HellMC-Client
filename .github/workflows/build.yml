@@ -8,23 +8,99 @@ on:
         description: 'Publica la release a GitHub (desmarca per només compilar)'
         type: boolean
         default: true
+      core_ref:
+        description: 'Etiqueta de HellMC-Core i HellMC-Distribution-Types (buit = branca per defecte)'
+        type: string
+        default: ""
+
+# Permisos mínims per defecte; només els jobs que els necessiten els amplien.
+permissions:
+  contents: read
+
+env:
+  CORE_REF: ${{ inputs.core_ref }}
 
 jobs:
+  # 1) Lint + proves: res es publica si això falla.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      # `hellmc-core` i `hellmc-distribution-types` són dependències `file:../…`: es clonen com a germanes i es compilen.
+      - name: Build sibling dependencies
+        shell: bash
+        run: |
+          git clone --depth 1 ${CORE_REF:+--branch "$CORE_REF"} https://github.com/TnTVlogs/HellMC-Distribution-Types.git ../HellMC-Distribution-Types
+          git clone --depth 1 ${CORE_REF:+--branch "$CORE_REF"} https://github.com/TnTVlogs/HellMC-Core.git ../HellMC-Core
+          (cd ../HellMC-Distribution-Types && npm ci && npm run build)
+          (cd ../HellMC-Core && npm ci && npm run build)
+
+      - name: Install Dependencies
+        run: npm ci
+        shell: bash
+
+      - name: Lint
+        run: npm run lint
+        shell: bash
+
+      - name: Tests
+        run: npm test
+        shell: bash
+
+      - name: Audit (production dependencies)
+        run: npm audit --omit=dev --audit-level=high
+        shell: bash
+
+  # 2) L'etiqueta es crea UNA vegada (abans es feia des dels tres sistemes a la vegada i en fallaven dos).
+  tag:
+    needs: verify
+    if: inputs.publish && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create Tag
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+  # 3) Compilació per sistema operatiu. Només aquest job té permís d'escriptura (per pujar els instal·ladors).
   release:
+    needs: [verify, tag]
+    # `tag` pot saltar-se (només compilar): el *release* s'executa igualment si `verify` ha passat.
+    if: ${{ !cancelled() && needs.verify.result == 'success' && (needs.tag.result == 'success' || needs.tag.result == 'skipped') }}
     runs-on: ${{ matrix.os }}
 
     permissions:
       contents: write
 
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -36,23 +112,17 @@ jobs:
         with:
           python-version: 3.x
 
+      - name: Build sibling dependencies
+        shell: bash
+        run: |
+          git clone --depth 1 ${CORE_REF:+--branch "$CORE_REF"} https://github.com/TnTVlogs/HellMC-Distribution-Types.git ../HellMC-Distribution-Types
+          git clone --depth 1 ${CORE_REF:+--branch "$CORE_REF"} https://github.com/TnTVlogs/HellMC-Core.git ../HellMC-Core
+          (cd ../HellMC-Distribution-Types && npm ci && npm run build)
+          (cd ../HellMC-Core && npm ci && npm run build)
+
       - name: Install Dependencies
         run: npm ci
         shell: bash
-
-      - name: Create Tag
-        id: create_tag
-        if: inputs.publish && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        shell: bash
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag "$TAG"
-            git push origin "$TAG"
-          fi
 
       - name: Build and Publish
         env:

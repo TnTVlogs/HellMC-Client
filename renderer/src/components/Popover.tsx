@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact'
-import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks'
+import { useFocusTrap } from './useFocusTrap'
 
 /**
  * Menú flotant ancorat a un element (compte, instàncies obertes…). Es dibuixa amb `position: fixed` per sobre de tot
@@ -12,8 +13,8 @@ export function Popover({ anchor, onClose, width = 280, children }: {
   width?: number
   children: ComponentChildren
 }) {
-  const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; bottom: number; maxHeight: number } | null>(null)
+  const ref = useFocusTrap<HTMLDivElement>(pos != null)
 
   useLayoutEffect(() => {
     if (anchor == null) return
@@ -32,7 +33,6 @@ export function Popover({ anchor, onClose, width = 280, children }: {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    ref.current?.focus()
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 

@@ -9,6 +9,8 @@ import { VersionDetail } from './views/VersionDetail'
 import { News } from './views/News'
 import { Loading, NeedNetwork, UpdateRequired } from './views/Boot'
 import { Welcome } from './views/Welcome'
+import { Terms } from './views/Terms'
+import { legalLoaded, needsTerms } from './stores/legal'
 import { clientOutdated, distro, distroLoading } from './stores/distro'
 import { accounts, accountsLoaded } from './stores/account'
 
@@ -17,7 +19,9 @@ import { accounts, accountsLoaded } from './stores/account'
 export function App() {
   // 07 §8 (2.6): flux inicial abans del Shell — càrrega, «Connecta't per començar» (sense
   // distribució ni cache), benvinguda/login (cap compte configurat).
-  if (distroLoading.value || !accountsLoaded.value) return <Loading />
+  if (distroLoading.value || !accountsLoaded.value || !legalLoaded.value) return <Loading />
+  // D15: termes i privacitat primer (primera execució o textos actualitzats); amb sessió ja iniciada no hi ha login.
+  if (needsTerms.value) return <Terms />
   if (distro.value == null) return <NeedNetwork />
   if (clientOutdated.value) return <UpdateRequired />
   if (accounts.value.length === 0) return <Welcome />

@@ -4,6 +4,12 @@
 // versió (cap loader permet dir-los que llegeixin mods d'un altre lloc, 06 §8.2 «Per què `gameDir`
 // per versió no es pot eliminar») — només aquesta llista fixa de dades del jugador es pot compartir,
 // mai configurable des de fora d'aquest fitxer.
+//
+// Carpetes (`saves`, `resourcepacks`, …): enllaç (junction a Windows, symlink a la resta) cap a l'arrel compartida.
+// Fitxers petits (`options.txt`, `servers.dat`, …): **còpies sincronitzades**, no enllaços durs (B6). Minecraft desa
+// `servers.dat` escrivint un fitxer temporal i substituint-lo, cosa que **trencava l'enllaç dur** en silenci: al llançament
+// següent el fitxer bo s'apartava a `*.separate-<ts>` i es perdien els canvis. Ara: en llançar, la còpia més recent (per data)
+// gana i es copia a l'altra banda; en tancar el joc, la instància es copia a l'arrel compartida.
 
 const fs = require('fs-extra')
 const path = require('path')
@@ -14,6 +20,9 @@ const logger = LoggerUtil.getLogger('DataSharing')
 
 const SHARED_DIRS = ['saves', 'resourcepacks', 'shaderpacks', 'screenshots']
 const SHARED_FILES = ['options.txt', 'optionsof.txt', 'servers.dat', 'hotbar.nbt']
+
+// Còpies `*.separate-<ts>` que es conserven per element (les més noves); abans s'acumulaven sense límit.
+const KEEP_SEPARATE_BACKUPS = 3
 
 // Exportat perquè `hellmc:versions-uninstall` (09 P6) mai esborri un d'aquests noms directament:
 // quan estan enllaçats (`shared`), esborrar-los per sota fora d'aquest mòdul podria (segons la
@@ -38,14 +47,26 @@ exports.isEffectivelyShared = function (rawVersion, versionId) {
     return ConfigManager.getDataSharingPreference(versionId)
 }
 
+async function pruneBackups(linkPath) {
+    try {
+        const dir = path.dirname(linkPath)
+        const prefix = `${path.basename(linkPath)}.separate-`
+        const names = (await fs.readdir(dir)).filter((n) => n.startsWith(prefix)).sort()
+        for (const old of names.slice(0, Math.max(0, names.length - KEEP_SEPARATE_BACKUPS))) {
+            await fs.remove(path.join(dir, old))
+        }
+    } catch { /* només neteja: mai ha de fer fallar el llançament */ }
+}
+
 // 06 §8.2: canviar de mode «no mou ni fusiona res automàticament» — la carpeta/fitxer real anterior
 // es queda al disc, intacta, només deixa d'usar-se. Sufix amb timestamp perquè, si el jugador
 // alterna de mode diverses vegades, cada transició deixa la seva pròpia còpia en comptes de
-// xocar amb una anterior.
+// xocar amb una anterior (es conserven les últimes `KEEP_SEPARATE_BACKUPS`).
 async function backupAside(linkPath) {
     const backupPath = `${linkPath}.separate-${Date.now()}`
     await fs.rename(linkPath, backupPath)
     logger.info(`Kept previous separate data intact at ${backupPath} (never merged automatically, 06 §8.2).`)
+    await pruneBackups(linkPath)
 }
 
 async function linkDir(gameDir, sharedRoot, name) {
@@ -80,39 +101,55 @@ async function unlinkDir(gameDir, name) {
     await fs.ensureDir(linkPath)
 }
 
-async function linkFile(gameDir, sharedRoot, name) {
-    const linkPath = path.join(gameDir, name)
-    const sharedTarget = path.join(sharedRoot, name)
-    const stat = await fs.lstat(linkPath).catch(() => null)
-    if (stat != null) {
-        // Un hardlink no té cap senyal fiable de "és un enllaç" (no hi ha equivalent d'`isSymbolicLink`
-        // per hardlinks) — comparar `dev`+`ino` contra l'arrel compartida és l'única manera correcta
-        // de saber si ja és el mateix fitxer físic.
-        const sharedStat = await fs.stat(sharedTarget).catch(() => null)
-        if (sharedStat != null && sharedStat.dev === stat.dev && sharedStat.ino === stat.ino) return
-        await backupAside(linkPath)
+function sameFile(a, b) {
+    return a != null && b != null && a.dev === b.dev && a.ino === b.ino && a.ino !== 0
+}
+
+/** Un enllaç dur antic (versions anteriors del client) es converteix en un fitxer independent. */
+async function breakLegacyHardlink(filePath) {
+    const tmp = `${filePath}.tmp-${process.pid}`
+    await fs.copyFile(filePath, tmp)
+    await fs.rename(tmp, filePath)
+}
+
+async function copyKeepingTime(from, to) {
+    await fs.ensureDir(path.dirname(to))
+    const tmp = `${to}.tmp-${process.pid}`
+    await fs.copyFile(from, tmp)
+    const { atime, mtime } = await fs.stat(from)
+    await fs.utimes(tmp, atime, mtime)
+    await fs.rename(tmp, to)
+}
+
+/**
+ * Abans de llançar: la còpia més recent (per data de modificació) entre la instància i l'arrel compartida gana.
+ * No es creen fitxers buits (a la `.minecraft` del sistema no s'hi escriu res que no existeixi a la instància).
+ */
+async function syncFileIn(gameDir, sharedRoot, name) {
+    const instancePath = path.join(gameDir, name)
+    const sharedPath = path.join(sharedRoot, name)
+    const [instance, shared] = await Promise.all([fs.stat(instancePath).catch(() => null), fs.stat(sharedPath).catch(() => null)])
+    if (instance == null && shared == null) return
+    if (sameFile(instance, shared)) {
+        await breakLegacyHardlink(instancePath)
+        return
     }
-    await fs.ensureDir(path.dirname(sharedTarget))
-    if (!await fs.pathExists(sharedTarget)) {
-        await fs.ensureFile(sharedTarget)
+    if (instance == null) {
+        await copyKeepingTime(sharedPath, instancePath)
+    } else if (shared == null) {
+        await copyKeepingTime(instancePath, sharedPath)
+    } else if (instance.mtimeMs > shared.mtimeMs + 1000) {
+        await copyKeepingTime(instancePath, sharedPath)
+    } else if (shared.mtimeMs > instance.mtimeMs + 1000) {
+        await copyKeepingTime(sharedPath, instancePath)
     }
-    await fs.link(sharedTarget, linkPath)
 }
 
 async function unlinkFile(gameDir, sharedRoot, name) {
-    const linkPath = path.join(gameDir, name)
-    const stat = await fs.lstat(linkPath).catch(() => null)
-    if (stat == null) return
-    // Un hardlink no es distingeix d'un fitxer real per `stat` sol (§linkFile) — cal comparar
-    // `dev`+`ino` contra l'arrel compartida abans d'esborrar res. **Crític**: sense aquesta
-    // comprovació, qualsevol versió `forcedSeparate` o amb l'interruptor desactivat perdria
-    // `options.txt`/`servers.dat` reals a cada llançament (`fs.remove` cec sobre un fitxer que mai
-    // ha estat un enllaç) — aquest camí s'executa a **cada** llançament, no només en canviar de mode.
-    const sharedTarget = path.join(sharedRoot, name)
-    const sharedStat = await fs.stat(sharedTarget).catch(() => null)
-    if (sharedStat != null && sharedStat.dev === stat.dev && sharedStat.ino === stat.ino) {
-        await fs.remove(linkPath)
-    }
+    // Versió amb dades separades: només es trenca un possible enllaç dur d'una versió anterior del client; mai s'esborra res.
+    const instancePath = path.join(gameDir, name)
+    const [instance, shared] = await Promise.all([fs.stat(instancePath).catch(() => null), fs.stat(path.join(sharedRoot, name)).catch(() => null)])
+    if (sameFile(instance, shared)) await breakLegacyHardlink(instancePath)
 }
 
 /**
@@ -143,12 +180,34 @@ exports.applyDataSharing = async function (gameDir, rawVersion, versionId) {
     for (const name of SHARED_FILES) {
         try {
             if (shared) {
-                await linkFile(gameDir, sharedRoot, name)
+                await syncFileIn(gameDir, sharedRoot, name)
             } else {
                 await unlinkFile(gameDir, sharedRoot, name)
             }
         } catch (err) {
-            logger.warn(`Could not ${shared ? 'link' : 'unlink'} shared file "${name}" for ${versionId}, keeping it separate.`, err)
+            logger.warn(`Could not ${shared ? 'sync' : 'detach'} shared file "${name}" for ${versionId}, keeping it separate.`, err)
+        }
+    }
+}
+
+/**
+ * En tancar el joc: els fitxers compartits de la instància (que el joc ha pogut canviar) es copien a l'arrel compartida
+ * perquè les altres versions els vegin. Mai llança.
+ */
+exports.syncBack = async function (gameDir, rawVersion, versionId) {
+    if (!exports.isEffectivelyShared(rawVersion, versionId)) return
+    const sharedRoot = ConfigManager.getSharedDataRoot()
+    for (const name of SHARED_FILES) {
+        try {
+            const instancePath = path.join(gameDir, name)
+            const sharedPath = path.join(sharedRoot, name)
+            const [instance, shared] = await Promise.all([fs.stat(instancePath).catch(() => null), fs.stat(sharedPath).catch(() => null)])
+            if (instance == null) continue
+            if (shared == null || instance.mtimeMs > shared.mtimeMs + 1000 || instance.size !== shared.size) {
+                await copyKeepingTime(instancePath, sharedPath)
+            }
+        } catch (err) {
+            logger.warn(`Could not sync "${name}" back to the shared root for ${versionId}.`, err)
         }
     }
 }

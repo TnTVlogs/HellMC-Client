@@ -56,8 +56,7 @@ class ProcessBuilder {
      */
     build() {
         fs.ensureDirSync(this.gameDir)
-        const tempNativePath = path.join(os.tmpdir(), ConfigManager.getTempNativeFolder(), crypto.pseudoRandomBytes(16).toString('hex'))
-        process.throwDeprecation = true
+        const tempNativePath = path.join(os.tmpdir(), ConfigManager.getTempNativeFolder(), crypto.randomBytes(16).toString('hex'))
         this.setupLiteLoader()
         logger.info('Using liteloader:', this.usingLiteLoader)
         this.usingFabricLoader = this.version.modules.some(mdl => mdl.rawModule.type === Type.Fabric)
@@ -90,27 +89,30 @@ class ProcessBuilder {
             }
         }
 
-        logger.info('Launch Arguments:', args)
+        // S5: mai el token d'accés ni l'UUID als registres.
+        logger.info('Launch Arguments:', args.map((arg, i) => (args[i - 1] === '--accessToken' || args[i - 1] === '--uuid' ? '[REDACTED]' : arg)))
 
-        const child = child_process.spawn(ConfigManager.getJavaExecutable(this.version.rawVersion.id), args, {
-            cwd: this.gameDir,
-            detached: ConfigManager.getLaunchDetached()
-        })
+        // B9: la sortida del procés (errors de JVM abans que Minecraft escrigui `latest.log`) va a un fitxer, no a un *pipe*:
+        // amb `detached` un pipe es trenca quan el launcher es tanca, i així es pot mostrar la cua si el joc peta.
+        fs.ensureDirSync(path.join(this.gameDir, 'logs'))
+        const gameOutputPath = path.join(this.gameDir, 'logs', 'hellmc-launcher.log')
+        const gameOutputFd = fs.openSync(gameOutputPath, 'w')
+        let child
+        try {
+            child = child_process.spawn(ConfigManager.getJavaExecutable(this.version.rawVersion.id), args, {
+                cwd: this.gameDir,
+                detached: ConfigManager.getLaunchDetached(),
+                stdio: ['ignore', gameOutputFd, gameOutputFd]
+            })
+        } finally {
+            fs.closeSync(gameOutputFd)
+        }
+        child.gameOutputPath = gameOutputPath
 
         if (ConfigManager.getLaunchDetached()) {
             child.unref()
         }
 
-        child.stdout.setEncoding('utf8')
-        child.stderr.setEncoding('utf8')
-
-        child.stdout.on('data', (data) => {
-            data.trim().split('\n').forEach(x => console.log(`\x1b[32m[Minecraft]\x1b[0m ${x}`))
-
-        })
-        child.stderr.on('data', (data) => {
-            data.trim().split('\n').forEach(x => console.log(`\x1b[31m[Minecraft]\x1b[0m ${x}`))
-        })
         child.on('close', (code) => {
             logger.info('Exited with code', code)
             fs.remove(tempNativePath, (err) => {
@@ -233,7 +235,9 @@ class ProcessBuilder {
                 const e = ProcessBuilder.isModEnabled(modCfg[mdl.getVersionlessMavenIdentifier()], mdl.getRequired())
                 if (!o || (o && e)) {
                     if (mdl.subModules.length > 0) {
-                        const v = this.resolveModConfiguration(modCfg[mdl.getVersionlessMavenIdentifier()].mods, mdl.subModules)
+                        // La config d'un mod amb submòduls pot ser un booleà (desat per la UI nova): sense `mods` niats.
+                        const cfg = modCfg[mdl.getVersionlessMavenIdentifier()]
+                        const v = this.resolveModConfiguration(cfg != null && typeof cfg === 'object' && cfg.mods != null ? cfg.mods : {}, mdl.subModules)
                         fMods = fMods.concat(v.fMods)
                         lMods = lMods.concat(v.lMods)
                         if (type === Type.LiteLoader) {
@@ -387,8 +391,9 @@ class ProcessBuilder {
         } catch (err) {
             // First launch, or unreadable state: nothing to clean.
         }
-        for (const name of previous) {
-            fs.removeSync(path.join(this.modsDir, name))
+        for (const name of Array.isArray(previous) ? previous : []) {
+            // S6: el fitxer d'estat és local però no de fiar: només noms de fitxer, mai camins.
+            fs.removeSync(path.join(this.modsDir, path.basename(String(name))))
         }
 
         const placed = []
@@ -399,7 +404,7 @@ class ProcessBuilder {
             fs.removeSync(dest)
             try {
                 fs.linkSync(source, dest)
-            } catch (err) {
+            } catch (_err) {
                 fs.copySync(source, dest)
             }
             placed.push(name)
@@ -582,7 +587,7 @@ class ProcessBuilder {
                 for (let rule of args[i].rules) {
                     if (rule.os != null) {
                         if (rule.os.name === getMojangOS()
-                            && (rule.os.version == null || new RegExp(rule.os.version).test(os.release))) {
+                            && (rule.os.version == null || new RegExp(rule.os.version).test(os.release()))) {
                             if (rule.action === 'allow') {
                                 checksum++
                             }
@@ -864,12 +869,13 @@ class ProcessBuilder {
         const nativeSubDirs = ['java', 'lwjgl', 'netty', 'jna']
         const nativeWriteTargets = [tempNativePath, ...nativeSubDirs.map(d => path.join(tempNativePath, d))]
         const writeNativeFile = (fileName, data) => {
+            // Síncron (B3): la JVM s'inicia just després de `build()`; amb escriptura asíncrona podia carregar una DLL a mig escriure.
             for (const dir of nativeWriteTargets) {
-                fs.writeFile(path.join(dir, fileName), data, (err) => {
-                    if (err) {
-                        logger.error('Error while extracting native library:', err)
-                    }
-                })
+                try {
+                    fs.writeFileSync(path.join(dir, fileName), data)
+                } catch (err) {
+                    logger.error('Error while extracting native library:', err)
+                }
             }
         }
 

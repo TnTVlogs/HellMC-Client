@@ -3,7 +3,7 @@
 <h1 align="center">HellMC Client</h1>
 
 <em><h5 align="center">by TnTVlogs</h5></em>
-![Build](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml/badge.svg)](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml)]
+[![Build](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml/badge.svg)](https://github.com/TnTVlogs/HellMC-Client/actions/workflows/build.yml)
 <p align="center">Join modded servers without worrying about installing Java, Forge, or other mods. We'll handle that for you.</p>
 
 **HellMC Client** is a fork of [HeliosLauncher](https://github.com/dscalzi/HeliosLauncher) by Daniel D. Scalzi ([MIT](LICENSE.txt)).
@@ -18,7 +18,7 @@ and [HellMC-Distribution-Types](https://github.com/TnTVlogs/HellMC-Distribution-
 * 🔒 Account management.
   * Add multiple accounts and easily switch between them.
   * Microsoft (OAuth 2.0) sign-in, or an offline account (just a username) to play without a connection.
-  * Credentials are never stored and are sent directly to Microsoft.
+  * You sign in on Microsoft's own page; HellMC Client never sees your password. It does store the session tokens locally (in `config.json`) so you stay signed in.
 * 🖥️ Servers and versions.
   * Pick a server and a version, or play any version without a server.
   * Live player count (direct ping), per-version install, verify and uninstall.

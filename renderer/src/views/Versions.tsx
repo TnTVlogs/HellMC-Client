@@ -7,7 +7,7 @@ import { Chip, Progress, ServerIcon } from '../components/ui'
 import { navigate } from '../router'
 import { distro, distroLoading } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
-import { launch } from '../stores/launch'
+import { launch, isVersionInUse } from '../stores/launch'
 import { statuses, refreshStatus, install, progress, busy } from '../stores/versions'
 import { formatBytes } from '../utils/format'
 
@@ -21,10 +21,11 @@ export function Versions() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
 
+  // F3/F4: només quan canvia el conjunt de versions (no a cada refresc de la distribució).
+  const versionsKey = (d?.versions ?? []).map((v) => `${v.id}@${v.version}`).join('|')
   useEffect(() => {
-    if (d == null) return
-    for (const version of d.versions) void refreshStatus(version.id)
-  }, [d])
+    for (const version of d?.versions ?? []) void refreshStatus(version.id)
+  }, [versionsKey])
 
   const rows = (d?.versions ?? [])
     .filter((v) => v.name.toLowerCase().includes(query.trim().toLowerCase()))
@@ -60,7 +61,7 @@ export function Versions() {
         <button type="button" class="chip" aria-pressed={filter === 'installed'} onClick={() => setFilter('installed')}>{t('ui.installedF')}</button>
         <button type="button" class="chip" aria-pressed={filter === 'updates'} onClick={() => setFilter('updates')}>{t('ui.withUpdate')}</button>
         <span style={{ flex: 1 }} />
-        <Button size="sm" disabled={updatable.length === 0} onClick={() => updatable.forEach((v) => void install(v.id))}>
+        <Button size="sm" disabled={updatable.length === 0} onClick={() => updatable.filter((v) => !isVersionInUse(v.id)).forEach((v) => void install(v.id))}>
           <RefreshCw size={16} /> {t('ui.updateAll')}
         </Button>
       </div>
@@ -110,10 +111,10 @@ export function Versions() {
                 {status?.installed && !status.needsUpdate && !isBusy && (
                   <Button size="sm" variant="primary" onClick={() => void play(version.id)}><Play size={16} fill="currentColor" /> {t('home.play')}</Button>
                 )}
-                {status?.installed && status.needsUpdate && !isBusy && (
+                {status?.installed && status.needsUpdate && !isBusy && !isVersionInUse(version.id) && (
                   <Button size="sm" onClick={() => void install(version.id)}>{t('ui.update')}</Button>
                 )}
-                {status != null && !status.installed && !isBusy && (
+                {status != null && !status.installed && !isBusy && !isVersionInUse(version.id) && (
                   <Button size="sm" onClick={() => void install(version.id)}><Download size={16} /> {t('versions.install')}</Button>
                 )}
               </div>

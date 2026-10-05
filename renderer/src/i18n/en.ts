@@ -103,6 +103,19 @@ export interface Messages {
     offline: string
     sessionInvalid: string
   }
+  legal: {
+    title: string,
+    intro: string,
+    privacyLink: string,
+    termsLink: string,
+    acceptLabel: string,
+    telemetryTitle: string,
+    telemetryHelp: string,
+    continue: string,
+    quit: string,
+    updated: string,
+    notOfficial: string
+  },
   boot: {
     updateRequired: {
       download: string
@@ -119,6 +132,9 @@ export interface Messages {
     needNetworkTitle: string
     needNetworkBody: string
     retry: string
+    errorTitle: string
+    errorBody: string
+    errorCopy: string
   }
   welcome: {
     title: string
@@ -166,7 +182,17 @@ export interface Messages {
       microsoftConnect: string
       offlineTitle: string
       offlineUsernamePlaceholder: string
-      addOffline: string
+      addOffline: string,
+      wipeTitle: string,
+      wipeHelp: string,
+      wipeButton: string,
+      wipeConfirmTitle: string,
+      wipeConfirmMessage: string,
+      wipeConfirm: string,
+      wipeCancel: string,
+      removeConfirmTitle: string,
+      removeConfirmMessage: string,
+      wipeGameRunning: string
       empty: string
       active: string
       select: string
@@ -183,6 +209,9 @@ export interface Messages {
       dataDirectory: string
       dataDirectoryChange: string
       dataDirectoryRestartHint: string
+      dataDirectoryPending: string
+      dataDirectoryRestartNow: string
+      dataDirectoryNote: string
       sharedDataRoot: string
       sharedDataRootHelp: string
       sharedDataRootHellmc: string
@@ -213,7 +242,18 @@ export interface Messages {
       performanceOff: string
       sidebarCollapsed: string
       devMode: string
-      devModeHint: string
+      devModeHint: string,
+      discordPresence: string,
+      discordPresenceHelp: string,
+      hardwareAcceleration: string,
+      hardwareAccelerationHelp: string,
+      onGameStart: string,
+      onGameStartHelp: string,
+      onGameStartKeep: string,
+      onGameStartMinimize: string,
+      onGameStartClose: string,
+      telemetry: string,
+      telemetryHelp: string
     }
     updates: {
       download: string
@@ -238,6 +278,10 @@ export interface Messages {
       nebulaNotice: string
       thirdPartyLicenses: string
       lgplLicense: string
+      openLogs: string
+      copyReport: string
+      reportCopied: string
+      viewLogs: string
       website: string
       source: string
       support: string
@@ -285,6 +329,8 @@ export interface Messages {
       LAUNCH_FAILED: string
       SPAWN_FAILED: string
       ALREADY_RUNNING: string
+      VERSION_BUSY: string
+      GAME_EXITED: string
     }
   }
   servers: {
@@ -343,7 +389,8 @@ export interface Messages {
     dataSharing: {
       title: string
       help: string
-      changeNotice: string
+      changeNotice: string,
+      savesWarning: string
       forcedNotice: string
       forcedTooltip: string
     }
@@ -357,6 +404,8 @@ export interface Messages {
       downloadAuto: string
       downloading: string
       downloadFailed: string
+      jvmRejected: string
+      forcedNote: string
       phase: {
         fetchingJdk: string
         downloadingJava: string
@@ -491,6 +540,19 @@ const en: Messages = {
     offline: 'Offline: showing saved data. Online servers will not be available.',
     sessionInvalid: 'Your account session is no longer valid. Go to Settings › Account and sign in again.'
   },
+  legal: {
+    title: "Before you start",
+    intro: "HellMC Client connects to Microsoft, Mojang, GitHub and the servers shown in the launcher, so they can see your IP address. Please read how your data is handled:",
+    privacyLink: "Privacy policy",
+    termsLink: "Terms of use",
+    acceptLabel: "I have read and accept the Terms of use and the Privacy policy.",
+    telemetryTitle: "Help improve HellMC (optional)",
+    telemetryHelp: "Share minimal anonymous usage data: a random ID, app version, operating system and whether the launcher was used. No name, no IP stored, no game data. You can change this later in Settings.",
+    continue: "Continue",
+    quit: "Quit",
+    updated: "We have updated our terms and privacy policy. Please review them to continue.",
+    notOfficial: "HellMC Client is not affiliated with, endorsed or sponsored by Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Synergies AB."
+  },
   boot: {
     updateRequired: {
       download: 'Download the update',
@@ -506,7 +568,10 @@ const en: Messages = {
     starting: 'Starting…',
     needNetworkTitle: 'Connect to start',
     needNetworkBody: 'HellMC needs an internet connection the first time it runs.',
-    retry: 'Try again'
+    retry: 'Try again',
+    errorTitle: 'Something went wrong',
+    errorBody: 'The interface hit an unexpected error. You can reload it; your data is safe.',
+    errorCopy: 'Copy error details'
   },
   welcome: {
     title: 'Welcome to HellMC',
@@ -555,6 +620,16 @@ const en: Messages = {
       offlineTitle: 'Offline account',
       offlineUsernamePlaceholder: 'Username',
       addOffline: 'Add account',
+      wipeTitle: "Sign out and erase local data",
+      wipeHelp: "Removes all accounts and saved sign-in tokens, your acceptance of the terms, cached data and logs. Your worlds and installed versions are kept. The launcher restarts.",
+      wipeButton: "Erase…",
+      wipeConfirmTitle: "Erase local data?",
+      wipeConfirmMessage: "You will be signed out of all accounts and the launcher will restart.",
+      wipeConfirm: "Erase and restart",
+      wipeCancel: "Cancel",
+      removeConfirmTitle: "Remove this account?",
+      removeConfirmMessage: "It will be removed from this launcher. You can add it again later.",
+      wipeGameRunning: "Close the game first.",
       empty: 'No accounts yet.',
       active: 'Active',
       select: 'Use this account',
@@ -571,6 +646,9 @@ const en: Messages = {
       dataDirectory: 'Data folder',
       dataDirectoryChange: 'Change…',
       dataDirectoryRestartHint: 'Takes effect after restarting the launcher.',
+      dataDirectoryPending: 'Will switch to {path} after restarting.',
+      dataDirectoryRestartNow: 'Restart now',
+      dataDirectoryNote: 'Existing data is not moved: versions are downloaded again in the new folder.',
       sharedDataRoot: 'Shared data location',
       sharedDataRootHelp: 'Where versions marked "shared" keep their worlds, resource packs, shaders, screenshots and options. Applies to all shared versions at once.',
       sharedDataRootHellmc: 'HellMC (default)',
@@ -601,7 +679,18 @@ const en: Messages = {
       performanceOff: 'Off',
       sidebarCollapsed: 'Collapse sidebar',
       devMode: 'Developer mode',
-      devModeHint: 'Click the version number in About a few times to reveal this.'
+      devModeHint: 'Click the version number in About a few times to reveal this.',
+      discordPresence: "Show activity on Discord",
+      discordPresenceHelp: "Shows what you are playing in your Discord profile.",
+      hardwareAcceleration: "Hardware acceleration",
+      hardwareAccelerationHelp: "Smoother interface on most computers. Turn it off if you see glitches. Applies after restarting.",
+      onGameStart: "When the game starts",
+      onGameStartHelp: "Closing the launcher frees memory on older computers; the game keeps running.",
+      onGameStartKeep: "Keep open",
+      onGameStartMinimize: "Minimize",
+      onGameStartClose: "Close launcher",
+      telemetry: "Share anonymous usage data",
+      telemetryHelp: "Minimal and anonymous. Helps improve HellMC."
     },
     updates: {
       download: 'Download the update',
@@ -626,6 +715,10 @@ const en: Messages = {
       nebulaNotice: 'Distribution server based on Nebula (Daniel D. Scalzi, MIT).',
       thirdPartyLicenses: 'Third-party licenses',
       lgplLicense: 'LGPL-3.0 license (HellMC-Core)',
+      openLogs: 'Open logs folder',
+      copyReport: 'Copy diagnostic report',
+      reportCopied: 'Report copied. Paste it when you ask for support.',
+      viewLogs: 'View logs',
       website: 'Website',
       source: 'Source code',
       support: 'Support'
@@ -672,7 +765,9 @@ const en: Messages = {
       NEEDS_NETWORK: "An internet connection is required to continue.",
       LAUNCH_FAILED: "The game could not be started.",
       SPAWN_FAILED: "The game process could not be opened.",
-      ALREADY_RUNNING: "This version is already running or starting."
+      ALREADY_RUNNING: "This version is already running or starting.",
+      VERSION_BUSY: "This version is being installed, verified or removed. Wait for it to finish.",
+      GAME_EXITED: "The game closed unexpectedly (code {code})."
     }
   },
   servers: {
@@ -732,6 +827,7 @@ const en: Messages = {
       title: 'Share worlds, resource packs and options with other versions',
       help: 'Worlds, textures, shaders, screenshots and options are shared with the other versions that also have this on. Mods and mod configuration always stay separate per version.',
       changeNotice: 'This change applies the next time you play this version.',
+      savesWarning: "Worlds are shared between versions. Back up important worlds before opening them in an older Minecraft version.",
       forcedNotice: 'This version always keeps its own data.',
       forcedTooltip: 'The server admin set this version to never share data with others.'
     },
@@ -745,6 +841,8 @@ const en: Messages = {
       downloadAuto: 'Download Java automatically',
       downloading: 'Downloading Java…',
       downloadFailed: 'Java download failed. Try again or choose a Java installation manually.',
+      jvmRejected: 'These JVM options were rejected: options that load code (-javaagent, -agentlib…) need developer mode.',
+      forcedNote: 'Chosen manually: it is used even if it does not match the recommended Java for this version.',
       phase: {
         fetchingJdk: 'Finding the right build…',
         downloadingJava: 'Downloading Java',

@@ -9,6 +9,55 @@ const semver = require('semver')
 const { pathToFileURL } = require('url')
 const { AZURE_CLIENT_ID, MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('./app/assets/js/ipcconstants')
 
+const Security = require('./app/assets/js/security')
+/** S4: ids de versió/servidor que vénen del renderer (mai camins ni text lliure). */
+function assertId(id, { nullable = false } = {}) {
+    if (nullable && id == null) return
+    if (!Security.isValidId(id)) throw new Error('INVALID_ID')
+}
+
+// S4: només la finestra principal (renderer-dist o el servidor de Vite en dev) pot cridar els handlers IPC. Les finestres
+// de Microsoft (contingut remot) no hi tenen accés encara que compartissin procés.
+const RENDERER_ORIGIN = pathToFileURL(path.join(__dirname, 'renderer-dist')).toString().toLowerCase()
+function isTrustedSender(event) {
+    const url = String(event?.senderFrame?.url ?? '').toLowerCase()
+    if (process.env.RENDERER_DEV_SERVER === '1' && url.startsWith('http://localhost:5173')) return true
+    return url.startsWith(RENDERER_ORIGIN)
+}
+const rawHandle = ipcMain.handle.bind(ipcMain)
+ipcMain.handle = (channel, listener) => rawHandle(channel, (event, ...args) => {
+    if (!isTrustedSender(event)) throw new Error(`Untrusted IPC sender for ${channel}`)
+    return listener(event, ...args)
+})
+const rawOn = ipcMain.on.bind(ipcMain)
+ipcMain.on = (channel, listener) => rawOn(channel, (event, ...args) => {
+    // Les finestres de Microsoft (OPEN_LOGIN/OPEN_LOGOUT) només es demanen des del renderer principal; es descarta la resta.
+    if (!isTrustedSender(event)) return
+    listener(event, ...args)
+})
+
+// O2: log persistent (`userData/logs/launcher.log`, rotatiu i sense credencials). El més aviat possible per no perdre res.
+const AppLog = require('./app/assets/js/applog')
+AppLog.install(path.join(app.getPath('userData'), 'logs'))
+
+// Una sola instància: dues finestres compartirien (i trepitjarien) `config.json` i l'RPC de Discord.
+if (!app.requestSingleInstanceLock()) {
+    app.exit(0)
+}
+app.on('second-instance', () => {
+    if (win != null && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore()
+        win.focus()
+    }
+})
+// Errors no capturats: es registren (sense el diàleg natiu d'Electron) i l'app continua.
+process.on('uncaughtException', (err) => {
+    console.error('[main] uncaughtException', err)
+})
+process.on('unhandledRejection', (reason) => {
+    console.error('[main] unhandledRejection', reason)
+})
+
 // Setup auto updater.
 //
 // 2.5 (Configuració > Actualitzacions): petició explícita de l'usuari, «com el de Discord» —
@@ -75,7 +124,12 @@ function configureAutoUpdater(allowPrerelease) {
 // `update-downloaded`; si no hi ha res baixat, `quitAndInstall` no fa res perillós (electron-updater
 // ho ignora), no calia guardar estat propi per evitar-ho.
 ipcMain.handle('hellmc:updater-check', async () => {
-    await autoUpdater.checkForUpdates()
+    try {
+        await autoUpdater.checkForUpdates()
+    } catch (err) {
+        // Sense xarxa o sense configuració d'actualitzacions: es notifica com a esdeveniment, no com a error d'IPC.
+        broadcastUpdaterEvent({ type: 'error', info: { message: err?.message ?? String(err) } })
+    }
 })
 ipcMain.handle('hellmc:updater-install', () => {
     autoUpdater.quitAndInstall(true, true)
@@ -114,7 +168,7 @@ function devLog(...args) {
 }
 const AuthManager = require('./app/assets/js/authmanager')
 const DistroManager = require('./app/assets/js/distromanager')
-const { DistroAPI } = DistroManager
+const { DistroAPI, SIGNING_KEYS } = DistroManager
 const ProcessBuilder = require('./app/assets/js/processbuilder')
 const DataSharing = require('./app/assets/js/datasharing')
 const ServersDat = require('./app/assets/js/serversdat')
@@ -168,7 +222,17 @@ DistroAPI['instanceDir'] = ConfigManager.getInstanceDirectory()
 
 // Disable hardware acceleration.
 // https://electronjs.org/docs/tutorial/offscreen-rendering
-app.disableHardwareAcceleration()
+// D14: només es desactiva si l'usuari ho ha triat (Configuració > Launcher) o si la GPU ha petat abans (vegeu `child-process-gone`).
+if (ConfigManager.getUiConfig().hardwareAcceleration === false) {
+    app.disableHardwareAcceleration()
+}
+app.on('child-process-gone', (_event, details) => {
+    if (details.type === 'GPU' && ['crashed', 'abnormal-exit', 'launch-failed', 'integrity-failure'].includes(details.reason)) {
+        console.error('[main] GPU process gone:', details.reason, '— hardware acceleration will be disabled on next start')
+        ConfigManager.setUiConfig({ hardwareAcceleration: false })
+        ConfigManager.save()
+    }
+})
 
 
 const REDIRECT_URI = 'https://login.microsoftonline.com/common/oauth2/nativeclient'
@@ -178,6 +242,11 @@ let msftAuthWindow
 let msftAuthSuccess
 let msftAuthViewSuccess
 let msftAuthViewOnClose
+// S8: PKCE (RFC 7636) + `state` aleatori + sessió **efímera** (cap galeta de Microsoft persistent al launcher).
+let pendingMsftLogin = null // { state, verifier }
+function base64Url(buffer) {
+    return buffer.toString('base64url')
+}
 ipcMain.on(MSFT_OPCODE.OPEN_LOGIN, (ipcEvent, ...arguments_) => {
     if (msftAuthWindow) {
         ipcEvent.reply(MSFT_OPCODE.REPLY_LOGIN, MSFT_REPLY_TYPE.ERROR, MSFT_ERROR.ALREADY_OPEN, msftAuthViewOnClose)
@@ -186,13 +255,23 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGIN, (ipcEvent, ...arguments_) => {
     msftAuthSuccess = false
     msftAuthViewSuccess = arguments_[0]
     msftAuthViewOnClose = arguments_[1]
+    const crypto = require('crypto')
+    const verifier = base64Url(crypto.randomBytes(32))
+    pendingMsftLogin = { state: base64Url(crypto.randomBytes(16)), verifier }
     msftAuthWindow = new BrowserWindow({
         title: 'Microsoft',
         backgroundColor: '#222222',
         width: 520,
         height: 600,
         frame: true,
-        icon: getPlatformIcon('SealCircle')
+        icon: getPlatformIcon('SealCircle'),
+        webPreferences: {
+            // Partició sense `persist:` = sessió en memòria: es descarta en tancar la finestra.
+            partition: `ms-login-${Date.now()}`,
+            sandbox: true,
+            contextIsolation: true,
+            nodeIntegration: false
+        }
     })
 
     msftAuthWindow.on('closed', () => {
@@ -209,6 +288,11 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGIN, (ipcEvent, ...arguments_) => {
         if (uri.startsWith(REDIRECT_URI)) {
             const url = new URL(uri)
             const code = url.searchParams.get('code')
+            if (code && url.searchParams.get('state') !== pendingMsftLogin?.state) {
+                // La resposta no correspon a aquest intent (CSRF/«login CSRF»): es descarta.
+                console.warn('[main] Microsoft login: state mismatch, ignoring response')
+                return
+            }
             if (code) {
                 const queryMap = Object.fromEntries(url.searchParams.entries())
 
@@ -222,7 +306,7 @@ ipcMain.on(MSFT_OPCODE.OPEN_LOGIN, (ipcEvent, ...arguments_) => {
     })
 
     msftAuthWindow.removeMenu()
-    msftAuthWindow.loadURL(`https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?prompt=select_account&client_id=${AZURE_CLIENT_ID}&response_type=code&scope=XboxLive.signin%20offline_access&redirect_uri=${REDIRECT_URI}`)
+    msftAuthWindow.loadURL(`https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?prompt=select_account&client_id=${AZURE_CLIENT_ID}&response_type=code&scope=XboxLive.signin%20offline_access&redirect_uri=${REDIRECT_URI}&state=${pendingMsftLogin.state}&code_challenge=${base64Url(crypto.createHash('sha256').update(verifier).digest())}&code_challenge_method=S256`)
 })
 
 // Microsoft Auth Logout
@@ -375,7 +459,7 @@ function createWindow() {
             preload: path.join(__dirname, 'src-node', 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false
+            sandbox: true
         },
         backgroundColor: '#0E1013'
     })
@@ -397,6 +481,16 @@ function createWindow() {
         win.loadURL(pathToFileURL(path.join(__dirname, 'renderer-dist', 'index.html')).toString())
     }
 
+    // O2: errors i avisos del renderer, i fallades del preload, també van al log persistent.
+    win.webContents.on('console-message', (event, ...legacy) => {
+        const level = event?.level ?? legacy[0]
+        const message = event?.message ?? legacy[1]
+        if (level === 'warning' || level === 'error' || level === 2 || level === 3) console.warn(`[renderer:${level}]`, message)
+    })
+    win.webContents.on('preload-error', (_event, preloadPath, error) => {
+        console.error('[main] preload error', preloadPath, error)
+    })
+
     if (isDev) {
         win.webContents.openDevTools()
     }
@@ -414,10 +508,10 @@ function createWindow() {
         const isOwnFile = url.startsWith(pathToFileURL(path.join(__dirname, 'renderer-dist')).toString())
         if (isDevServer || isOwnFile) return
         event.preventDefault()
-        shell.openExternal(url)
+        openExternalSafely(url)
     })
     win.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url)
+        openExternalSafely(url)
         return { action: 'deny' }
     })
 
@@ -472,8 +566,23 @@ ipcMain.on('hellmc:set-native-theme', (_event, theme) => {
 ipcMain.handle('hellmc:system-memory', () => {
     return { totalMb: Math.round(os.totalmem() / 1048576), freeMb: Math.round(os.freemem() / 1048576) }
 })
-ipcMain.handle('hellmc:open-path', (_event, p) => shell.openPath(p))
-ipcMain.handle('hellmc:open-external', (_event, url) => shell.openExternal(url))
+// S3: només http(s) (mai `file:`/manejadors de protocol) i només carpetes dins de les dades del launcher.
+function openExternalSafely(rawUrl) {
+    const url = Security.safeExternalUrl(rawUrl)
+    if (url == null) {
+        console.warn('[main] blocked external URL', String(rawUrl).slice(0, 200))
+        return Promise.resolve()
+    }
+    return shell.openExternal(url)
+}
+ipcMain.handle('hellmc:open-path', (_event, p) => {
+    if (typeof p !== 'string' || !(Security.isInside(ConfigManager.getDataDirectory(), p) || Security.isInside(app.getPath('userData'), p))) {
+        console.warn('[main] blocked open-path', String(p).slice(0, 200))
+        return ''
+    }
+    return shell.openPath(p)
+})
+ipcMain.handle('hellmc:open-external', (_event, url) => openExternalSafely(url))
 // 2.5 (Sobre > «Llicències de tercers», D23): `THIRD_PARTY_LICENSES.txt` viu a l'arrel del repo en
 // dev i a `extraResources` (`electron-builder.yml`) en un paquet real — mai dins l'asar.
 // `LICENSE-LGPL-3.0.txt`: text de la llicència de `HellMC-Core` (02 §3/§7.2).
@@ -483,6 +592,58 @@ function openBundledFile(name) {
 }
 ipcMain.handle('hellmc:open-third-party-licenses', () => openBundledFile('THIRD_PARTY_LICENSES.txt'))
 ipcMain.handle('hellmc:open-lgpl-license', () => openBundledFile('LICENSE-LGPL-3.0.txt'))
+// O2: carpeta de logs i informe de diagnòstic (sense credencials: `AppLog.tailFile` redacta) per demanar suport.
+// D15/D8: termes, política de privacitat i consentiment de telemetria (separat). `CURRENT_TERMS_VERSION` puja quan canvien
+// els textos: tothom torna a veure la pantalla (sense login si ja hi ha sessió).
+const CURRENT_TERMS_VERSION = 1
+ipcMain.handle('hellmc:legal-get', () => ({ currentVersion: CURRENT_TERMS_VERSION, ...ConfigManager.getLegal() }))
+ipcMain.handle('hellmc:legal-accept', (_event, telemetryOptIn) => {
+    ConfigManager.setLegal({ termsAcceptedVersion: CURRENT_TERMS_VERSION, acceptedAt: new Date().toISOString(), telemetryOptIn: telemetryOptIn === true })
+    ConfigManager.save()
+})
+ipcMain.handle('hellmc:legal-set-telemetry', (_event, value) => {
+    if (typeof value !== 'boolean') throw new Error('INVALID_VALUE')
+    ConfigManager.setLegal({ telemetryOptIn: value })
+    ConfigManager.save()
+})
+
+// D16: «Tanca la sessió i esborra les dades»: comptes i tokens, acceptació legal, cache i logs. No toca les dades del joc
+// (mons, versions instal·lades): són grans i del jugador. Reinicia el launcher.
+ipcMain.handle('hellmc:wipe-local-data', async () => {
+    if (runningInstances.size > 0) throw new Error('GAME_RUNNING')
+    ConfigManager.removeAllAccounts()
+    ConfigManager.setLegal({ termsAcceptedVersion: null, acceptedAt: null, telemetryOptIn: false })
+    ConfigManager.save()
+    const userData = app.getPath('userData')
+    for (const name of ['distribution.json', 'distribution.json.sig', 'newscache.json', 'config.json.bak', 'config.json.bak-v1']) {
+        await fs.promises.rm(path.join(userData, name), { force: true }).catch(() => { /* ja no hi és */ })
+    }
+    const logsDir = path.join(userData, 'logs')
+    for (const name of await fs.promises.readdir(logsDir).catch(() => [])) {
+        const file = path.join(logsDir, name)
+        // El log actual està obert per escriure: es buida; els rotats s'esborren.
+        if (name === 'launcher.log') await fs.promises.writeFile(file, '').catch(() => { /* ignora */ })
+        else await fs.promises.rm(file, { force: true }).catch(() => { /* ignora */ })
+    }
+    app.relaunch()
+    app.exit(0)
+})
+ipcMain.handle('hellmc:open-logs', () => shell.openPath(path.join(app.getPath('userData'), 'logs')))
+ipcMain.handle('hellmc:diagnostic-report', () => {
+    const selected = ConfigManager.getSelectedVersion()
+    const lines = [
+        `HellMC Client ${app.getVersion()}${app.isPackaged ? '' : ' (dev)'}`,
+        `OS: ${process.platform} ${process.arch} ${os.release()}`,
+        `Electron ${process.versions.electron} · Chrome ${process.versions.chrome} · Node ${process.versions.node}`,
+        `RAM: ${Math.round(os.freemem() / 1048576)} MB free of ${Math.round(os.totalmem() / 1048576)} MB`,
+        `Selected version: ${selected ?? '—'}`,
+        `Running instances: ${runningInstances.size}`,
+        '',
+        '--- launcher.log (last 80 lines) ---',
+        ...AppLog.tailFile(AppLog.getLogFile(), 80, 64 * 1024)
+    ]
+    return lines.join('\n')
+})
 // `process.env.npm_package_version` (l'antic valor del mock a `preload.js`) només existeix quan
 // el procés principal s'ha arrencat via `npm run …` — en un paquet real (producció) mai hi és,
 // Sobre mostraria sempre «0.0.0-dev». Síncron (`event.returnValue`) perquè `api.ts` declara
@@ -496,7 +657,10 @@ ipcMain.on('hellmc:system-app-version', (event) => {
 // la versió del `package.json` no és una versió publicada i bloquejaria el desenvolupador.
 ipcMain.handle('hellmc:system-client-outdated', (_event, minClientVersion) => {
     if (!app.isPackaged || typeof minClientVersion !== 'string' || semver.valid(minClientVersion) == null) return false
-    return semver.lt(app.getVersion(), minClientVersion)
+    // Les versions preliminars (2.0.0-beta.N) compten com la seva versió base: si no, `semver.lt('2.0.0-beta.1', '2.0.0')`
+    // és cert i el canal beta quedaria sempre bloquejat.
+    const current = semver.coerce(app.getVersion())
+    return current != null && semver.lt(current, minClientVersion)
 })
 
 // 07 §1.1 «Estat de Mojang»: l'API pública antiga (`status.mojang.com`) està tancada i no n'hi ha cap
@@ -522,10 +686,23 @@ ipcMain.handle('hellmc:status-minecraft', async () => {
 
 // 2.5 (`window.hellmc.config.get/set`, 06 §6 store `ui`): abans mock (tema/idioma es perdien a
 // cada reinici, `src-node/preload.js`) — ara persisteix de veritat a `config.json`.
-ipcMain.handle('hellmc:config-get', () => ({ ui: ConfigManager.getUiConfig() }))
-ipcMain.handle('hellmc:config-set', (_event, patch) => {
-    if (patch.ui != null) ConfigManager.setUiConfig(patch.ui)
+// F9: la primera vegada l'idioma és el del SO (ca/es si coincideix, si no anglès) i es desa.
+function resolveLanguage() {
+    const stored = ConfigManager.getUiConfig().language
+    if (stored != null) return stored
+    const locale = String(app.getLocale() || 'en').slice(0, 2).toLowerCase()
+    const language = locale === 'ca' || locale === 'es' ? locale : 'en'
+    ConfigManager.setUiConfig({ language })
     ConfigManager.save()
+    return language
+}
+ipcMain.handle('hellmc:config-get', () => ({ ui: { ...ConfigManager.getUiConfig(), language: resolveLanguage() } }))
+ipcMain.handle('hellmc:config-set', (_event, patch) => {
+    // S4: només claus conegudes de la UI i amb el tipus correcte.
+    const ui = Security.sanitizeUiPatch(patch?.ui)
+    if (Object.keys(ui).length > 0) ConfigManager.setUiConfig(ui)
+    ConfigManager.save()
+    if ('discordPresence' in ui) syncMenuRpc()
 })
 
 // 2.5 (Configuració > Joc, resta de 07 §6): resolució/pantalla completa/autoconnect/launch
@@ -540,7 +717,8 @@ ipcMain.handle('hellmc:game-settings-get', () => ({
     fullscreen: ConfigManager.getFullscreen(),
     autoConnect: ConfigManager.getAutoConnect(),
     launchDetached: ConfigManager.getLaunchDetached(),
-    dataDirectory: ConfigManager.getDataDirectory()
+    dataDirectory: ConfigManager.getDataDirectory(),
+    pendingDataDirectory: ConfigManager.getPendingDataDirectory()
 }))
 ipcMain.handle('hellmc:game-settings-set', (_event, patch) => {
     if (patch.resWidth != null && ConfigManager.validateGameWidth(patch.resWidth)) ConfigManager.setGameWidth(patch.resWidth)
@@ -559,9 +737,20 @@ ipcMain.handle('hellmc:game-data-directory-pick', async (event) => {
     const senderWin = BrowserWindow.fromWebContents(event.sender)
     const result = await dialog.showOpenDialog(senderWin, { properties: ['openDirectory', 'createDirectory'] })
     if (result.canceled || result.filePaths.length === 0) return null
-    ConfigManager.setDataDirectory(result.filePaths[0])
+    const picked = result.filePaths[0]
+    try {
+        fs.accessSync(picked, fs.constants.W_OK)
+    } catch {
+        throw new Error('DIRECTORY_NOT_WRITABLE')
+    }
+    // No s'aplica en calent: queda «pendent» fins que es reinicia (`ConfigManager.load`).
+    ConfigManager.setPendingDataDirectory(picked === ConfigManager.getDataDirectory() ? null : picked)
     ConfigManager.save()
-    return result.filePaths[0]
+    return picked
+})
+ipcMain.handle('hellmc:app-relaunch', () => {
+    app.relaunch()
+    app.exit(0)
 })
 
 // ── Discord RPC «en partida» (P17, 06 §8.1): mod HellMC-Presence ────────────────────────────────
@@ -579,10 +768,11 @@ function writePresenceConfig(gameDir, rawDistribution, rawServer, version) {
     const file = path.join(gameDir, 'hellmc-presence.json')
     // Sense Discord configurat el fitxer s'escriu igualment (sense `clientId`): el mod no fa Rich Presence, però sí el
     // títol i la icona de la finestra. Sense fitxer, el mod no fa res.
-    const language = ConfigManager.getUiConfig()?.language
+    const language = ConfigManager.getUiConfig()?.language ?? resolveLanguage()
     const serv = rawServer?.discord
     const config = {
-        clientId: gen?.clientId ?? null,
+        // D9: sense «Mostrar activitat a Discord» el mod no fa Rich Presence (però sí el títol i la icona de la finestra).
+        clientId: ConfigManager.getUiConfig().discordPresence === false ? null : (gen?.clientId ?? null),
         versionName: version.name,
         // Títol de la finestra del joc: «HellMC Client <versió de Minecraft> - Singleplayer…».
         windowTitle: 'HellMC Client',
@@ -607,7 +797,7 @@ const DiscordWrapper = require('./app/assets/js/discordwrapper')
 let menuRpcSettings = null
 function syncMenuRpc() {
     if (menuRpcSettings == null) return
-    if (runningInstances.size === 0) {
+    if (runningInstances.size === 0 && ConfigManager.getUiConfig().discordPresence !== false) {
         DiscordWrapper.initRPC(menuRpcSettings, null)
     } else {
         DiscordWrapper.shutdownRPC()
@@ -638,17 +828,22 @@ ipcMain.handle('hellmc:selection-get', () => ({
     versionId: ConfigManager.getSelectedVersion()
 }))
 ipcMain.handle('hellmc:selection-set-version', (_event, versionId) => {
+    assertId(versionId, { nullable: true })
     ConfigManager.setSelectedVersion(versionId)
     ConfigManager.save()
 })
 ipcMain.handle('hellmc:selection-set-server', (_event, serverId) => {
+    assertId(serverId, { nullable: true })
     ConfigManager.setSelectedServer(serverId)
     ConfigManager.save()
 })
 ipcMain.handle('hellmc:selection-get-last-version-for-server', (_event, serverId) => {
+    assertId(serverId)
     return ConfigManager.getLastVersionByServer(serverId)
 })
 ipcMain.handle('hellmc:selection-set-last-version-for-server', (_event, serverId, versionId) => {
+    assertId(serverId)
+    assertId(versionId)
     ConfigManager.setLastVersionByServer(serverId, versionId)
     ConfigManager.save()
 })
@@ -675,6 +870,7 @@ ipcMain.handle('hellmc:auth-select', (_event, uuid) => {
     ConfigManager.save()
 })
 ipcMain.handle('hellmc:auth-add-offline', async (_event, username) => {
+    if (!Security.isValidOfflineName(username)) throw new Error('INVALID_USERNAME')
     const account = await AuthManager.addMojangAccount(username)
     return normalizeAccount(account)
 })
@@ -685,7 +881,9 @@ ipcMain.handle('hellmc:auth-add-offline', async (_event, username) => {
 // la UI.
 ipcMain.handle('hellmc:auth-add-microsoft', async (_event, code) => {
     try {
-        const account = await AuthManager.addMicrosoftAccount(code)
+        const verifier = pendingMsftLogin?.verifier
+        pendingMsftLogin = null
+        const account = await AuthManager.addMicrosoftAccount(code, verifier)
         return normalizeAccount(account)
     } catch (err) {
         // `AuthManager` rebutja amb `{code, network}` (no un `Error`): per IPC arribaria com
@@ -743,6 +941,35 @@ const launchingTargets = new Map() // key -> { repair: FullRepair | null }
 function targetKey(versionId, serverId) {
     return `${versionId}::${serverId ?? ''}`
 }
+
+// B5: exclusió d'operacions de disc sobre les versions.
+//  · `versionOps`: versions amb una instal·lació/verificació/desinstal·lació en curs (impedeixen jugar-hi).
+//  · `repairChain`: les reparacions (`FullRepair`) comparteixen `common/` (biblioteques, assets): s'executen d'una en una,
+//    ja sigui des de «Jugar» o des d'«Instal·lar»/«Actualitzar-ho tot».
+const versionOps = new Map() // versionId -> 'install' | 'verify' | 'uninstall'
+let repairChain = Promise.resolve()
+function acquireRepairLock() {
+    let release
+    const previous = repairChain
+    repairChain = new Promise((resolve) => { release = resolve })
+    return previous.then(() => release)
+}
+function isVersionRunning(versionId) {
+    for (const instance of runningInstances.values()) {
+        if (instance.versionId === versionId) return true
+    }
+    for (const key of launchingTargets.keys()) {
+        if (key.startsWith(`${versionId}::`)) return true
+    }
+    return false
+}
+/** Marca una operació sobre `versionId`; llança `VERSION_BUSY`/`VERSION_RUNNING` si no és possible. Retorna l'alliberament. */
+function beginVersionOp(versionId, kind) {
+    if (versionOps.has(versionId)) throw new Error('VERSION_BUSY')
+    if (isVersionRunning(versionId)) throw new Error('VERSION_RUNNING')
+    versionOps.set(versionId, kind)
+    return () => versionOps.delete(versionId)
+}
 function instancesSnapshot() {
     return [...runningInstances.values()].map(({ id, versionId, serverId, startedAt }) => ({ id, versionId, serverId, startedAt }))
 }
@@ -753,12 +980,21 @@ function broadcastInstances() {
 }
 
 ipcMain.handle('hellmc:launch-start', async (event, target) => {
+    assertId(target?.versionId)
+    assertId(target?.serverId, { nullable: true })
     const sender = event.sender
-    const send = (progress) => { if (!sender.isDestroyed()) sender.send('hellmc:launch-progress', progress) }
+    // F1: cada progrés porta el seu destí perquè la UI pugui seguir diversos llançaments alhora.
+    const progressTarget = { versionId: target.versionId, serverId: target.serverId ?? null }
+    const send = (progress) => { if (!sender.isDestroyed()) sender.send('hellmc:launch-progress', { ...progress, target: progressTarget }) }
     const key = targetKey(target.versionId, target.serverId)
 
     if (runningInstances.has(key) || launchingTargets.has(key)) {
         send({ phase: 'error', percent: 0, error: { code: 'ALREADY_RUNNING', message: 'This version is already running or launching.' } })
+        return
+    }
+    // B5: no es pot llançar mentre la mateixa versió s'instal·la/verifica/desinstal·la.
+    if (versionOps.has(target.versionId)) {
+        send({ phase: 'error', percent: 0, error: { code: 'VERSION_BUSY', message: 'This version is being installed, verified or removed.' } })
         return
     }
 
@@ -777,6 +1013,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
     const step = (promise) => Promise.race([promise, cancelledPromise])
     const throwIfCancelled = () => { if (launchState.cancelled) throw new Error('LAUNCH_CANCELLED') }
     launchingTargets.set(key, launchState)
+    let releaseRepairLock = null
     try {
         send({ phase: 'refreshing-distribution', percent: 0 })
         const distro = await step(DistroAPI.refreshDistributionOrFallback())
@@ -843,13 +1080,22 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         }
         ConfigManager.save()
 
+        // B5: una sola reparació alhora (comparteixen `common/`). Si es cancel·la mentre s'espera, el pany es retorna sol.
+        const lockPromise = acquireRepairLock().then((release) => {
+            if (launchState.cancelled) { release(); return null }
+            releaseRepairLock = release
+            return release
+        })
+        await step(lockPromise)
+
         send({ phase: 'verifying-files', percent: 0 })
         const repair = new FullRepair(
             ConfigManager.getCommonDirectory(),
             ConfigManager.getInstanceDirectory(),
             ConfigManager.getLauncherDirectory(),
             selectedVersion.rawVersion.id,
-            DistroAPI.isDevMode()
+            DistroAPI.isDevMode(),
+            SIGNING_KEYS
         )
         launchState.repair = repair
         repair.spawnReceiver()
@@ -859,6 +1105,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         await step(repair.download((percent) => { if (!launchState.cancelled) send({ phase: 'downloading', percent }) }))
         repair.destroyReceiver()
         launchState.repair = null
+        if (releaseRepairLock != null) { releaseRepairLock(); releaseRepairLock = null }
 
         throwIfCancelled()
         send({ phase: 'launching', percent: 100 })
@@ -889,20 +1136,39 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         broadcastInstances()
         syncMenuRpc()
 
-        const onProcEnd = () => {
+        const startedAt = Date.now()
+        let ended = false
+        const onProcEnd = (exitCode, signal) => {
+            if (ended) return
+            ended = true
             runningInstances.delete(key)
             broadcastInstances()
             syncMenuRpc()
-            send({ phase: 'closed', percent: 100 })
+            // B6: els fitxers compartits (servers.dat, options.txt…) que el joc ha pogut canviar tornen a l'arrel compartida.
+            DataSharing.syncBack(gameDir, selectedVersion.rawVersion, selectedVersion.rawVersion.id).catch(() => { /* ja registrat */ })
+            // B9: sortida anormal (no l'ha tancat l'usuari des del launcher ni amb un senyal) → s'explica amb la cua del log.
+            const killedByUs = signal != null || proc.killedByUs === true
+            if (exitCode != null && exitCode !== 0 && !killedByUs) {
+                const details = AppLog.tailFile(proc.gameOutputPath, 25)
+                const latest = AppLog.tailFile(path.join(gameDir, 'logs', 'latest.log'), 25)
+                devLog(`game exited with code ${exitCode} after ${Date.now() - startedAt} ms`)
+                send({
+                    phase: 'error',
+                    percent: 0,
+                    error: { code: 'GAME_EXITED', message: `Game exited with code ${exitCode}`, exitCode, details: details.length > 0 ? details : latest }
+                })
+            } else {
+                send({ phase: 'closed', percent: 100 })
+            }
         }
-        proc.on('close', onProcEnd)
-        proc.on('exit', onProcEnd)
+        proc.once('exit', onProcEnd)
         // `spawn` amb un executable inexistent/inaccessible falla de forma ASÍNCRONA (l'esdeveniment
         // 'error' del child, no una excepció síncrona) — sense escoltar-lo, l'error no passava mai
         // pel `catch` d'aquí baix i sortia com a excepció no capturada del procés principal (diàleg
         // natiu «A JavaScript error occurred», reportat per l'usuari amb un `ENOENT` de Java).
         proc.on('error', (spawnErr) => {
             devLog(`spawn error: ${spawnErr.message}`)
+            ended = true
             runningInstances.delete(key)
             broadcastInstances()
             syncMenuRpc()
@@ -910,6 +1176,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         })
 
         send({ phase: 'ready', percent: 100 })
+        applyOnGameStart(key)
     } catch (err) {
         if (launchState.repair) {
             launchState.repair.destroyReceiver()
@@ -925,12 +1192,31 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         const isNetwork = networkCodes.some((c) => err?.code === c || String(err?.message).includes(c))
         send({ phase: 'error', percent: 0, error: { code: isNetwork ? 'NEEDS_NETWORK' : 'LAUNCH_FAILED', message: err?.message || String(err) } })
     } finally {
+        if (releaseRepairLock != null) { releaseRepairLock(); releaseRepairLock = null }
         // Només si la clau encara és d'aquest llançament: després d'un cancel·lar, l'usuari pot haver-ne començat un de nou.
         if (launchingTargets.get(key) === launchState) launchingTargets.delete(key)
     }
 })
 
+// D13: què fa el launcher quan el joc ja està en marxa (Configuració > Launcher > «En iniciar el joc»).
+// 'close' només si el joc és independent del launcher (`launchDetached`) i no hi ha cap altre llançament en curs; es tanca
+// al cap de 10 s i només si la instància segueix viva (si el joc petés de seguida, el jugador ha de veure l'error).
+function applyOnGameStart(key) {
+    const mode = ConfigManager.getUiConfig().onGameStart
+    if (mode === 'minimize' || mode === 'close') {
+        if (win != null && !win.isDestroyed()) win.minimize()
+    }
+    if (mode === 'close' && ConfigManager.getLaunchDetached()) {
+        setTimeout(() => {
+            const othersLaunching = [...launchingTargets.keys()].some((k) => k !== key)
+            if (runningInstances.has(key) && !othersLaunching) app.quit()
+        }, 10000)
+    }
+}
+
 ipcMain.handle('hellmc:launch-cancel', (_event, target) => {
+    assertId(target?.versionId)
+    assertId(target?.serverId, { nullable: true })
     const key = targetKey(target.versionId, target.serverId)
     const state = launchingTargets.get(key)
     if (state == null) return
@@ -946,12 +1232,17 @@ ipcMain.handle('hellmc:launch-cancel', (_event, target) => {
 // ── 2.11: instàncies en execució (llistar + tancar per la força) ─────────────────────────────
 ipcMain.handle('hellmc:instances-list', () => instancesSnapshot())
 ipcMain.handle('hellmc:instances-kill', (_event, id) => {
+    if (typeof id !== 'string') return
     const instance = runningInstances.get(id)
-    if (instance) instance.proc.kill()
+    if (instance) {
+        instance.proc.killedByUs = true
+        instance.proc.kill()
+    }
 })
 
 // ── 2.2: ping de servidors (real, socket directe) ─────────────────────────────────────────────
 ipcMain.handle('hellmc:status-ping', async (_event, address) => {
+    if (typeof address !== 'string' || address.length === 0 || address.length > 255) return { online: false }
     const parsed = parseAddress(address, 25565)
     if (parsed == null) {
         return { online: false }
@@ -1001,14 +1292,25 @@ async function getDirectorySize(dir) {
     return total
 }
 
+const sizeCache = new Map() // versionId -> { size, at }
 ipcMain.handle('hellmc:versions-status', async (_event, versionId) => {
+    assertId(versionId)
     const gameDir = getVersionInstanceDir(versionId)
     if (!fs.existsSync(gameDir)) {
         // Ruta retornada igualment (07 §4.2 pt.4, pestanya Fitxers): és on s'instal·larà, útil
         // encara que «Obrir carpeta» no tingui gaire sentit fins que existeixi de veritat.
         return { installed: false, sizeBytes: 0, needsUpdate: false, path: gameDir }
     }
-    const sizeBytes = await getDirectorySize(gameDir)
+    // F3: recórrer tota la carpeta és car (milers de fitxers) i es demana des de moltes pantalles: es cacheja 5 min i
+    // s'invalida en instal·lar/verificar/desinstal·lar.
+    const cached = sizeCache.get(versionId)
+    let sizeBytes
+    if (cached != null && Date.now() - cached.at < 5 * 60 * 1000) {
+        sizeBytes = cached.size
+    } else {
+        sizeBytes = await getDirectorySize(gameDir)
+        sizeCache.set(versionId, { size: sizeBytes, at: Date.now() })
+    }
     let installedRevision = null
     try {
         installedRevision = JSON.parse(fs.readFileSync(getInstalledMarkerPath(versionId), 'utf-8')).revision
@@ -1033,7 +1335,8 @@ async function performRepair(versionId, onProgress) {
         ConfigManager.getInstanceDirectory(),
         ConfigManager.getLauncherDirectory(),
         versionId,
-        DistroAPI.isDevMode()
+        DistroAPI.isDevMode(),
+        SIGNING_KEYS
     )
     repair.spawnReceiver()
     try {
@@ -1053,13 +1356,32 @@ function makeVersionsProgressSender(event, versionId) {
     return (progress) => { if (!sender.isDestroyed()) sender.send('hellmc:versions-progress', versionId, progress) }
 }
 
-ipcMain.handle('hellmc:versions-install', async (event, versionId) => {
-    await performRepair(versionId, makeVersionsProgressSender(event, versionId))
-})
-ipcMain.handle('hellmc:versions-verify', async (event, versionId) => {
-    await performRepair(versionId, makeVersionsProgressSender(event, versionId))
-})
+async function runRepairOp(kind, event, versionId) {
+    const endOp = beginVersionOp(versionId, kind)
+    const releaseLock = await acquireRepairLock()
+    try {
+        await performRepair(versionId, makeVersionsProgressSender(event, versionId))
+    } finally {
+        releaseLock()
+        endOp()
+        sizeCache.delete(versionId)
+    }
+}
+ipcMain.handle('hellmc:versions-install', (event, versionId) => runRepairOp('install', event, versionId))
+ipcMain.handle('hellmc:versions-verify', (event, versionId) => runRepairOp('verify', event, versionId))
 ipcMain.handle('hellmc:versions-uninstall', async (_event, versionId) => {
+    // S4/B5: només versions de la distribució (mai un camí lliure) i mai amb el joc en marxa o una altra operació en curs.
+    const distro = await DistroAPI.getDistribution()
+    if (distro.getVersionById(versionId) == null) throw new Error('VERSION_NOT_FOUND')
+    const endOp = beginVersionOp(versionId, 'uninstall')
+    try {
+        await uninstallVersion(versionId)
+    } finally {
+        endOp()
+        sizeCache.delete(versionId)
+    }
+})
+async function uninstallVersion(versionId) {
     // 09 P6: esborra mods/libraries/config gestionada, però conserva les dades del jugador —
     // exactament la llista de D26 (`DataSharing.SHAREABLE_NAMES`, 01 §3.1.1), no un duplicat propi:
     // quan un d'aquests noms és un enllaç (`shared`), mai s'ha d'esborrar per sota, encara que
@@ -1073,7 +1395,7 @@ ipcMain.handle('hellmc:versions-uninstall', async (_event, versionId) => {
             .filter((name) => !PRESERVE.has(name))
             .map((name) => fs.promises.rm(path.join(gameDir, name), { recursive: true, force: true }))
     )
-})
+}
 
 // ── 2.3: dades compartides entre versions (D26, 06 §8.2/07 §4.4/§6.2) ───────────────────────────
 function getSystemMinecraftDir() {
@@ -1090,6 +1412,8 @@ ipcMain.handle('hellmc:datasharing-get-preference', async (_event, versionId) =>
     }
 })
 ipcMain.handle('hellmc:datasharing-set-preference', async (_event, versionId, shared) => {
+    assertId(versionId)
+    if (typeof shared !== 'boolean') throw new Error('INVALID_VALUE')
     ConfigManager.setDataSharingPreference(versionId, shared)
     ConfigManager.save()
 })
@@ -1176,21 +1500,36 @@ async function ensureJavaConfigForVersion(versionId) {
     return selectedVersion
 }
 ipcMain.handle('hellmc:config-get-version', async (_event, versionId) => {
-    await ensureJavaConfigForVersion(versionId)
+    assertId(versionId)
+    if ((await ensureJavaConfigForVersion(versionId)) == null) throw new Error('VERSION_NOT_FOUND')
     return {
         minRAM: ConfigManager.getMinRAM(versionId),
         maxRAM: ConfigManager.getMaxRAM(versionId),
         executable: ConfigManager.getJavaExecutable(versionId),
-        jvmOptions: ConfigManager.getJVMOptions(versionId)
+        jvmOptions: ConfigManager.getJVMOptions(versionId),
+        forceExecutable: ConfigManager.getJavaForced(versionId)
     }
 })
 ipcMain.handle('hellmc:config-set-version', async (_event, versionId, patch) => {
-    await ensureJavaConfigForVersion(versionId)
+    assertId(versionId)
+    if ((await ensureJavaConfigForVersion(versionId)) == null) throw new Error('VERSION_NOT_FOUND')
+    if (patch == null || typeof patch !== 'object') throw new Error('INVALID_VALUE')
     devLog(`config-set-version ${versionId} patch=${JSON.stringify(patch)}`)
-    if (patch.minRAM != null) ConfigManager.setMinRAM(versionId, patch.minRAM)
-    if (patch.maxRAM != null) ConfigManager.setMaxRAM(versionId, patch.maxRAM)
-    if (patch.executable != null) ConfigManager.setJavaExecutable(versionId, patch.executable)
-    if (patch.jvmOptions != null) ConfigManager.setJVMOptions(versionId, patch.jvmOptions)
+    // B11: només valors de memòria vàlids per a la JVM (`512M`, `4G`); mai text lliure dins `-Xmx`/`-Xms`.
+    const ramRe = /^[1-9]\d{0,5}[MG]$/
+    if (patch.minRAM != null && ramRe.test(patch.minRAM)) ConfigManager.setMinRAM(versionId, patch.minRAM)
+    if (patch.maxRAM != null && ramRe.test(patch.maxRAM)) ConfigManager.setMaxRAM(versionId, patch.maxRAM)
+    // S4: l'executable ha de ser un fitxer de Java existent; les opcions de JVM que carreguen codi només amb el mode desenvolupador.
+    if (patch.executable != null) {
+        if (typeof patch.executable !== 'string' || !isJavaExecPath(patch.executable) || !fs.existsSync(patch.executable)) throw new Error('INVALID_JAVA_EXECUTABLE')
+        ConfigManager.setJavaExecutable(versionId, patch.executable)
+    }
+    if (typeof patch.forceExecutable === 'boolean') ConfigManager.setJavaForced(versionId, patch.forceExecutable)
+    if (patch.jvmOptions != null) {
+        const checked = Security.validateJvmOptions(patch.jvmOptions, ConfigManager.getUiConfig()?.devMode === true)
+        if (!checked.ok) throw new Error(`INVALID_JVM_OPTIONS:${checked.reason}`)
+        ConfigManager.setJVMOptions(versionId, checked.options)
+    }
     ConfigManager.save()
 })
 ipcMain.handle('hellmc:java-detect', async (_event, versionId) => {
@@ -1218,6 +1557,9 @@ ipcMain.handle('hellmc:java-detect', async (_event, versionId) => {
             return { available: true, path: normalizedExisting, version: valid.semverStr }
         }
     }
+    if (existing && ConfigManager.getJavaForced(versionId) && fs.existsSync(javaExecFromRoot(ensureJavaDirIsRoot(existing)))) {
+        return { available: true, path: javaExecFromRoot(ensureJavaDirIsRoot(existing)), version: undefined }
+    }
     const found = await discoverBestJvmInstallation(ConfigManager.getDataDirectory(), semverRange)
     devLog(`discoverBestJvmInstallation -> ${JSON.stringify(found)}`)
     if (found == null) return { available: false }
@@ -1225,6 +1567,7 @@ ipcMain.handle('hellmc:java-detect', async (_event, versionId) => {
     // `landing.js:292` (`JavaUtils.javaExecFromRoot(jvmDetails.path)`) abans de desar-lo.
     const executable = javaExecFromRoot(found.path)
     ConfigManager.setJavaExecutable(versionId, executable)
+    ConfigManager.setJavaForced(versionId, false)
     ConfigManager.save()
     return { available: true, path: executable, version: found.semverStr }
 })
@@ -1271,6 +1614,7 @@ ipcMain.handle('hellmc:java-list-installations', async () => {
 })
 ipcMain.handle('hellmc:java-global-get', () => ConfigManager.getGlobalJavaExecutable())
 ipcMain.handle('hellmc:java-global-set', (_event, executable) => {
+    if (executable != null && (typeof executable !== 'string' || !isJavaExecPath(executable) || !fs.existsSync(executable))) throw new Error('INVALID_JAVA_EXECUTABLE')
     ConfigManager.setGlobalJavaExecutable(executable)
     ConfigManager.save()
 })
@@ -1313,6 +1657,7 @@ async function downloadJdkForVersion(versionId, selectedVersion, report) {
     devLog(`java-download extracted -> ${newJavaExec}`)
 
     ConfigManager.setJavaExecutable(versionId, newJavaExec)
+    ConfigManager.setJavaForced(versionId, false)
     ConfigManager.save()
 
     const info = await validateSelectedJvm(newJavaExec, semverRange)
@@ -1347,6 +1692,10 @@ async function resolveJavaExecutable(selectedVersion, report) {
     const semverRange = selectedVersion.effectiveJavaOptions.supported
 
     const stored = ConfigManager.getJavaExecutable(versionId)
+    // B13: un Java triat a mà (forçat) es respecta encara que no compleixi el rang de la versió, mentre existeixi.
+    if (stored && ConfigManager.getJavaForced(versionId) && fs.existsSync(javaExecFromRoot(ensureJavaDirIsRoot(stored)))) {
+        return javaExecFromRoot(ensureJavaDirIsRoot(stored))
+    }
     if (stored) {
         const normalized = javaExecFromRoot(ensureJavaDirIsRoot(stored))
         if ((await validateSelectedJvm(normalized, semverRange)) != null) return normalized
@@ -1391,11 +1740,35 @@ function writeNewsCacheEntry(scopeKey, entry) {
     } catch { /* millor perdre la cache que petar la resposta */ }
 }
 
+// S11: baixada del feed amb https obligatori, amfitrió públic, *timeout* i límit de mida (2 MB) abans de passar-ho a `rss-parser`.
+const MAX_FEED_BYTES = 2 * 1024 * 1024
+async function fetchFeed(rawUrl) {
+    const url = Security.safeFeedUrl(rawUrl)
+    if (url == null) throw new Error('FEED_URL_NOT_ALLOWED')
+    const response = await fetch(url, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' } })
+    if (!response.ok) throw new Error(`FEED_HTTP_${response.status}`)
+    const reader = response.body.getReader()
+    const chunks = []
+    let total = 0
+    for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        total += value.length
+        if (total > MAX_FEED_BYTES) {
+            await reader.cancel()
+            throw new Error('FEED_TOO_LARGE')
+        }
+        chunks.push(value)
+    }
+    return rssParser.parseString(Buffer.concat(chunks).toString('utf8'))
+}
+
 function normalizeFeedItem(item, feedUrl) {
     const dateStr = item.isoDate ?? item.pubDate
     const date = dateStr != null ? Date.parse(dateStr) : Number.NaN
     return {
-        id: item.guid ?? item.link ?? `${feedUrl}#${item.title ?? date}`,
+        // L'id inclou el feed: dues fonts amb el mateix `guid` no han de col·lidir a la llista de la UI.
+        id: `${feedUrl}|${item.guid ?? item.link ?? `${item.title ?? ''}#${date}`}`,
         title: item.title ?? '',
         date: Number.isNaN(date) ? Date.now() : date,
         url: item.link ?? feedUrl,
@@ -1403,7 +1776,8 @@ function normalizeFeedItem(item, feedUrl) {
         // 2.4 completes (07 §5): calien per a l'autor i el lector dins l'app — `news-get` (2.1/2.2)
         // mai els havia necessitat (només la targeta Jugar/detall de servidor, cap lectura completa).
         author: item.creator ?? item.author,
-        content: item.content ?? item.contentSnippet ?? item.summary ?? ''
+        // Acotat: el contingut complet es desa a `newscache.json` i es pinta; un feed enorme no ha d'inflar res.
+        content: String(item.content ?? item.contentSnippet ?? item.summary ?? '').slice(0, 100_000)
     }
 }
 
@@ -1415,7 +1789,7 @@ async function fetchNewsSource(scopeKey, feedUrls) {
     if (activeFeedUrls.length === 0) {
         return { items: [], fromCache: false, fetchedAt: Date.now() }
     }
-    const results = await Promise.allSettled(activeFeedUrls.map((url) => rssParser.parseURL(url)))
+    const results = await Promise.allSettled(activeFeedUrls.map((url) => fetchFeed(url)))
     const items = []
     let anySucceeded = false
     results.forEach((result, i) => {
@@ -1430,12 +1804,14 @@ async function fetchNewsSource(scopeKey, feedUrls) {
         return { items: [], fromCache: false, fetchedAt: Date.now() }
     }
     items.sort((a, b) => b.date - a.date)
+    items.splice(50)
     const fetchedAt = Date.now()
     writeNewsCacheEntry(scopeKey, { items, fetchedAt })
     return { items, fromCache: false, fetchedAt }
 }
 
 ipcMain.handle('hellmc:news-get', async (_event, scope) => {
+    assertId(scope?.serverId, { nullable: true })
     const distro = await DistroAPI.getDistribution()
     const feedUrls = [distro.rawDistribution.rss]
     if (scope?.serverId != null) {
@@ -1514,8 +1890,39 @@ function getPlatformIcon(filename) {
     return path.join(__dirname, 'app', 'assets', 'images', `${filename}.${ext}`)
 }
 
+// B3: carpetes temporals de natives que es van quedar si el launcher es va tancar abans que el joc. Només les de > 2 dies,
+// perquè un joc obert d'una sessió anterior (launchDetached) encara pot estar-les fent servir.
+function cleanStaleNatives() {
+    for (const folder of [ConfigManager.getTempNativeFolder(), 'WCNatives']) cleanStaleNativesIn(path.join(os.tmpdir(), folder))
+}
+function cleanStaleNativesIn(base) {
+    fs.promises.readdir(base).then(async (names) => {
+        const limit = Date.now() - 2 * 24 * 60 * 60 * 1000
+        for (const name of names) {
+            const dir = path.join(base, name)
+            try {
+                if ((await fs.promises.stat(dir)).mtimeMs < limit) await fs.promises.rm(dir, { recursive: true, force: true })
+            } catch { /* en ús o ja esborrada */ }
+        }
+    }).catch(() => { /* no existeix la carpeta: res a netejar */ })
+}
+
+// S10: cap permís del navegador (càmera, geolocalització, notificacions…) per a cap finestra, cap <webview>, i cap navegació a
+// esquemes que no siguin https (les finestres de Microsoft) ni al propi renderer.
+app.on('web-contents-created', (_event, contents) => {
+    contents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+    contents.on('will-attach-webview', (event) => event.preventDefault())
+    contents.on('will-navigate', (event, url) => {
+        const own = url.toLowerCase().startsWith(RENDERER_ORIGIN) || (process.env.RENDERER_DEV_SERVER === '1' && url.startsWith('http://localhost:5173'))
+        if (!own && !url.startsWith('https://')) event.preventDefault()
+    })
+})
+
+// S5: desxifra els tokens abans de res més (cap finestra ni handler els necessita abans).
+app.on('ready', () => ConfigManager.unlockSecrets())
 app.on('ready', createWindow)
 app.on('ready', createMenu)
+app.on('ready', cleanStaleNatives)
 
 // 2.5: comprovació silenciosa a l'arrencada — Discord-style, mai depèn que l'usuari premi
 // «Comprova ara».

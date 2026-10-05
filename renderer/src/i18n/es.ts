@@ -103,6 +103,19 @@ const es: Messages = {
     offline: 'Sin conexión: se muestran datos guardados. Los servidores en línea no estarán disponibles.',
     sessionInvalid: 'La sesión de tu cuenta ya no es válida. Ve a Configuración › Cuenta e inicia sesión de nuevo.'
   },
+  legal: {
+    title: "Antes de empezar",
+    intro: "HellMC Client se conecta a Microsoft, Mojang, GitHub y a los servidores que se muestran en el launcher, por lo que pueden ver tu dirección IP. Lee cómo se tratan tus datos:",
+    privacyLink: "Política de privacidad",
+    termsLink: "Términos de uso",
+    acceptLabel: "He leído y acepto los Términos de uso y la Política de privacidad.",
+    telemetryTitle: "Ayuda a mejorar HellMC (opcional)",
+    telemetryHelp: "Comparte datos de uso mínimos y anónimos: un identificador aleatorio, la versión de la app, el sistema operativo y si se ha usado el launcher. Sin nombre, sin guardar la IP, sin datos del juego. Puedes cambiarlo después en Configuración.",
+    continue: "Continuar",
+    quit: "Salir",
+    updated: "Hemos actualizado los términos y la política de privacidad. Revísalos para continuar.",
+    notOfficial: "HellMC Client no está afiliado, respaldado ni patrocinado por Mojang Studios ni por Microsoft. Minecraft es una marca registrada de Mojang Synergies AB."
+  },
   boot: {
     updateRequired: {
       download: 'Descargar la actualización',
@@ -118,7 +131,10 @@ const es: Messages = {
     starting: 'Iniciando…',
     needNetworkTitle: 'Conéctate para empezar',
     needNetworkBody: 'HellMC necesita conexión a internet la primera vez que se ejecuta.',
-    retry: 'Reintentar'
+    retry: 'Reintentar',
+    errorTitle: 'Algo ha fallado',
+    errorBody: 'La interfaz ha encontrado un error inesperado. Puedes volver a cargarla; tus datos están a salvo.',
+    errorCopy: 'Copiar los detalles del error'
   },
   welcome: {
     title: 'Bienvenido a HellMC',
@@ -167,6 +183,16 @@ const es: Messages = {
       offlineTitle: 'Cuenta sin conexión',
       offlineUsernamePlaceholder: 'Nombre de usuario',
       addOffline: 'Añadir cuenta',
+      wipeTitle: "Cerrar sesión y borrar los datos locales",
+      wipeHelp: "Elimina todas las cuentas y los tokens de inicio de sesión guardados, la aceptación de los términos, la caché y los logs. Se conservan tus mundos y las versiones instaladas. El launcher se reinicia.",
+      wipeButton: "Borrar…",
+      wipeConfirmTitle: "¿Borrar los datos locales?",
+      wipeConfirmMessage: "Se cerrará la sesión de todas las cuentas y el launcher se reiniciará.",
+      wipeConfirm: "Borrar y reiniciar",
+      wipeCancel: "Cancelar",
+      removeConfirmTitle: "¿Eliminar esta cuenta?",
+      removeConfirmMessage: "Se eliminará de este launcher. Podrás volver a añadirla más adelante.",
+      wipeGameRunning: "Cierra primero el juego.",
       empty: 'Todavía no hay ninguna cuenta.',
       active: 'Activa',
       select: 'Usar esta cuenta',
@@ -183,6 +209,9 @@ const es: Messages = {
       dataDirectory: 'Carpeta de datos',
       dataDirectoryChange: 'Cambiar…',
       dataDirectoryRestartHint: 'Se aplica al reiniciar el launcher.',
+      dataDirectoryPending: 'Cambiará a {path} al reiniciar.',
+      dataDirectoryRestartNow: 'Reiniciar ahora',
+      dataDirectoryNote: 'Los datos existentes no se mueven: las versiones se volverán a descargar en la carpeta nueva.',
       sharedDataRoot: 'Ubicación de los datos compartidos',
       sharedDataRootHelp: 'Dónde guardan las versiones marcadas como "compartidas" sus mundos, packs de recursos, shaders, capturas y opciones. Aplica a todas las versiones compartidas a la vez.',
       sharedDataRootHellmc: 'HellMC (por defecto)',
@@ -213,7 +242,18 @@ const es: Messages = {
       performanceOff: 'Desactivado',
       sidebarCollapsed: 'Contraer barra lateral',
       devMode: 'Modo desarrollador',
-      devModeHint: 'Haz clic varias veces en el número de versión en Acerca de para revelar esto.'
+      devModeHint: 'Haz clic varias veces en el número de versión en Acerca de para revelar esto.',
+      discordPresence: "Mostrar actividad en Discord",
+      discordPresenceHelp: "Muestra en tu perfil de Discord a qué juegas.",
+      hardwareAcceleration: "Aceleración por hardware",
+      hardwareAccelerationHelp: "Interfaz más fluida en la mayoría de ordenadores. Desactívala si ves fallos visuales. Se aplica al reiniciar.",
+      onGameStart: "Al iniciar el juego",
+      onGameStartHelp: "Cerrar el launcher libera memoria en ordenadores antiguos; el juego sigue abierto.",
+      onGameStartKeep: "Mantener abierto",
+      onGameStartMinimize: "Minimizar",
+      onGameStartClose: "Cerrar el launcher",
+      telemetry: "Compartir datos de uso anónimos",
+      telemetryHelp: "Mínimos y anónimos. Ayuda a mejorar HellMC."
     },
     updates: {
       download: 'Descargar la actualización',
@@ -238,6 +278,10 @@ const es: Messages = {
       nebulaNotice: 'Servidor de distribución basado en Nebula (Daniel D. Scalzi, MIT).',
       thirdPartyLicenses: 'Licencias de terceros',
       lgplLicense: 'Licencia LGPL-3.0 (HellMC-Core)',
+      openLogs: 'Abrir la carpeta de logs',
+      copyReport: 'Copiar el informe de diagnóstico',
+      reportCopied: 'Informe copiado. Pégalo cuando pidas soporte.',
+      viewLogs: 'Ver logs',
       website: 'Web',
       source: 'Código fuente',
       support: 'Soporte'
@@ -284,7 +328,9 @@ const es: Messages = {
       NEEDS_NETWORK: "Se necesita conexión a internet para continuar.",
       LAUNCH_FAILED: "No se ha podido iniciar el juego.",
       SPAWN_FAILED: "No se ha podido abrir el proceso del juego.",
-      ALREADY_RUNNING: "Esta versión ya se está ejecutando o iniciando."
+      ALREADY_RUNNING: "Esta versión ya se está ejecutando o iniciando.",
+      VERSION_BUSY: "Esta versión se está instalando, verificando o eliminando. Espera a que termine.",
+      GAME_EXITED: "El juego se ha cerrado inesperadamente (código {code})."
     }
   },
   servers: {
@@ -344,6 +390,7 @@ const es: Messages = {
       title: 'Compartir mundos, packs de recursos y opciones con otras versiones',
       help: 'Los mundos, texturas, shaders, capturas y opciones se comparten con las demás versiones que también lo tengan activado. Los mods y su configuración siempre se quedan separados por versión.',
       changeNotice: 'Este cambio se aplicará la próxima vez que juegues con esta versión.',
+      savesWarning: "Los mundos se comparten entre versiones. Haz una copia de los mundos importantes antes de abrirlos con una versión de Minecraft más antigua.",
       forcedNotice: 'Esta versión siempre tiene sus propios datos.',
       forcedTooltip: 'El administrador del servidor ha fijado que esta versión nunca comparta datos con las demás.'
     },
@@ -357,6 +404,8 @@ const es: Messages = {
       downloadAuto: 'Descargar Java automáticamente',
       downloading: 'Descargando Java…',
       downloadFailed: 'La descarga de Java ha fallado. Inténtalo de nuevo o elige una instalación de Java manualmente.',
+      jvmRejected: 'Opciones de JVM rechazadas: las que cargan código (-javaagent, -agentlib…) necesitan el modo desarrollador.',
+      forcedNote: 'Elegido manualmente: se usa aunque no coincida con el Java recomendado para esta versión.',
       phase: {
         fetchingJdk: 'Buscando la versión adecuada…',
         downloadingJava: 'Descargando Java',

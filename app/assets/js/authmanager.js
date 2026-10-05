@@ -37,15 +37,33 @@ function microsoftError(errorCode) {
  * @param {string} password The account password.
  * @returns {Promise.<Object>} Promise which resolves the resolved authenticated account object.
  */
+/**
+ * UUID d'un jugador *offline* segons l'algorisme de Minecraft/Java: `UUID.nameUUIDFromBytes("OfflinePlayer:" + nom)`
+ * (MD5 amb els bits de versió 3 i variant IETF). És el que calcula un servidor en mode *offline*, així l'inventari/dades
+ * coincideixen entre aquest client i altres launchers.
+ */
+function offlineUuid(username) {
+    const digest = crypto.createHash('md5').update(`OfflinePlayer:${username}`, 'utf8').digest()
+    digest[6] = (digest[6] & 0x0f) | 0x30
+    digest[8] = (digest[8] & 0x3f) | 0x80
+    const hex = digest.toString('hex')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+exports.offlineUuid = offlineUuid
+
 exports.addMojangAccount = async function (username) {
     try {
-        let userId = null
-        // Gerar um UUID baseado no hash MD5 do nome de usuário
-        const hash = crypto.createHash('md5')
-        hash.update(username)
-        userId = hash.digest('hex')
+        // Un compte *offline* existent amb el mateix nom (sigui del format antic o del nou) es reutilitza: sense duplicats.
+        const existing = Object.values(ConfigManager.getAuthAccounts()).find((a) => a.type !== 'microsoft' && String(a.displayName).toLowerCase() === username.trim().toLowerCase())
+        if (existing != null) {
+            ConfigManager.setSelectedAccount(existing.uuid)
+            ConfigManager.save()
+            return existing
+        }
+        // Comptes nous: UUID estàndard (els antics, `md5(nom)`, es mantenen tal qual perquè no perdin l'inventari).
+        const userId = offlineUuid(username.trim())
 
-        const ret = ConfigManager.addMojangAuthAccount(userId, 'sry', username, username)
+        const ret = ConfigManager.addMojangAuthAccount(userId, '0', username, username)
         if (ConfigManager.getClientToken() == null) {
             ConfigManager.setClientToken('sry')
         }
@@ -89,13 +107,13 @@ function rejectMicrosoft(errorCode, response) {
  * @param {*} authMode The auth mode.
  * @returns An object with all auth data. AccessToken object will be null when mode is MC_REFRESH.
  */
-async function fullMicrosoftAuthFlow(entryCode, authMode) {
+async function fullMicrosoftAuthFlow(entryCode, authMode, codeVerifier) {
     try {
 
         let accessTokenRaw
         let accessToken
         if (authMode !== AUTH_MODE.MC_REFRESH) {
-            const accessTokenResponse = await MicrosoftAuth.getAccessToken(entryCode, authMode === AUTH_MODE.MS_REFRESH, AZURE_CLIENT_ID)
+            const accessTokenResponse = await MicrosoftAuth.getAccessToken(entryCode, authMode === AUTH_MODE.MS_REFRESH, AZURE_CLIENT_ID, codeVerifier)
             if (accessTokenResponse.responseStatus === RestResponseStatus.ERROR) {
                 return rejectMicrosoft(accessTokenResponse.microsoftErrorCode, accessTokenResponse)
             }
@@ -158,9 +176,9 @@ function calculateExpiryDate(nowMs, epiresInS) {
  * @param {string} authCode The authCode obtained from microsoft.
  * @returns {Promise.<Object>} Promise which resolves the resolved authenticated account object.
  */
-exports.addMicrosoftAccount = async function (authCode) {
+exports.addMicrosoftAccount = async function (authCode, codeVerifier) {
 
-    const fullAuth = await fullMicrosoftAuthFlow(authCode, AUTH_MODE.FULL)
+    const fullAuth = await fullMicrosoftAuthFlow(authCode, AUTH_MODE.FULL, codeVerifier)
 
     // Advance expiry by 10 seconds to avoid close calls.
     const now = new Date().getTime()
@@ -332,14 +350,23 @@ async function validateSelectedMicrosoftAccount() {
  *
  * @returns {Promise.<'ok'|'offline'|'invalid'>} 'offline' never means the account must be removed.
  */
+// B14: l'arrencada, `online`, Configuració > Compte i «Jugar» poden demanar la validació alhora; dos refrescos paral·lels del mateix
+// *refresh token* podien fer que un fallés (`invalid_grant`) i el compte quedés marcat com a invàlid sense motiu.
+const inflightValidation = new Map()
+
 exports.validateSelectedStatus = async function () {
     const current = ConfigManager.getSelectedAccount()
+    if (current == null) return 'invalid'
 
-    if (current.type === 'microsoft') {
-        return await validateSelectedMicrosoftAccount()
-    } else {
+    if (current.type !== 'microsoft') {
         return await validateSelectedOfflineAccount()
     }
+    let pending = inflightValidation.get(current.uuid)
+    if (pending == null) {
+        pending = validateSelectedMicrosoftAccount().finally(() => inflightValidation.delete(current.uuid))
+        inflightValidation.set(current.uuid, pending)
+    }
+    return await pending
 }
 
 /**

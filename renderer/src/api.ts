@@ -18,7 +18,21 @@ export interface ClientConfig {
      * Sobre uns quants cops) — el valor persisteix igual de normal, només la UI que el mostra es
      * manté amagada fins que es desbloqueja. */
     devMode: boolean
+    /** D9: Rich Presence de Discord (activat per defecte). */
+    discordPresence: boolean
+    /** D14: acceleració per maquinari; s'aplica en reiniciar. */
+    hardwareAcceleration: boolean
+    /** D13: què fa el launcher quan s'inicia el joc. */
+    onGameStart: 'keep' | 'minimize' | 'close'
   }
+}
+
+/** D15/D8: estat de l'acceptació legal; `currentVersion` puja quan canvien els textos. */
+export interface LegalState {
+  currentVersion: number
+  termsAcceptedVersion: number | null
+  acceptedAt: string | null
+  telemetryOptIn: boolean
 }
 
 /** 2.3: forma real (`configmanager.js` `javaConfig[versionId]`) — abans `Record<string, unknown>`
@@ -28,6 +42,8 @@ export interface VersionSettings {
   maxRAM: string
   executable: string | null
   jvmOptions: string[]
+  /** B13: Java triat a mà que es respecta encara que no compleixi el rang de la versió. */
+  forceExecutable?: boolean
 }
 
 /** 2.5 (Configuració > Joc, 07 §6 resta): `ProcessBuilder` ja llegeix tots aquests camps
@@ -42,6 +58,8 @@ export interface GameSettings {
   /** Només lectura efectiva aquí (useu `game.pickDataDirectory()` per canviar-la) — resolta un
    * sol cop en arrencar l'app (`DistroAPI.commonDir`/`instanceDir`), canviar-la cal reiniciar. */
   dataDirectory: string
+  /** B4: carpeta triada que s'aplicarà en el proper arrencada (`null` si no n'hi ha cap de pendent). */
+  pendingDataDirectory: string | null
 }
 
 export interface Account {
@@ -56,7 +74,9 @@ export interface LaunchProgress {
   phase: string
   percent: number
   message?: string
-  error?: { code: string; message: string }
+  error?: { code: string; message: string; exitCode?: number; details?: string[] }
+  /** Destí al qual correspon aquest progrés (hi pot haver diversos llançaments alhora). */
+  target?: { serverId: string | null; versionId: string }
 }
 
 /** 2.11: una instància de joc en execució (multi-instància real — diverses versions/servidors
@@ -182,10 +202,12 @@ export interface HellMCApi {
    * que `config` (bloc `ui`) no cobria. */
   game: {
     get(): Promise<GameSettings>
-    set(patch: Partial<Omit<GameSettings, 'dataDirectory'>>): Promise<void>
+    set(patch: Partial<Omit<GameSettings, 'dataDirectory' | 'pendingDataDirectory'>>): Promise<void>
     /** Obre el selector natiu de carpeta; `null` si l'usuari cancel·la. Reiniciar l'app aplica el
      * canvi (`commonDir`/`instanceDir` es resolen un sol cop en arrencar). */
     pickDataDirectory(): Promise<string | null>
+    /** Reinicia el launcher (aplica la carpeta de dades pendent). */
+    relaunch(): Promise<void>
   }
   auth: {
     /** 2.1: canviat d'`Account[]` a aquesta forma perquè el renderer sàpiga quin ja és l'actiu
@@ -288,6 +310,10 @@ export interface HellMCApi {
     openThirdPartyLicenses(): Promise<void>
     /** Text de la LGPL-3.0 de `HellMC-Core` (02 §3/§7.2). */
     openLgplLicense(): Promise<void>
+    /** O2: obre la carpeta de logs del launcher. */
+    openLogsFolder(): Promise<void>
+    /** O2: informe de diagnòstic (versions, SO, cua del log) sense credencials, per enganxar a una petició de suport. */
+    diagnosticReport(): Promise<string>
     platform: 'win32' | 'darwin' | 'linux'
     appVersion: string
   }
@@ -301,6 +327,14 @@ export interface HellMCApi {
     setTitleBarOverlay(effectiveTheme: 'dark' | 'light'): void
     /** 08 §11: `nativeTheme.themeSource` (diàlegs/menús natius segueixen el tema de l'app). */
     setNativeTheme(theme: 'system' | 'dark' | 'light'): void
+  }
+  legal: {
+    get(): Promise<LegalState>
+    /** Desa l'acceptació de la versió actual; `telemetryOptIn` és el consentiment separat (per defecte no). */
+    accept(telemetryOptIn: boolean): Promise<void>
+    setTelemetry(value: boolean): Promise<void>
+    /** D16: tanca totes les sessions i esborra comptes/tokens, acceptació, cache i logs; reinicia el launcher. */
+    wipeLocalData(): Promise<void>
   }
   updater: {
     check(): Promise<void>

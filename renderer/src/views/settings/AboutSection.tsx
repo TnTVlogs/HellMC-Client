@@ -4,6 +4,7 @@ import { Button } from '../../components/Button'
 import { BrandFlame } from '../../components/BrandFlame'
 import { hellmc } from '../../api'
 import { devModeRevealed } from '../../stores/ui'
+import { LINKS as APP_LINKS } from '../../links'
 
 const LINKS = {
   website: 'https://hellmcclient.sergidalmau.dev',
@@ -27,6 +28,17 @@ function ExtLink({ href, children }: { href: string; children: string }) {
  */
 export function AboutSection() {
   const [clicks, setClicks] = useState(0)
+  const [reportCopied, setReportCopied] = useState(false)
+
+  async function copyReport() {
+    try {
+      await navigator.clipboard.writeText(await hellmc.system.diagnosticReport())
+      setReportCopied(true)
+      setTimeout(() => setReportCopied(false), 4000)
+    } catch (err) {
+      console.error('[about] copyReport failed', err)
+    }
+  }
 
   function handleVersionClick() {
     const next = clicks + 1
@@ -65,6 +77,13 @@ export function AboutSection() {
         <div style={{ display: 'flex', gap: 8, marginTop: 'var(--space-4)', flexWrap: 'wrap' }}>
           <Button size="sm" onClick={() => void hellmc.system.openThirdPartyLicenses()}>{t('settings.about.thirdPartyLicenses')}</Button>
           <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openLgplLicense()}>{t('settings.about.lgplLicense')}</Button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(APP_LINKS.privacy)}>{t('legal.privacyLink')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(APP_LINKS.terms)}>{t('legal.termsLink')}</Button>
+          <Button size="sm" onClick={() => void hellmc.system.openLogsFolder()}>{t('settings.about.openLogs')}</Button>
+          <Button size="sm" onClick={() => void copyReport()}>{t('settings.about.copyReport')}</Button>
+          {reportCopied && <span class="muted small" role="status">{t('settings.about.reportCopied')}</span>}
         </div>
       </div>
     </section>

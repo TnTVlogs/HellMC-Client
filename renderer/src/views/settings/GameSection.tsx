@@ -28,9 +28,13 @@ function GeneralGameSection() {
   }
 
   async function handlePickDataDirectory() {
-    const dir = await hellmc.game.pickDataDirectory()
-    if (dir == null) return
-    setSettings((prev) => (prev != null ? { ...prev, dataDirectory: dir } : prev))
+    try {
+      const dir = await hellmc.game.pickDataDirectory()
+      if (dir == null) return
+      setSettings((prev) => (prev != null ? { ...prev, pendingDataDirectory: dir === prev.dataDirectory ? null : dir } : prev))
+    } catch (err) {
+      console.error('[settings] pickDataDirectory failed', err)
+    }
   }
 
   if (settings == null) return null
@@ -39,10 +43,10 @@ function GeneralGameSection() {
     <Card>
       <div class="set-row">
         <div class="l"><b>{t('settings.game.resolution')}</b><span>{t('ui.descResolution')}</span></div>
-        <input class="field sm" type="number" min={0} style={{ width: 84 }} aria-label={t('settings.game.width')} value={width}
+        <input class="field sm" type="number" min={320} max={16384} style={{ width: 84 }} aria-label={t('settings.game.width')} value={width}
           onInput={(e) => setWidth((e.target as HTMLInputElement).value)} onBlur={() => void patch({ resWidth: Number.parseInt(width, 10) })} />
         <span class="faint">×</span>
-        <input class="field sm" type="number" min={0} style={{ width: 84 }} aria-label={t('settings.game.height')} value={height}
+        <input class="field sm" type="number" min={320} max={16384} style={{ width: 84 }} aria-label={t('settings.game.height')} value={height}
           onInput={(e) => setHeight((e.target as HTMLInputElement).value)} onBlur={() => void patch({ resHeight: Number.parseInt(height, 10) })} />
       </div>
       <div class="set-row">
@@ -62,8 +66,19 @@ function GeneralGameSection() {
           <b>{t('settings.game.dataDirectory')}</b>
           <span class="num" style={{ wordBreak: 'break-all' }}>{settings.dataDirectory}</span>
           <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('settings.game.dataDirectoryRestartHint')}</span>
+          <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('settings.game.dataDirectoryNote')}</span>
+          {settings.pendingDataDirectory != null && (
+            <span class="num" style={{ display: 'block', wordBreak: 'break-all', color: 'var(--warning)' }}>
+              {t('settings.game.dataDirectoryPending', { path: settings.pendingDataDirectory })}
+            </span>
+          )}
         </div>
-        <Button size="sm" onClick={() => void handlePickDataDirectory()}>{t('settings.game.dataDirectoryChange')}</Button>
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          <Button size="sm" onClick={() => void handlePickDataDirectory()}>{t('settings.game.dataDirectoryChange')}</Button>
+          {settings.pendingDataDirectory != null && (
+            <Button size="sm" variant="primary" onClick={() => void hellmc.game.relaunch()}>{t('settings.game.dataDirectoryRestartNow')}</Button>
+          )}
+        </div>
       </div>
     </Card>
   )

@@ -10,11 +10,12 @@ import { Popover } from './Popover'
 import { BrandFlame } from './BrandFlame'
 import { Avatar, Banner, RingProgress, StatusDot } from './ui'
 import { instances, killInstance } from '../stores/instances'
+import { distro } from '../stores/distro'
 import { unreadCount } from '../stores/news'
 import { minecraftServices, online, sessionInvalid } from '../stores/network'
 import { sidebarCollapsed } from '../stores/ui'
 import { accounts, selectedAccount, selectAccount, loadAccounts } from '../stores/account'
-import { isLaunching, launchProgress } from '../stores/launch'
+import { activeLaunch } from '../stores/launch'
 
 type NavKey = 'nav.home' | 'nav.servers' | 'nav.versions' | 'nav.news'
 
@@ -31,8 +32,8 @@ const LINKS = { discord: 'https://discord.gg/yScnSw7cFt', website: 'https://hell
 
 /** Tasca activa (07 §9): progrés circular + fase; porta a Inici on hi ha el detall. */
 function TaskIndicator() {
-  if (!isLaunching.value) return null
-  const p = launchProgress.value
+  const p = activeLaunch.value
+  if (p == null) return null
   const label = t(`home.phase.${p.phase}`)
   return (
     <button type="button" class="task" title={`${label} · ${Math.round(p.percent)}%`} onClick={() => navigate('/home')}
@@ -51,6 +52,7 @@ function InstancesIndicator() {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   if (list.length === 0) return null
+  const versionName = (id: string) => distro.value?.versions.find((v) => v.id === id)?.name ?? id
   const confirmingInstance = confirmingId != null ? list.find((i) => i.id === confirmingId) ?? null : null
 
   return (
@@ -60,7 +62,7 @@ function InstancesIndicator() {
           <div style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
             {list.map((instance) => (
               <div key={instance.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-2)' }}>
-                <span class="small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{instance.versionId}</span>
+                <span class="small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{versionName(instance.versionId)}</span>
                 <Button size="sm" variant="danger" onClick={() => { setOpen(false); setConfirmingId(instance.id) }}>{t('instances.forceClose')}</Button>
               </div>
             ))}
@@ -74,7 +76,7 @@ function InstancesIndicator() {
       {confirmingInstance != null && (
         <ConfirmDialog
           title={t('instances.confirmTitle')}
-          message={t('instances.confirmMessage', { version: confirmingInstance.versionId })}
+          message={t('instances.confirmMessage', { version: versionName(confirmingInstance.versionId) })}
           confirmLabel={t('instances.confirmForceClose')}
           cancelLabel={t('instances.cancel')}
           onCancel={() => setConfirmingId(null)}

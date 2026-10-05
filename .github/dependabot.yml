@@ -1,0 +1,19 @@
+# O5: actualitzacions de dependències agrupades i setmanals (Electron publica un major cada ~8 setmanes; només els tres
+# darrers reben pegats de seguretat de Chromium).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Es puja a mà (decisió de compatibilitat de l'app)
+      - dependency-name: electron
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

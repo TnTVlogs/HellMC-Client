@@ -70,4 +70,20 @@ assert.equal(normalizeAddress('play.hellmc.net:25566'), 'play.hellmc.net:25566')
     assert.ok(fs.readFileSync(path.join(dir, 'servers.dat')).equals(before))
     assert.equal(ensureServer(dir, null).status, 'skipped')
 }
+// B17: longitud negativa (bucle potencial) i nidificació excessiva: es rebutgen sense penjar-se ni tocar el fitxer
+{
+    const dir = tmp()
+    // compound arrel + byte_array amb longitud -4
+    const evil = Buffer.concat([Buffer.from([10, 0, 0, 7, 0, 1, 97]), Buffer.from([0xff, 0xff, 0xff, 0xfc]), Buffer.from([0])])
+    fs.writeFileSync(path.join(dir, 'servers.dat'), evil)
+    assert.equal(ensureServer(dir, { name: 'X', address: 'x.example.com' }).status, 'skipped')
+    assert.ok(fs.readFileSync(path.join(dir, 'servers.dat')).equals(evil))
+
+    // 100 compounds niats
+    const parts = [Buffer.from([10, 0, 0])]
+    for (let i = 0; i < 100; i++) parts.push(Buffer.from([10, 0, 1, 97]))
+    for (let i = 0; i < 101; i++) parts.push(Buffer.from([0]))
+    fs.writeFileSync(path.join(dir, 'servers.dat'), Buffer.concat(parts))
+    assert.equal(ensureServer(dir, { name: 'X', address: 'x.example.com' }).status, 'skipped')
+}
 console.log('serversdat: all OK')

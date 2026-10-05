@@ -1,5 +1,6 @@
 import { useEffect } from 'preact/hooks'
 import { Button } from './Button'
+import { useFocusTrap } from './useFocusTrap'
 
 export interface ConfirmDialogProps {
   title: string
@@ -14,6 +15,7 @@ export interface ConfirmDialogProps {
 /** 08 §7 (`.dialog`): diàleg de confirmació **al mig de la finestra** (`position:fixed;inset:0`),
  * independentment d'on visqui al DOM. `Esc` cancel·la; acció destructiva en color de perill. */
 export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, danger = true, onConfirm, onCancel }: ConfirmDialogProps) {
+  const trapRef = useFocusTrap<HTMLDivElement>()
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onCancel()
@@ -24,7 +26,7 @@ export function ConfirmDialog({ title, message, confirmLabel, cancelLabel, dange
 
   return (
     <div class="dialog-host" onClick={onCancel}>
-      <div class="card dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-dialog-title" onClick={(e) => e.stopPropagation()}>
+      <div ref={trapRef} class="card dialog" role="alertdialog" tabIndex={-1} aria-modal="true" aria-labelledby="confirm-dialog-title" onClick={(e) => e.stopPropagation()}>
         <h2 id="confirm-dialog-title">{title}</h2>
         <p class="muted">{message}</p>
         <div class="actions">

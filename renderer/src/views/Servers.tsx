@@ -33,10 +33,11 @@ export function Servers() {
   const [tag, setTag] = useState<string | null>(null)
   const selectedId = effectiveSelection.value.serverId
 
+  // F4: depèn del *contingut* (ids+adreces), no de la referència de `d` (que canvia a cada refresc de la distribució).
+  const serversKey = (d?.servers ?? []).map((s) => `${s.id}@${s.address}`).join('|')
   useEffect(() => {
-    if (d == null) return
-    for (const server of d.servers) void pingServer(server.id, server.address)
-  }, [d])
+    for (const server of d?.servers ?? []) void pingServer(server.id, server.address)
+  }, [serversKey])
 
   const allTags = [...new Set((d?.servers ?? []).flatMap((s) => s.tags ?? []))]
   const servers = (d?.servers ?? [])
@@ -72,7 +73,7 @@ export function Servers() {
 
       <div class="server-grid">
         <div class="card scard free" role="button" tabIndex={0} onClick={playWithoutServer}
-          onKeyDown={(e) => { if (e.key === 'Enter') playWithoutServer() }}>
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playWithoutServer() } }}>
           <div class="ring"><Play size={24} fill="currentColor" /></div>
           <h3>{t('servers.playWithoutServer')}</h3>
           <p class="muted small" style={{ maxWidth: '26ch' }}>{t('servers.playWithoutServerDesc')}</p>
@@ -84,7 +85,7 @@ export function Servers() {
         {servers.map((server) => (
           <div key={server.id} class={`card scard${server.id === selectedId ? ' selected' : ''}`} role="link" tabIndex={0}
             onClick={() => navigate(`/servers/${server.id}`)}
-            onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/servers/${server.id}`) }}>
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/servers/${server.id}`) } }}>
             <Art seed={server.id} url={server.banner} />
             {server.mainServer === true && <span class="star"><Star size={12} fill="currentColor" /> {t('ui.main')}</span>}
             <div class="body">

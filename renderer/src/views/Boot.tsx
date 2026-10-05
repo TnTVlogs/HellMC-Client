@@ -53,11 +53,12 @@ export function UpdateRequired() {
   type S = 'idle' | 'checking' | 'none' | 'downloading' | 'ready' | 'manual'
   const [status, setStatus] = useState<S>('idle')
   const [percent, setPercent] = useState(0)
+  const [version, setVersion] = useState('')
 
   useEffect(() => hellmc.updater.onEvent((e) => {
     if (e.type === 'checking-for-update') setStatus('checking')
     else if (e.type === 'update-not-available') setStatus('none')
-    else if (e.type === 'update-available') setStatus(hellmc.system.platform === 'darwin' ? 'manual' : 'downloading')
+    else if (e.type === 'update-available') { setVersion(e.info?.version ?? ''); setStatus(hellmc.system.platform === 'darwin' ? 'manual' : 'downloading') }
     else if (e.type === 'download-progress') { setStatus('downloading'); setPercent(Math.round(e.info?.percent ?? 0)) }
     else if (e.type === 'update-downloaded') setStatus('ready')
   }), [])
@@ -68,7 +69,7 @@ export function UpdateRequired() {
     : status === 'none' ? t('boot.updateRequired.none')
     : status === 'downloading' ? t('boot.updateRequired.downloading', { percent })
     : status === 'ready' ? t('boot.updateRequired.ready')
-    : status === 'manual' ? t('settings.updates.manualMac', { version: '' }) : null
+    : status === 'manual' ? t('settings.updates.manualMac', { version }) : null
 
   return (
     <div class="app-shell" style={{ gridTemplateRows: 'minmax(0, 1fr)' }}>

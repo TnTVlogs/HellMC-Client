@@ -5,6 +5,6 @@
 /logs/
 /dist/
 /renderer-dist/
-package-lock.json
+**/node_modules/
 .claude/
 /newDocs/

@@ -1,4 +1,5 @@
-const { DistributionAPI } = require('hellmc-core/common')
+const { DistributionAPI, Ed25519Verifier } = require('hellmc-core/common')
+const SIGNING_KEYS = require('./signing-keys')
 
 const ConfigManager = require('./configmanager')
 
@@ -11,7 +12,11 @@ const api = new DistributionAPI(
     null, // Injected forcefully by the preloader.
     null, // Injected forcefully by the preloader.
     exports.REMOTE_DISTRO_URL,
-    false
+    false,
+    // S1: sense claus configurades la signatura no s'exigeix (vegeu signing-keys.js).
+    SIGNING_KEYS.length > 0 ? new Ed25519Verifier(SIGNING_KEYS) : null
 )
+
+exports.SIGNING_KEYS = SIGNING_KEYS
 
 exports.DistroAPI = api

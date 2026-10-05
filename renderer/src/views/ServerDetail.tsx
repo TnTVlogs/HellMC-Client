@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { sanitizeRichHtml } from '../utils/sanitize'
 import { Check, Copy, ExternalLink, Play, Star } from 'lucide-preact'
 import { t } from '../i18n'
 import { hellmc, type NewsItem } from '../api'
@@ -13,19 +13,11 @@ import { selectServer, selectVersion } from '../stores/selection'
 import { launch } from '../stores/launch'
 import { pings, pingServer } from '../stores/status'
 import { statuses, refreshStatus } from '../stores/versions'
+import { formatBytes } from '../utils/format'
 
 // 07 §3.2: detall del servidor — hero, descripció (Markdown sanititzat), notícies del servidor,
 // i a la dreta desplegable de versions + Jugar + dades. «Jugar» selecciona i navega a Inici, on hi
 // ha la UI de progrés (store `launch` compartit).
-
-function formatBytes(n: number): string {
-  if (n <= 0) return '—'
-  const units = ['B', 'KB', 'MB', 'GB']
-  let i = 0
-  let v = n
-  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++ }
-  return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`
-}
 
 export function ServerDetail({ id }: { id: string }) {
   const d = distro.value
@@ -44,8 +36,8 @@ export function ServerDetail({ id }: { id: string }) {
       }
       const recommended = server.versions.find((v) => v.recommended === true) ?? server.versions[0]
       setVersionId(recommended?.id ?? null)
-    })
-    if (server.rss != null) hellmc.news.get({ serverId: server.id }).then((r) => setNews(r.items.slice(0, 5)))
+    }).catch(() => { /* es queda la recomanada */ })
+    if (server.rss != null) hellmc.news.get({ serverId: server.id }).then((r) => setNews(r.items.slice(0, 5))).catch(() => { /* sense notícies */ })
     for (const entry of server.versions) void refreshStatus(entry.id)
     // Només `server?.id`: el refresc de `distro` canvia la referència de `server` a cada poll.
   }, [server?.id])
@@ -67,7 +59,7 @@ export function ServerDetail({ id }: { id: string }) {
   const current = options.find((o) => o.entry.id === versionId)?.version ?? null
   const status = versionId != null ? statuses.value[versionId] : undefined
   const longHtml = server.descriptionLong != null && server.descriptionLong.trim() !== ''
-    ? DOMPurify.sanitize(marked.parse(server.descriptionLong, { async: false }))
+    ? sanitizeRichHtml(marked.parse(server.descriptionLong, { async: false }))
     : null
 
   async function handlePlay() {

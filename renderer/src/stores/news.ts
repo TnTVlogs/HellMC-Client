@@ -22,6 +22,9 @@ export async function loadArchive(): Promise<void> {
     sources.value = archive.sources
     fromCache.value = archive.fromCache
     fetchedAt.value = archive.fetchedAt
+  } catch (err) {
+    // Sense xarxa/feed: es queda l'arxiu anterior (o buit) en comptes d'una promesa rebutjada.
+    console.error('[news] loadArchive failed', err)
   } finally {
     loading.value = false
   }

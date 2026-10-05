@@ -5,6 +5,7 @@ import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { Art, Chip, Progress, ServerIcon, StatusDot } from '../components/ui'
+import { hellmc } from '../api'
 import { navigate } from '../router'
 import { distro } from '../stores/distro'
 import { effectiveSelection, selectVersion } from '../stores/selection'
@@ -87,9 +88,9 @@ function NewsColumn() {
 }
 
 /** Text de l'error de llançament en l'idioma actiu (el missatge del procés principal és en anglès, només per al registre). */
-function errorText(code: string | undefined, fallback: string): string {
+function errorText(code: string | undefined, fallback: string, exitCode?: number): string {
   const key = `home.errors.${code ?? ''}`
-  const translated = t(key)
+  const translated = t(key, { code: exitCode ?? '' })
   return translated === key ? fallback : translated
 }
 
@@ -179,7 +180,20 @@ function PlayCard() {
           <Progress value={progress.percent > 0 ? progress.percent : null} />
         </div>
 
-        {progress.phase === 'error' && progress.error != null && !showDialog && <p class="error-text">{errorText(progress.error.code, progress.error.message)}</p>}
+        {progress.phase === 'error' && progress.error != null && !showDialog && (
+          <div>
+            <p class="error-text">{errorText(progress.error.code, progress.error.message, progress.error.exitCode)}</p>
+            {progress.error.details != null && progress.error.details.length > 0 && (
+              <details class="xs" style={{ marginTop: 4 }}>
+                <summary>{t('settings.about.viewLogs')}</summary>
+                <pre class="num" style={{ whiteSpace: 'pre-wrap', maxHeight: 160, overflow: 'auto', margin: 0 }}>{progress.error.details.join('\n')}</pre>
+              </details>
+            )}
+            {progress.error.code === 'GAME_EXITED' && (
+              <button type="button" class="link-btn" onClick={() => void hellmc.system.openLogsFolder()}>{t('settings.about.openLogs')}</button>
+            )}
+          </div>
+        )}
 
         <div class="pc-actions">
           {busy ? (

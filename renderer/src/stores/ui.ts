@@ -8,6 +8,7 @@ import { hellmc } from '../api'
 export type Theme = 'system' | 'dark' | 'light'
 export type PerformanceMode = 'auto' | 'on' | 'off'
 export type Language = 'en' | 'es' | 'ca'
+export type OnGameStart = 'keep' | 'minimize' | 'close'
 
 function detectLanguage(): Language {
   const nav = navigator.language.slice(0, 2)
@@ -22,6 +23,10 @@ export const language = signal<Language>(detectLanguage())
 /** 07 §6 «Launcher»: persisteix igual de normal; la UI que el mostra es manté amagada fins que
  * es desbloqueja (Sobre, clicar la versió uns quants cops, `views/settings/AboutSection.tsx`). */
 export const devMode = signal<boolean>(false)
+/** D9/D14/D13: ajustos nous del Launcher. */
+export const discordPresence = signal<boolean>(true)
+export const hardwareAcceleration = signal<boolean>(true)
+export const onGameStart = signal<OnGameStart>('keep')
 /** Només de sessió (mai `config.json`): un cop clicada la versió prou vegades a Sobre, el
  * interruptor de `devMode` apareix a Launcher per a la resta de la sessió — tornar a obrir l'app
  * torna a amagar-lo (sense desbloquejar, el valor de `devMode` en si no es toca). */
@@ -41,7 +46,8 @@ let loaded = false
 /** Es crida un cop en arrencar (`main.tsx`). No bloqueja el primer render: els signals ja tenen
  * valors per defecte raonables i es corregeixen quan `config.get()` respon. */
 export async function loadUiConfig(): Promise<void> {
-  await detectLowEndHardware()
+  // Una fallada de la mesura de memòria no ha d'impedir carregar tema/idioma.
+  await detectLowEndHardware().catch(() => { /* es queda `false` */ })
   const config = await hellmc.config.get()
   theme.value = config.ui.theme
   perfMode.value = config.ui.performance
@@ -49,6 +55,9 @@ export async function loadUiConfig(): Promise<void> {
   sidebarCollapsed.value = config.ui.sidebarCollapsed
   language.value = config.ui.language
   devMode.value = config.ui.devMode
+  discordPresence.value = config.ui.discordPresence !== false
+  hardwareAcceleration.value = config.ui.hardwareAcceleration !== false
+  onGameStart.value = config.ui.onGameStart ?? 'keep'
   loaded = true
 }
 
@@ -63,7 +72,10 @@ function persist(): void {
       uiScale: uiScale.value,
       sidebarCollapsed: sidebarCollapsed.value,
       language: language.value,
-      devMode: devMode.value
+      devMode: devMode.value,
+      discordPresence: discordPresence.value,
+      hardwareAcceleration: hardwareAcceleration.value,
+      onGameStart: onGameStart.value
     }
   })
 }
@@ -90,6 +102,21 @@ export function setUiScale(next: number): void {
 
 export function setSidebarCollapsed(next: boolean): void {
   sidebarCollapsed.value = next
+  persist()
+}
+
+export function setDiscordPresence(next: boolean): void {
+  discordPresence.value = next
+  persist()
+}
+
+export function setHardwareAcceleration(next: boolean): void {
+  hardwareAcceleration.value = next
+  persist()
+}
+
+export function setOnGameStart(next: OnGameStart): void {
+  onGameStart.value = next
   persist()
 }
 

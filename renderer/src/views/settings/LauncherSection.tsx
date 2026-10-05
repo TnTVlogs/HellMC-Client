@@ -7,8 +7,12 @@ import {
   uiScale, setUiScale,
   sidebarCollapsed, setSidebarCollapsed,
   language, setLanguage, type Language,
-  devMode, setDevMode, devModeRevealed
+  devMode, setDevMode, devModeRevealed,
+  discordPresence, setDiscordPresence,
+  hardwareAcceleration, setHardwareAcceleration,
+  onGameStart, setOnGameStart, type OnGameStart
 } from '../../stores/ui'
+import { legal, setTelemetry } from '../../stores/legal'
 
 const UI_SCALES = [85, 100, 115, 130]
 const LANGUAGES: Language[] = ['ca', 'es', 'en']
@@ -25,6 +29,10 @@ export function LauncherSection() {
   ]
   const perfs: [PerformanceMode, string][] = [
     ['auto', t('settings.launcher.performanceAuto')], ['on', t('settings.launcher.performanceOn')], ['off', t('settings.launcher.performanceOff')]
+  ]
+
+  const onGameStartOptions: [OnGameStart, string][] = [
+    ['keep', t('settings.launcher.onGameStartKeep')], ['minimize', t('settings.launcher.onGameStartMinimize')], ['close', t('settings.launcher.onGameStartClose')]
   ]
 
   return (
@@ -59,6 +67,24 @@ export function LauncherSection() {
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.sidebarCollapsed')}</b><span>{t('ui.descSidebar')}</span></div>
           <Toggle checked={sidebarCollapsed.value} onChange={setSidebarCollapsed} label={t('settings.launcher.sidebarCollapsed')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.onGameStart')}</b><span>{t('settings.launcher.onGameStartHelp')}</span></div>
+          <div class="seg">
+            {onGameStartOptions.map(([v, label]) => <button key={v} type="button" aria-pressed={onGameStart.value === v} onClick={() => setOnGameStart(v)}>{label}</button>)}
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.discordPresence')}</b><span>{t('settings.launcher.discordPresenceHelp')}</span></div>
+          <Toggle checked={discordPresence.value} onChange={setDiscordPresence} label={t('settings.launcher.discordPresence')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.hardwareAcceleration')}</b><span>{t('settings.launcher.hardwareAccelerationHelp')}</span></div>
+          <Toggle checked={hardwareAcceleration.value} onChange={setHardwareAcceleration} label={t('settings.launcher.hardwareAcceleration')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.telemetry')}</b><span>{t('settings.launcher.telemetryHelp')}</span></div>
+          <Toggle checked={legal.value?.telemetryOptIn === true} onChange={(v) => void setTelemetry(v)} label={t('settings.launcher.telemetry')} />
         </div>
         {(devMode.value || devModeRevealed.value) && (
           <div class="set-row">

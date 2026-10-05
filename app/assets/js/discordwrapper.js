@@ -44,6 +44,7 @@ exports.initRPC = function (gen, serv, initialDetails = 'In the launcher', initi
     }
 
     client = new Client({ transport: 'ipc' })
+    const thisClient = client
 
     activity = {
         details: initialDetails,
@@ -61,9 +62,24 @@ exports.initRPC = function (gen, serv, initialDetails = 'In the launcher', initi
         safe(() => client.setActivity(activity))
     })
 
+    // B18: si Discord es tanca DESPRÉS d'haver connectat, es reconnecta sol (abans només es reintentava el primer connect).
+    client.on('disconnected', () => {
+        if (client !== thisClient) return
+        logger.info('Discord desconnectat; es reintenta cada 30s.')
+        retryTimer = setTimeout(() => {
+            retryTimer = null
+            if (client !== thisClient) return
+            const savedGen = genSettings
+            const savedServ = servSettings
+            const savedActivity = activity
+            client = null
+            try { thisClient.destroy() } catch { /* ja tancat */ }
+            exports.initRPC(savedGen, savedServ, savedActivity?.details, savedActivity?.state)
+        }, 30000)
+    })
+
     // Reintents fins que Discord s'obri. El temporitzador es cancel·la a `shutdownRPC` i cada
     // intent comprova que el client segueixi sent aquest (si no, `client` ja és `null` → crash).
-    const thisClient = client
     let warned = false
     const doLogin = () => {
         retryTimer = null

@@ -7,7 +7,16 @@ const { contextBridge, ipcRenderer } = require('electron')
 // 2.5: mateixos opcodes que l'app antiga per a la finestra d'OAuth de Microsoft
 // (`index.js` `MSFT_OPCODE.OPEN_LOGIN`/`REPLY_LOGIN`, mai tocada) — reutilitzats tal qual, no
 // duplicats, perquè el main process ja sap parlar aquest protocol.
-const { MSFT_OPCODE, MSFT_REPLY_TYPE, MSFT_ERROR } = require('../app/assets/js/ipcconstants')
+// S4: el preload és **sandboxed** (només pot fer `require('electron')`), per això les constants s'inlinen aquí.
+// Mantenir sincronitzades amb `app/assets/js/ipcconstants.js` (ho comprova `test/preload-constants.test.js`).
+const MSFT_OPCODE = {
+    OPEN_LOGIN: 'MSFT_AUTH_OPEN_LOGIN',
+    OPEN_LOGOUT: 'MSFT_AUTH_OPEN_LOGOUT',
+    REPLY_LOGIN: 'MSFT_AUTH_REPLY_LOGIN',
+    REPLY_LOGOUT: 'MSFT_AUTH_REPLY_LOGOUT'
+}
+const MSFT_REPLY_TYPE = { SUCCESS: 'MSFT_AUTH_REPLY_SUCCESS', ERROR: 'MSFT_AUTH_REPLY_ERROR' }
+const MSFT_ERROR = { ALREADY_OPEN: 'MSFT_AUTH_ERR_ALREADY_OPEN', NOT_FINISHED: 'MSFT_AUTH_ERR_NOT_FINISHED' }
 
 function makeEmitter() {
     const listeners = new Set()
@@ -72,7 +81,8 @@ const hellmcApi = {
     game: {
         get: () => ipcRenderer.invoke('hellmc:game-settings-get'),
         set: (patch) => ipcRenderer.invoke('hellmc:game-settings-set', patch),
-        pickDataDirectory: () => ipcRenderer.invoke('hellmc:game-data-directory-pick')
+        pickDataDirectory: () => ipcRenderer.invoke('hellmc:game-data-directory-pick'),
+        relaunch: () => ipcRenderer.invoke('hellmc:app-relaunch')
     },
     auth: {
         accounts: () => ipcRenderer.invoke('hellmc:auth-accounts'),
@@ -151,6 +161,8 @@ const hellmcApi = {
         openExternal: (url) => ipcRenderer.invoke('hellmc:open-external', url),
         openThirdPartyLicenses: () => ipcRenderer.invoke('hellmc:open-third-party-licenses'),
         openLgplLicense: () => ipcRenderer.invoke('hellmc:open-lgpl-license'),
+        openLogsFolder: () => ipcRenderer.invoke('hellmc:open-logs'),
+        diagnosticReport: () => ipcRenderer.invoke('hellmc:diagnostic-report'),
         isClientOutdated: (minClientVersion) => ipcRenderer.invoke('hellmc:system-client-outdated', minClientVersion),
         platform: process.platform,
         // Síncron (`sendSync`, demanat un sol cop en carregar el preload) perquè sigui correcte
@@ -165,6 +177,12 @@ const hellmcApi = {
         onMaximizeChange: (cb) => maximizeChangeEmitter.subscribe(cb),
         setTitleBarOverlay: (effectiveTheme) => ipcRenderer.send('hellmc:set-titlebar-overlay', effectiveTheme),
         setNativeTheme: (theme) => ipcRenderer.send('hellmc:set-native-theme', theme)
+    },
+    legal: {
+        get: () => ipcRenderer.invoke('hellmc:legal-get'),
+        accept: (telemetryOptIn) => ipcRenderer.invoke('hellmc:legal-accept', telemetryOptIn),
+        setTelemetry: (value) => ipcRenderer.invoke('hellmc:legal-set-telemetry', value),
+        wipeLocalData: () => ipcRenderer.invoke('hellmc:wipe-local-data')
     },
     updater: {
         check: () => ipcRenderer.invoke('hellmc:updater-check'),

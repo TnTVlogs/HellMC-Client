@@ -1,6 +1,6 @@
 appId: 'hellmcclient'
 productName: 'HellMC Client'
-artifactName: '${productName}-setup.${ext}'
+artifactName: 'HellMC-Client-Setup.${ext}'
 
 publish:
   provider: github
@@ -37,6 +37,9 @@ win:
 # to the multi-step wizard, incompatible with oneClick, so they're dropped here).
 nsis:
   oneClick: true
+  # D16: en desinstal·lar s'esborra la carpeta de dades del launcher (config, tokens, logs). No toca els mons ni les
+  # versions instal·lades (carpeta de dades del joc). Una actualització NO l'esborra.
+  deleteAppDataOnUninstall: true
 
 # macOS sense signatura (Developer ID): no hi ha actualització automàtica, només avís + descàrrega manual
 # (vegeu index.js i docs 12 C3c). Si algun dia es signa, cal afegir aquí el target 'zip' (és el que llegeix
@@ -63,3 +66,11 @@ linux:
 directories:
   buildResources: 'build'
   output: 'dist'
+
+# S10: *fuses* d'Electron. `runAsNode` es queda activat: el receptor de descàrregues (`HellMC-Core`) es llança amb
+# `child_process.fork` sobre el binari d'Electron i en depèn (només es podrà desactivar migrant-lo a `utilityProcess`).
+electronFuses:
+  runAsNode: true
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true

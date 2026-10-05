@@ -1,0 +1,904 @@
+{
+  "format": 2,
+  "minClientVersion": "2.0.0",
+  "version": "20261005-095759",
+  "rss": "https://hellmcclient.sergidalmau.dev/client/news.rss",
+  "discord": {
+    "clientId": "1439187291917648012",
+    "smallImageText": "HellMC Network",
+    "smallImageKey": "hellmc_logo"
+  },
+  "servers": [
+    {
+      "id": "Tecnikal",
+      "name": "Tecnikal",
+      "description": "Servidor técnico de Baikal04 y su comunidad.",
+      "address": "tecnikal.sergidalmau.dev",
+      "autoconnect": true,
+      "tags": [
+        "Tecnikal",
+        "Técnico",
+        "Vanilla+"
+      ],
+      "versions": [
+        {
+          "id": "Tecnikal-26.1.2",
+          "recommended": true
+        }
+      ],
+      "sortOrder": 10
+    }
+  ],
+  "versions": [
+    {
+      "id": "Tecnikal-26.1.2",
+      "name": "Tecnikal (26.1.2)",
+      "description": "Tecnikal (26.1.2)",
+      "icon": null,
+      "version": "1.0.0",
+      "minecraftVersion": "26.1.2",
+      "loader": "fabric",
+      "loaderVersion": "0.19.5",
+      "javaOptions": {
+        "ram": {
+          "minimum": 1024,
+          "recommended": 4096
+        }
+      },
+      "modules": [
+        {
+          "id": "net.fabricmc:fabric-loader:0.19.5",
+          "name": "Fabric (fabric-loader)",
+          "type": "Fabric",
+          "artifact": {
+            "size": 1984980,
+            "MD5": "23bf6a8c5ba938db7d13959a2630357f",
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/net/fabricmc/fabric-loader/0.19.5/fabric-loader-0.19.5.jar"
+          },
+          "subModules": [
+            {
+              "id": "26.1.2-fabric-0.19.5",
+              "name": "Fabric (version.json)",
+              "type": "VersionManifest",
+              "artifact": {
+                "size": 2782,
+                "MD5": "9212f00070dce50ffc691f86060ff73e",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/versions/26.1.2-fabric-0.19.5/26.1.2-fabric-0.19.5.json"
+              }
+            },
+            {
+              "id": "org.ow2.asm:asm:9.10.1",
+              "name": "Fabric (asm)",
+              "type": "Library",
+              "artifact": {
+                "size": 126151,
+                "MD5": "9cb72080438acf27f2607002e1444a7b",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar"
+              }
+            },
+            {
+              "id": "org.ow2.asm:asm-analysis:9.10.1",
+              "name": "Fabric (asm-analysis)",
+              "type": "Library",
+              "artifact": {
+                "size": 35140,
+                "MD5": "6dd9011ec87f65e4b2e14e938c4118e4",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/org/ow2/asm/asm-analysis/9.10.1/asm-analysis-9.10.1.jar"
+              }
+            },
+            {
+              "id": "org.ow2.asm:asm-commons:9.10.1",
+              "name": "Fabric (asm-commons)",
+              "type": "Library",
+              "artifact": {
+                "size": 74840,
+                "MD5": "8eee0b1bdd046baf472eb83dd5e6bb44",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/org/ow2/asm/asm-commons/9.10.1/asm-commons-9.10.1.jar"
+              }
+            },
+            {
+              "id": "org.ow2.asm:asm-tree:9.10.1",
+              "name": "Fabric (asm-tree)",
+              "type": "Library",
+              "artifact": {
+                "size": 51958,
+                "MD5": "62541e1dc62331408ef31317555bf4fa",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/org/ow2/asm/asm-tree/9.10.1/asm-tree-9.10.1.jar"
+              }
+            },
+            {
+              "id": "org.ow2.asm:asm-util:9.10.1",
+              "name": "Fabric (asm-util)",
+              "type": "Library",
+              "artifact": {
+                "size": 95628,
+                "MD5": "d0892ecb209867805e7d2418e5dc6c42",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/org/ow2/asm/asm-util/9.10.1/asm-util-9.10.1.jar"
+              }
+            },
+            {
+              "id": "net.fabricmc:sponge-mixin:0.17.4+mixin.0.8.7",
+              "name": "Fabric (sponge-mixin)",
+              "type": "Library",
+              "artifact": {
+                "size": 1539080,
+                "MD5": "9e33b145b2a46fbc70daf532e3705066",
+                "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/repo/lib/net/fabricmc/sponge-mixin/0.17.4+mixin.0.8.7/sponge-mixin-0.17.4+mixin.0.8.7.jar"
+              }
+            }
+          ]
+        },
+        {
+          "id": "io.github.foundationgames:animatica:0.6.3+26.1@jar",
+          "name": "Animatica Refabricated",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 117116,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/animatica-0.6.3+26.1.jar",
+            "MD5": "9c082f2e059c2e09648f48976ae7bb8a"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:badoptimizations:2.4.1@jar",
+          "name": "BadOptimizations",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 61928,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/BadOptimizations-2.4.1-26.1-fabric.jar",
+            "MD5": "2f089a3cbfd88478d5e7c4454164c42d"
+          }
+        },
+        {
+          "id": "betteradvancements:betteradvancements:0.6.0.76@jar",
+          "name": "Better Advancements",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 105165,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/BetterAdvancements-Fabric-26.1.2-0.6.0.76.jar",
+            "MD5": "eeadfc70b0d4c2b765dbea0b3c638e3c"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "generated.fabricmod:bettermounthud:1.3.0@jar",
+          "name": "Better Mount HUD",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 20720,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/bettermounthud-1.3.0.jar",
+            "MD5": "93ab8d095b5230f1e64f31872ab48510"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "com.thecsdev:betterstats:5.5.6+fabric-26.1@jar",
+          "name": "Better Statistics Screen",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 405131,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/betterstats-5.5.6+fn-26.1.jar",
+            "MD5": "fedf09fb0b0316ac74ce3d45c1735393"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "com.thecsdev.commonmc:tcdcommons:5.5.6+fabric-26.1@jar"
+          ]
+        },
+        {
+          "id": "me.cael:capes:1.5.11+26.1@jar",
+          "name": "Capes",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 77458,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/capes-1.5.11+26.1.jar",
+            "MD5": "09813f7afdee9946775a25597210cfc9"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+            "generated.fabricmod:fabric-language-kotlin:1.14.1+kotlin.2.4.20@jar"
+          ]
+        },
+        {
+          "id": "dzwdz.chat_heads:chat_heads:1.3.1@jar",
+          "name": "Chat Heads",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 98373,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/chat_heads-1.3.1-fabric-26.1.jar",
+            "MD5": "ea727c3eefd29384440d3791406b400f"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar",
+          "name": "Cloth Config v26.1",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1135373,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/cloth-config-26.1.154.jar",
+            "MD5": "9296b69633619f5bbddf5115461f8213"
+          }
+        },
+        {
+          "id": "me.pepperbell:continuity:3.0.1-beta.2+26.1@jar",
+          "name": "Continuity",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1040001,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/continuity-3.0.1-beta.2+26.1.jar",
+            "MD5": "6716943e4fc1495c826e351e03dc8398"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "dev.isxander:debugify:26.1.2.3@jar",
+          "name": "Debugify",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 367957,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/debugify-26.1.2.3.jar",
+            "MD5": "d66292da029f0602e8f42dbe76490c06"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+            "dev.isxander.yacl3.platform:yet_another_config_lib_v3:3.9.7+26.1-fabric@jar"
+          ]
+        },
+        {
+          "id": "net.lostluma.dynamic_fps.impl.fabric.compat:dynamic_fps:3.11.7@jar",
+          "name": "Dynamic FPS",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 187418,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/dynamic-fps-3.11.7+minecraft-26.1.0-fabric.jar",
+            "MD5": "d9d024459570aae118a113b2b14d0e3b"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "io.github.kosmx.emotes:emotecraft:3.3.0-b.build.164@jar",
+          "name": "Emotecraft",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 930584,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/emotecraft-for-MC26.1.2-3.3.0-b.build.164.jar",
+            "MD5": "a2e5f3f03570b3b8abd5b0174d014ef6"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "com.zigythebird.playeranim:player_animation_library:1.2.6+mc.26.1@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:entity_model_features:3.3.8-26.1-fabric@jar",
+          "name": "Entity_model_features",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 650529,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/entity_model_features-3.3.8-26.1-fabric.jar",
+            "MD5": "4186f8bd7b95bbb946e266ea17004059"
+          },
+          "dependencies": [
+            "generated.fabricmod:entity_texture_features:7.2.4-26.1-fabric@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:entity_sound_features:0.8.2-26.1-fabric@jar",
+          "name": "Entity_sound_features",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 96666,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/entity_sound_features-0.8.2-26.1-fabric.jar",
+            "MD5": "8b37ad7d0bb9ad42c43f894e10d481f1"
+          },
+          "dependencies": [
+            "generated.fabricmod:entity_model_features:3.3.8-26.1-fabric@jar",
+            "generated.fabricmod:entity_texture_features:7.2.4-26.1-fabric@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:entity_texture_features:7.2.4-26.1-fabric@jar",
+          "name": "Entity_texture_features",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 783459,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/entity_texture_features-7.2.4-26.1-fabric.jar",
+            "MD5": "4c1a640ef1a8b9a4e498de930fb2d5aa"
+          }
+        },
+        {
+          "id": "dev.tr7zw:entityculling:1.11.2@jar",
+          "name": "EntityCulling",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1506455,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/entityculling-fabric-1.11.2-mc26.1.jar",
+            "MD5": "00636ddff842e288d081995cd52462f8"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+          "name": "Fabric API",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 2521340,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/fabric-api-0.155.3+26.1.2.jar",
+            "MD5": "0100feb8acda9242a6353ead3f1893be"
+          }
+        },
+        {
+          "id": "generated.fabricmod:fabric-language-kotlin:1.14.1+kotlin.2.4.20@jar",
+          "name": "Fabric Language Kotlin",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 8142858,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionalon/fabric-language-kotlin-1.14.1+kotlin.2.4.20.jar",
+            "MD5": "dd78dcb947b56090b41f943a7cc45da8"
+          },
+          "required": {
+            "value": false
+          }
+        },
+        {
+          "id": "randommcsomethin.fallingleaves:fallingleaves:2.0.7@jar",
+          "name": "Falling Leaves",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 182516,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/fallingleaves-2.0.7+26.1.jar",
+            "MD5": "933af303dfe6bca1ef38ce341fbe2160"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar",
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:ferritecore:9.0.0@jar",
+          "name": "FerriteCore",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 72677,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/ferritecore-9.0.0-fabric.jar",
+            "MD5": "9d96f643cfd220b75f47c94ea56ebc2a"
+          }
+        },
+        {
+          "id": "io.github.sjouwer:gammautils:3.0.0@jar",
+          "name": "Gamma Utils",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 103258,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionalon/Gamma-Utils-3.0.0+mc26.1.jar",
+            "MD5": "9918cab05de7ab08ba2eb6f98d3f44a0"
+          },
+          "required": {
+            "value": false
+          },
+          "dependencies": [
+            "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar",
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "net.hellmc.presence:hellmc_presence:1.2.0@jar",
+          "name": "HellMC Presence",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 208715,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/hellmc-presence.jar",
+            "MD5": "e046acc23079c28b0126db8b4b9e93ec"
+          }
+        },
+        {
+          "id": "generated.fabricmod:immediatelyfast:1.15.3+26.1@jar",
+          "name": "ImmediatelyFast",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 310057,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/ImmediatelyFast-Fabric-1.15.3+26.1.jar",
+            "MD5": "0fbbb63f3ee2fa9e089f58939f92d688"
+          }
+        },
+        {
+          "id": "me.pieking1215:invmove:0.9.6@jar",
+          "name": "InvMove",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 84309,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/InvMove-0.9.6+26.1.2-Fabric.jar",
+            "MD5": "7984c175eca547da8fb359f9d8c365f2"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:iris:1.11.3+mc26.1.2@jar",
+          "name": "Iris",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 2791069,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/iris-fabric-1.11.3+mc26.1.2.jar",
+            "MD5": "73400d97d613ce9fe5bfb022c5ce315d"
+          },
+          "dependencies": [
+            "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar"
+          ]
+        },
+        {
+          "id": "me.steinborn.krypton.mod.shared:krypton:0.3.0@jar",
+          "name": "Krypton",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 268664,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/krypton-0.3.0.jar",
+            "MD5": "28e2844ffd1c9d3c85ea3d8eb58f48ae"
+          }
+        },
+        {
+          "id": "generated.fabricmod:lambdynlights:4.11.2+26.1.2@jar",
+          "name": "LambDynamicLights",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1340177,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/lambdynamiclights-4.11.2+26.1.2.jar",
+            "MD5": "f4bf31f55547be33f905f824a8d488c0"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "jerozgen.languagereload:languagereload:1.7.7+26.1.2@jar",
+          "name": "Language Reload",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 77224,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/language-reload-1.7.7+26.1.2.jar",
+            "MD5": "61fc5dbd116e5bf79a6638bba1757184"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "fi.dy.masa:litematica:0.27.14@jar",
+          "name": "Litematica",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1934808,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/litematica-fabric-26.1.2-0.27.14.jar",
+            "MD5": "d79721d8e5004979eddf69c6a1fe789c"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "fi.dy.masa:malilib:0.28.12@jar"
+          ]
+        },
+        {
+          "id": "net.caffeinemc.mods:lithium:0.24.7+mc26.1.2@jar",
+          "name": "Lithium",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 912821,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/lithium-fabric-0.24.7+mc26.1.2.jar",
+            "MD5": "75f8a3ac5e70f3f88aca953947526bff"
+          }
+        },
+        {
+          "id": "fi.dy.masa:malilib:0.28.12@jar",
+          "name": "MaLiLib",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 2042597,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/malilib-fabric-26.1.2-0.28.12.jar",
+            "MD5": "d874a758ff99afc40a1e31f28efcfe09"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "generated.fabricmod:morechathistory:2.0.0@jar",
+          "name": "More Chat History",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 3773,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/morechathistory-2.0.0.jar",
+            "MD5": "89baaf10d39c96e70460765738afb201"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "ca.fxco:moreculling:1.7.3@jar",
+          "name": "More Culling",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 360749,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/moreculling-fabric-26.1.2-1.7.3.jar",
+            "MD5": "19e7c87337dc55fd439d49ebbe60d493"
+          },
+          "dependencies": [
+            "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar"
+          ]
+        },
+        {
+          "id": "dev.tr7zw:notenoughanimations:1.12.5@jar",
+          "name": "NotEnoughAnimations",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1861811,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/notenoughanimations-fabric-1.12.5-mc26.1.jar",
+            "MD5": "fe873b3b2fe9c99e4fbc8d58458a4b76"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "com.zigythebird.playeranim:player_animation_library:1.2.6+mc.26.1@jar",
+          "name": "Player Animation Library",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 419758,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/PlayerAnimationLibMerged-1.2.6+mc.26.1.jar",
+            "MD5": "8e99f67d285c55148f53e8c46acb04e9"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "eu.ha3:presencefootsteps:1.13.3+26.1@jar",
+          "name": "Presence Footsteps",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 5748152,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/PresenceFootsteps-1.13.3+26.1.jar",
+            "MD5": "dd6b44d8af75108766193ac534a60b35"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:reeses-sodium-options:2.2.3+mc26.1.2@jar",
+          "name": "Reese's Sodium Options",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 259487,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/reeses-sodium-options-fabric-2.2.3+mc26.1.2.jar",
+            "MD5": "77bfe268f3b31081eca85a4b7b446e6b"
+          },
+          "dependencies": [
+            "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar"
+          ]
+        },
+        {
+          "id": "com.misterpemodder:shulkerboxtooltip:5.4.0+26.1.1@jar",
+          "name": "Shulker Box Tooltip",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 417988,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/shulkerboxtooltip-fabric-5.4.0+26.1.1.jar",
+            "MD5": "fcfd09c3a0ebe88ce2c92f03f1980d0b"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "dev.tr7zw.skinlayers:skinlayers3d:1.11.3@jar",
+          "name": "3d-Skin-Layers",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1888644,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/skinlayers3d-fabric-1.11.3-mc26.1.jar",
+            "MD5": "de782d7ab0e27aaf0c68933cf55e10f0"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "generated.fabricmod:skinshuffle:2.11.1@jar",
+          "name": "SkinShuffle",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 5286933,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/skinshuffle-2.11.1+26.1.2-fabric.jar",
+            "MD5": "7737787438dd50c0bba7d562840a8e1c"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "me.flashyreese.mods.sodiumextra:sodium-extra:0.9.3+mc26.1.2@jar",
+          "name": "Sodium Extra",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 477705,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/sodium-extra-fabric-0.9.3+mc26.1.2.jar",
+            "MD5": "13089d55e761685d414f1252b2853948"
+          },
+          "dependencies": [
+            "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar"
+          ]
+        },
+        {
+          "id": "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar",
+          "name": "Sodium",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1889595,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/sodium-fabric-0.9.1+mc26.1.2.jar",
+            "MD5": "f173cec7478bd6ea8b39ab3fbc769a3b"
+          }
+        },
+        {
+          "id": "rynnavinx.sspb:sspb:7.0.0@jar",
+          "name": "Sodium Shadowy Path Blocks",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 67690,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/sodium-shadowy-path-blocks-fabric-7.0.0.jar",
+            "MD5": "caa6fd6067bbfc1d76a52a0a39136ccf"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar"
+          ]
+        },
+        {
+          "id": "com.sonicether.soundphysics:sound_physics_remastered:1.5.1+26.1.2@jar",
+          "name": "Sound Physics Remastered",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 201734,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/sound-physics-remastered-fabric-1.5.1+26.1.2.jar",
+            "MD5": "9c081a2d94035174c43c045290d5cdbe"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "com.thecsdev.commonmc:tcdcommons:5.5.6+fabric-26.1@jar",
+          "name": "TCDCommons API",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 503898,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/tcdcommons-5.5.6+fn-26.1.jar",
+            "MD5": "55d185c21b7a393c80d5b9f91ab497b0"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "visuality:visuality:0.7.13+26.1@jar",
+          "name": "Visuality",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 82146,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/visuality-0.7.13+26.1.jar",
+            "MD5": "4c13148bdbf409eeadf43509f63b34fd"
+          },
+          "dependencies": [
+            "me.shedaniel.autoconfig.example:cloth-config:26.1.154@jar",
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "de.maxhenkel:voicechat:2.6.24+26.1.2@jar",
+          "name": "Simple Voice Chat",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 5543255,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/voicechat-fabric-2.6.24+26.1.2.jar",
+            "MD5": "09a5297ec9602dc5b19670b6a1f7fac5"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          }
+        },
+        {
+          "id": "me.cortex.voxy.commonImpl:voxy:0.2.18-beta@jar",
+          "name": "Voxy",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 12658666,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/voxy-0.2.18-beta-26.1.2.jar",
+            "MD5": "ad6dc60907c964155041a8440eaa0742"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+            "net.caffeinemc.mods:sodium:0.9.1+mc26.1.2@jar"
+          ]
+        },
+        {
+          "id": "dev.tr7zw:waveycapes:1.11.2@jar",
+          "name": "WaveyCapes",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1769711,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/waveycapes-fabric-1.11.2-mc26.1.jar",
+            "MD5": "0fcbb2111f355248ebf6dd172e5fd897"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "xaero.minimap:xaerominimap:26.5.0@jar",
+          "name": "Xaero's Minimap",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 2216048,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/xaerominimap-fabric-26.1.2-26.5.0.jar",
+            "MD5": "b32eaf817e2cae3cfbfa40f39d0c7996"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "xaeroplus:xaeroplus:2.36.3@jar",
+          "name": "XaeroPlus",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 8150593,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/XaeroPlus-2.36.3+fabric-26.1.2-WM1.46.0-MM26.5.0.jar",
+            "MD5": "2f9976184693987c7d61230d028b5832"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+            "xaero.minimap:xaerominimap:26.5.0@jar",
+            "xaero.map:xaeroworldmap:1.46.0@jar"
+          ]
+        },
+        {
+          "id": "xaero.map:xaeroworldmap:1.46.0@jar",
+          "name": "Xaero's World Map",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1474162,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionaloff/xaeroworldmap-fabric-26.1.2-1.46.0.jar",
+            "MD5": "00da90dc14f75f787924e3887c683af9"
+          },
+          "required": {
+            "value": false,
+            "def": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "dev.isxander.yacl3.platform:yet_another_config_lib_v3:3.9.7+26.1-fabric@jar",
+          "name": "YetAnotherConfigLib",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 1124837,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/required/yet_another_config_lib_v3-3.9.7+26.1-fabric.jar",
+            "MD5": "733c38ef1c06812188f67c16135252cb"
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar"
+          ]
+        },
+        {
+          "id": "dev.isxander:zoomify:2.16.3+26.1@jar",
+          "name": "Zoomify",
+          "type": "FabricMod",
+          "artifact": {
+            "size": 562826,
+            "url": "https://hellmcclient.sergidalmau.dev/client/releases/20261005-095758/versions/Tecnikal-26.1.2/fabricmods/optionalon/zoomify-2.16.3+26.1.jar",
+            "MD5": "d6a4633a669d33855ba849a2208234df"
+          },
+          "required": {
+            "value": false
+          },
+          "dependencies": [
+            "generated.fabricmod:fabric-api:0.155.3+26.1.2@jar",
+            "generated.fabricmod:fabric-language-kotlin:1.14.1+kotlin.2.4.20@jar",
+            "dev.isxander.yacl3.platform:yet_another_config_lib_v3:3.9.7+26.1-fabric@jar"
+          ]
+        }
+      ]
+    }
+  ]
+}

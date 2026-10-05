@@ -27,6 +27,16 @@ exports.setDataDirectory = function (dataDirectory) {
     config.settings.launcher.dataDirectory = dataDirectory
 }
 
+// B4: canviar la carpeta de dades en calent deixava `HeliosModule.getPath()` (carpeta antiga) i la baixada (carpeta nova)
+// desincronitzades. Es desa com a «pendent» i s'aplica en el proper arrencada (`load`).
+exports.getPendingDataDirectory = function () {
+    return config.settings.launcher.pendingDataDirectory ?? null
+}
+
+exports.setPendingDataDirectory = function (dataDirectory) {
+    config.settings.launcher.pendingDataDirectory = dataDirectory
+}
+
 function getConfigPath() {
     return path.join(exports.getLauncherDirectory(), 'config.json')
 }
@@ -81,6 +91,7 @@ const DEFAULT_CONFIG = {
         launcher: {
             allowPrerelease: false,
             dataDirectory: dataPath,
+            pendingDataDirectory: null,
             language: 'es_ES'
         }
     },
@@ -120,8 +131,21 @@ const DEFAULT_CONFIG = {
         performance: 'auto',
         uiScale: 100,
         sidebarCollapsed: false,
-        language: 'en',
-        devMode: false
+        // `null` = encara no triat: el procés principal el resol amb l'idioma del SO la primera vegada (F9).
+        language: null,
+        devMode: false,
+        // D9: Rich Presence de Discord activat per defecte, amb interruptor.
+        discordPresence: true,
+        // D14: acceleració per maquinari (decisió de l'usuari; només s'aplica en reiniciar).
+        hardwareAcceleration: true,
+        // D13: què fa el launcher quan s'inicia el joc: 'keep' | 'minimize' | 'close'.
+        onGameStart: 'keep'
+    },
+    // D15/D8: acceptació dels termes i política de privacitat (versió) i consentiment SEPARAT de telemetria mínima.
+    legal: {
+        termsAcceptedVersion: null,
+        acceptedAt: null,
+        telemetryOptIn: false
     },
     // 2.5 (07 §6, «Java»: «valors globals per defecte»): seed per a `defaultJavaConfig` quan es
     // crea l'entrada d'una versió **nova** — `null` = segueix detectant/preguntant per versió com
@@ -141,7 +165,91 @@ let config = null
  * Save the current configuration to a file.
  */
 exports.save = function () {
-    fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 4), 'UTF-8')
+    // B2: escriptura atòmica (fitxer temporal + rename) perquè un tall a mig escriure no deixi `config.json` truncat,
+    // i còpia `.bak` de l'última versió bona per poder recuperar-se.
+    const target = getConfigPath()
+    const tmp = `${target}.tmp`
+    const json = JSON.stringify(withEncryptedSecrets(config), null, 4)
+    const fd = fs.openSync(tmp, 'w')
+    try {
+        fs.writeSync(fd, json, 0, 'UTF-8')
+        fs.fsyncSync(fd)
+    } finally {
+        fs.closeSync(fd)
+    }
+    if (fs.existsSync(target)) {
+        try { fs.copyFileSync(target, `${target}.bak`) } catch (err) { logger.warn('Could not refresh config backup', err) }
+    }
+    fs.renameSync(tmp, target)
+}
+
+// S5: els tokens de Microsoft/Minecraft es desen xifrats amb `safeStorage` (DPAPI a Windows, Keychain a macOS, libsecret a Linux)
+// com a `enc:<base64>`. A memòria sempre són text clar un cop cridat `unlockSecrets()` (en estar l'app a punt). Si el SO no té
+// xifratge disponible (Linux sense *keyring*) es desen en clar, com abans.
+const SECRET_PREFIX = 'enc:'
+
+function secretStorage() {
+    try {
+        const { safeStorage } = electron
+        return safeStorage != null && safeStorage.isEncryptionAvailable() ? safeStorage : null
+    } catch {
+        return null
+    }
+}
+
+function forEachSecret(cfg, fn) {
+    for (const account of Object.values(cfg?.authenticationDatabase ?? {})) {
+        if (account == null || account.type !== 'microsoft') continue
+        fn(account, 'accessToken')
+        if (account.microsoft != null) {
+            fn(account.microsoft, 'access_token')
+            fn(account.microsoft, 'refresh_token')
+        }
+    }
+}
+
+function withEncryptedSecrets(cfg) {
+    const storage = secretStorage()
+    if (storage == null) return cfg
+    const out = structuredClone(cfg)
+    forEachSecret(out, (holder, key) => {
+        const value = holder[key]
+        if (typeof value === 'string' && value !== '' && !value.startsWith(SECRET_PREFIX)) {
+            holder[key] = SECRET_PREFIX + storage.encryptString(value).toString('base64')
+        }
+    })
+    return out
+}
+
+/** Desxifra els tokens a memòria. Cridar un cop (quan Electron està a punt). Retorna si hi havia xifratge disponible. */
+exports.unlockSecrets = function () {
+    const storage = secretStorage()
+    if (storage == null || config == null) return false
+    forEachSecret(config, (holder, key) => {
+        const value = holder[key]
+        if (typeof value === 'string' && value.startsWith(SECRET_PREFIX)) {
+            try {
+                holder[key] = storage.decryptString(Buffer.from(value.slice(SECRET_PREFIX.length), 'base64'))
+            } catch {
+                holder[key] = null // altre usuari/màquina: caldrà tornar a iniciar sessió
+            }
+        }
+    })
+    // Migració: un config antic amb tokens en clar es reescriu ja xifrat.
+    exports.save()
+    return true
+}
+
+/** Read and parse a config file, or null if missing/corrupt. */
+function tryReadConfig(file) {
+    try {
+        if (!fs.existsSync(file)) return null
+        const parsed = JSON.parse(fs.readFileSync(file, 'UTF-8'))
+        return parsed != null && typeof parsed === 'object' ? parsed : null
+    } catch (err) {
+        logger.error(`Could not read ${file}`, err)
+        return null
+    }
 }
 
 /**
@@ -159,30 +267,56 @@ exports.load = function () {
         fs.ensureDirSync(path.join(configPath, '..'))
         if (fs.existsSync(configPathLEGACY)) {
             fs.moveSync(configPathLEGACY, configPath)
+        } else if (fs.existsSync(`${configPath}.bak`)) {
+            // `config.json` ha desaparegut però hi ha la còpia de seguretat: es recupera (B2).
+            fs.copyFileSync(`${configPath}.bak`, configPath)
         } else {
             doLoad = false
-            config = DEFAULT_CONFIG
+            config = structuredClone(DEFAULT_CONFIG)
             exports.save()
         }
     }
     if (doLoad) {
         let doValidate = false
-        try {
-            config = JSON.parse(fs.readFileSync(configPath, 'UTF-8'))
-            config = migrateLegacyConfig(config, configPath)
-            doValidate = true
-        } catch (err) {
-            logger.error(err)
-            logger.info('Configuration file contains malformed JSON or is corrupt.')
-            logger.info('Generating a new configuration file.')
+        let loaded = tryReadConfig(configPath)
+        if (loaded == null) {
+            // Fitxer corrupte: abans de caure als valors per defecte es prova la còpia `.bak`, i es guarda el fitxer
+            // trencat apartat perquè mai es perdin els comptes en silenci.
+            const backup = tryReadConfig(`${configPath}.bak`)
+            if (fs.existsSync(configPath)) {
+                try { fs.copyFileSync(configPath, `${configPath}.corrupt-${Date.now()}`) } catch (err) { logger.warn('Could not keep corrupt config', err) }
+            }
+            if (backup != null) {
+                logger.warn('Configuration file corrupt: restored from config.json.bak.')
+                loaded = backup
+            }
+        }
+        if (loaded != null) {
+            try {
+                config = migrateLegacyConfig(loaded, configPath)
+                doValidate = true
+            } catch (err) {
+                logger.error(err)
+                loaded = null
+            }
+        }
+        if (loaded == null) {
+            logger.info('Configuration file is corrupt and no usable backup exists. Generating a new configuration file.')
             fs.ensureDirSync(path.join(configPath, '..'))
-            config = DEFAULT_CONFIG
+            config = structuredClone(DEFAULT_CONFIG)
             exports.save()
         }
         if (doValidate) {
             config = validateKeySet(DEFAULT_CONFIG, config)
             exports.save()
         }
+    }
+    // B4: la carpeta de dades escollida abans s'aplica ara, al començar (cap part de l'app l'ha llegit encara).
+    const pending = config.settings.launcher.pendingDataDirectory
+    if (pending != null) {
+        config.settings.launcher.dataDirectory = pending
+        config.settings.launcher.pendingDataDirectory = null
+        exports.save()
     }
     logger.info('Successfully Loaded')
 }
@@ -240,7 +374,7 @@ function validateKeySet(srcObj, destObj) {
     const keys = Object.keys(srcObj)
     for (let i = 0; i < keys.length; i++) {
         if (typeof destObj[keys[i]] === 'undefined') {
-            destObj[keys[i]] = srcObj[keys[i]]
+            destObj[keys[i]] = structuredClone(srcObj[keys[i]])
         } else if (typeof srcObj[keys[i]] === 'object' && srcObj[keys[i]] != null && !(srcObj[keys[i]] instanceof Array) && validationBlacklist.indexOf(keys[i]) === -1) {
             destObj[keys[i]] = validateKeySet(srcObj[keys[i]], destObj[keys[i]])
         }
@@ -265,7 +399,7 @@ exports.isFirstLaunch = function () {
  * @returns {string} The name of the folder.
  */
 exports.getTempNativeFolder = function () {
-    return 'WCNatives'
+    return 'HellMCNatives'
 }
 
 // System Settings (Unconfigurable on UI)
@@ -672,6 +806,22 @@ exports.setUiConfig = function (patch) {
     Object.assign(config.ui, patch)
 }
 
+/** D15/D8: estat legal desat (versió acceptada, data i consentiment de telemetria). */
+exports.getLegal = function () {
+    return config.legal
+}
+
+exports.setLegal = function (legal) {
+    config.legal = { ...config.legal, ...legal }
+}
+
+/** Esborra tots els comptes (i els seus tokens) i el token de client. */
+exports.removeAllAccounts = function () {
+    config.authenticationDatabase = {}
+    config.selectedAccount = null
+    config.clientToken = null
+}
+
 /**
  * 2.4 (07 §5): when the player last saw a news source's archive, as a Unix ms timestamp. `0` if
  * never (every article counts as unread).
@@ -818,6 +968,17 @@ exports.setJavaExecutable = function (versionid, executable) {
 }
 
 /**
+ * B13: l'usuari ha triat aquest Java a mà i vol que es respecti encara que no compleixi el rang recomanat de la versió.
+ */
+exports.getJavaForced = function (versionid) {
+    return config.javaConfig[versionid].forceExecutable === true
+}
+
+exports.setJavaForced = function (versionid, forced) {
+    config.javaConfig[versionid].forceExecutable = forced === true
+}
+
+/**
  * Retrieve the additional arguments for JVM initialization. Required arguments,
  * such as memory allocation, will be dynamically resolved and will not be included
  * in this value.
@@ -889,7 +1050,7 @@ exports.setGameWidth = function (resWidth) {
  */
 exports.validateGameWidth = function (resWidth) {
     const nVal = Number.parseInt(resWidth)
-    return Number.isInteger(nVal) && nVal >= 0
+    return Number.isInteger(nVal) && nVal >= 320 && nVal <= 16384
 }
 
 /**
@@ -919,7 +1080,7 @@ exports.setGameHeight = function (resHeight) {
  */
 exports.validateGameHeight = function (resHeight) {
     const nVal = Number.parseInt(resHeight)
-    return Number.isInteger(nVal) && nVal >= 0
+    return Number.isInteger(nVal) && nVal >= 320 && nVal <= 16384
 }
 
 /**

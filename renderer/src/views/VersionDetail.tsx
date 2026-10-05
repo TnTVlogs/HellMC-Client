@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
 import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { sanitizeRichHtml } from '../utils/sanitize'
 import { Box, Check, ExternalLink, Info, Lock, Play, Search, ShieldCheck, Trash2, Download } from 'lucide-preact'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
@@ -12,7 +12,7 @@ import { Banner, Chip, Progress, ServerIcon } from '../components/ui'
 import { navigate } from '../router'
 import { distro } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
-import { launch } from '../stores/launch'
+import { launch, isVersionInUse } from '../stores/launch'
 import { statuses, progress, busy, refreshStatus, install, verify, uninstall } from '../stores/versions'
 import { hellmc, type VersionSettings, type JavaInfo, type JavaDownloadProgress, type DataSharingPreference, type ModInfo } from '../api'
 import { formatBytes } from '../utils/format'
@@ -69,6 +69,7 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
   const [jvm, setJvm] = useState('')
   const [minGb, setMinGb] = useState(1)
   const [maxGb, setMaxGb] = useState(2)
+  const [jvmError, setJvmError] = useState(false)
 
   useEffect(() => {
     void hellmc.config.getVersion(versionId).then((s) => {
@@ -105,7 +106,7 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
   async function handlePick() {
     const picked = await hellmc.java.pick()
     if (picked == null) return
-    await hellmc.config.setVersion(versionId, { executable: picked })
+    await hellmc.config.setVersion(versionId, { executable: picked, forceExecutable: true })
     await reload()
   }
 
@@ -132,7 +133,13 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
   }
 
   async function commitJvm() {
-    await hellmc.config.setVersion(versionId, { jvmOptions: jvm.split(/\s+/).filter(Boolean) })
+    setJvmError(false)
+    try {
+      await hellmc.config.setVersion(versionId, { jvmOptions: jvm.split(/\s+/).filter(Boolean) })
+    } catch {
+      // S4: el procés principal rebutja opcions que carreguen codi (-javaagent…) fora del mode desenvolupador.
+      setJvmError(true)
+    }
     await reload()
   }
 
@@ -142,14 +149,14 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
     <div class="card pad spanel" style={{ maxWidth: 'none' }}>
       <div class="slider-row">
         <label for="ram-min">{t('versionDetail.java.minRam')}</label>
-        <input id="ram-min" type="range" min={1} max={totalGb} value={minGb}
+        <input id="ram-min" type="range" min={1} max={Math.max(1, totalGb - 2)} value={minGb}
           onInput={(e) => { const v = Number((e.target as HTMLInputElement).value); setMinGb(v); if (v > maxGb) setMaxGb(v) }}
           onChange={() => { void commitRam('minRAM', minGb); if (minGb > maxGb) void commitRam('maxRAM', minGb) }} />
         <span class="num">{minGb} GB</span>
       </div>
       <div class="slider-row">
         <label for="ram-max">{t('versionDetail.java.maxRam')}</label>
-        <input id="ram-max" type="range" min={1} max={totalGb} value={maxGb}
+        <input id="ram-max" type="range" min={1} max={Math.max(1, totalGb - 2)} value={maxGb}
           onInput={(e) => { const v = Number((e.target as HTMLInputElement).value); setMaxGb(v); if (v < minGb) setMinGb(v) }}
           onChange={() => { void commitRam('maxRAM', maxGb); if (maxGb < minGb) void commitRam('minRAM', maxGb) }} />
         <span class="num">{maxGb} GB</span>
@@ -159,6 +166,7 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
         <div class="l">
           <b>{t('versionDetail.java.executable')}</b>
           <span style={{ wordBreak: 'break-all' }}>{settings.executable ?? t('versionDetail.java.notConfigured')}</span>
+          {settings.forceExecutable === true && <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('versionDetail.java.forcedNote')}</span>}
           {javaInfo != null && !javaInfo.available && <span style={{ display: 'block', color: 'var(--danger)' }}>{t('versionDetail.java.noneFound')}</span>}
           {downloadFailed && <span style={{ display: 'block', color: 'var(--danger)' }}>{t('versionDetail.java.downloadFailed')}</span>}
         </div>
@@ -186,6 +194,7 @@ function JavaMemoryTab({ versionId }: { versionId: string }) {
         <label for="jvm-args">{t('ui.jvmArgs')}</label>
         <input id="jvm-args" class="field" value={jvm} onInput={(e) => setJvm((e.target as HTMLInputElement).value)} onBlur={() => void commitJvm()} />
       </div>
+      {jvmError && <p class="error-text small">{t('versionDetail.java.jvmRejected')}</p>}
       <p class="muted small">{t('ui.ramHint', { total: totalGb })}</p>
     </div>
   )
@@ -218,6 +227,7 @@ function DataSharingToggle({ versionId }: { versionId: string }) {
           <b>{t('versionDetail.dataSharing.title')}</b>
           <span>{t('versionDetail.dataSharing.help')}</span>
           <span style={{ display: 'block', color: 'var(--text-faint)' }}>{t('versionDetail.dataSharing.changeNotice')}</span>
+          <span style={{ display: 'block', color: 'var(--warning)' }}>{t('versionDetail.dataSharing.savesWarning')}</span>
         </div>
         <Toggle checked={pref.shared} onChange={(v) => void handleChange(v)} label={t('versionDetail.dataSharing.title')} />
       </div>
@@ -357,9 +367,10 @@ export function VersionDetail({ id }: { id: string }) {
   const status = statuses.value[id]
   const taskProgress = progress.value[id]
   const isBusy = busy.value[id] === true
+  const inUse = isVersionInUse(id)
   const availableServers = d.servers.filter((s) => s.versions.some((v) => v.id === id))
   // Sanititzat amb DOMPurify abans de pintar (07 §4.2) — mai HTML cru sense passar-hi.
-  const changelogHtml = version.changelog != null ? DOMPurify.sanitize(marked.parse(version.changelog, { async: false })) : null
+  const changelogHtml = version.changelog != null ? sanitizeRichHtml(marked.parse(version.changelog, { async: false })) : null
 
   async function handlePlayWithoutServer() {
     await selectServer(null)
@@ -386,12 +397,12 @@ export function VersionDetail({ id }: { id: string }) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {status?.installed !== true && (
-            <Button variant="primary" disabled={isBusy} onClick={() => void install(id)}><Download size={18} /> {t('versions.install')}</Button>
+            <Button variant="primary" disabled={isBusy || inUse} onClick={() => void install(id)}><Download size={18} /> {t('versions.install')}</Button>
           )}
           {status?.installed === true && (
             <>
-              <Button disabled={isBusy} onClick={() => void verify(id)}><ShieldCheck size={18} /> {t('versionDetail.verify')}</Button>
-              <Button variant="danger" disabled={isBusy} onClick={() => setConfirmingUninstall(true)}><Trash2 size={18} /> {t('versionDetail.uninstall')}</Button>
+              <Button disabled={isBusy || inUse} onClick={() => void verify(id)}><ShieldCheck size={18} /> {t('versionDetail.verify')}</Button>
+              <Button variant="danger" disabled={isBusy || inUse} onClick={() => setConfirmingUninstall(true)}><Trash2 size={18} /> {t('versionDetail.uninstall')}</Button>
               <Button variant="primary" disabled={isBusy} onClick={() => void handlePlayWithoutServer()}><Play size={18} fill="currentColor" /> {t('ui.playWithoutServer')}</Button>
             </>
           )}

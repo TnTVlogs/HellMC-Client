@@ -18,7 +18,19 @@ const TAG = { END: 0, BYTE: 1, SHORT: 2, INT: 3, LONG: 4, FLOAT: 5, DOUBLE: 6, B
 
 // ── Lectura ──────────────────────────────────────────────────────────────────────────────────────
 
-function readPayload(buf, state, type) {
+const MAX_DEPTH = 32
+const MAX_FILE_BYTES = 4 * 1024 * 1024
+
+/** Longitud llegida d'un array NBT: mai negativa (un valor negatiu faria retrocedir la posició i podria penjar el parser). */
+function arrayLength(buf, state) {
+    if (state.pos + 4 > buf.length) throw new Error('NBT truncat')
+    const n = buf.readInt32BE(state.pos)
+    if (n < 0) throw new Error('Longitud NBT negativa')
+    return n
+}
+
+function readPayload(buf, state, type, depth = 0) {
+    if (depth > MAX_DEPTH) throw new Error('NBT massa profund')
     switch (type) {
         case TAG.BYTE: return take(buf, state, 1)
         case TAG.SHORT: return take(buf, state, 2)
@@ -26,16 +38,17 @@ function readPayload(buf, state, type) {
         case TAG.LONG: return take(buf, state, 8)
         case TAG.FLOAT: return take(buf, state, 4)
         case TAG.DOUBLE: return take(buf, state, 8)
-        case TAG.BYTE_ARRAY: { const n = buf.readInt32BE(state.pos); return take(buf, state, 4 + n) }
+        case TAG.BYTE_ARRAY: { const n = arrayLength(buf, state); return take(buf, state, 4 + n) }
         case TAG.STRING: { const n = buf.readUInt16BE(state.pos); return take(buf, state, 2 + n) }
-        case TAG.INT_ARRAY: { const n = buf.readInt32BE(state.pos); return take(buf, state, 4 + 4 * n) }
-        case TAG.LONG_ARRAY: { const n = buf.readInt32BE(state.pos); return take(buf, state, 4 + 8 * n) }
+        case TAG.INT_ARRAY: { const n = arrayLength(buf, state); return take(buf, state, 4 + 4 * n) }
+        case TAG.LONG_ARRAY: { const n = arrayLength(buf, state); return take(buf, state, 4 + 8 * n) }
         case TAG.LIST: {
             const elementType = buf.readUInt8(state.pos)
             const length = buf.readInt32BE(state.pos + 1)
+            if (length < 0) throw new Error('Longitud NBT negativa')
             state.pos += 5
             const items = []
-            for (let i = 0; i < length; i++) items.push(readPayload(buf, state, elementType))
+            for (let i = 0; i < length; i++) items.push(readPayload(buf, state, elementType, depth + 1))
             return { elementType, items }
         }
         case TAG.COMPOUND: {
@@ -45,7 +58,7 @@ function readPayload(buf, state, type) {
                 if (childType === TAG.END) break
                 const nameLength = buf.readUInt16BE(state.pos)
                 const name = take(buf, state, 2 + nameLength).subarray(2)
-                entries.push({ type: childType, name, value: readPayload(buf, state, childType) })
+                entries.push({ type: childType, name, value: readPayload(buf, state, childType, depth + 1) })
             }
             return entries
         }
@@ -150,6 +163,7 @@ function ensureServer(gameDir, server) {
     const file = path.join(gameDir, 'servers.dat')
     try {
         let root
+        if (fs.existsSync(file) && fs.statSync(file).size > MAX_FILE_BYTES) return { status: 'skipped', reason: 'fitxer massa gran' }
         if (fs.existsSync(file) && fs.statSync(file).size > 0) {
             root = parse(fs.readFileSync(file))
         } else {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'preact/hooks'
-import DOMPurify from 'dompurify'
+import { sanitizeRichHtml } from '../utils/sanitize'
 import { ExternalLink } from 'lucide-preact'
 import { t } from '../i18n'
 import { language } from '../stores/ui'
@@ -12,30 +12,6 @@ import { Art } from '../components/ui'
 // `stores/news.ts` ja carrega l'arxiu en arrencar (`main.tsx`) perquè el comptador de la barra
 // lateral funcioni sense obrir aquesta pestanya primer.
 
-// DOMPurify és una instància compartida amb tot el renderer; el hook és global un cop registrat:
-// qualsevol HTML extern sanititzat es beneficia de «només imatges https» i «enllaços segurs».
-let sanitizeHooksRegistered = false
-function ensureSanitizeHooks() {
-  if (sanitizeHooksRegistered) return
-  sanitizeHooksRegistered = true
-  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-    if (node.tagName === 'IMG') {
-      const src = node.getAttribute('src')
-      if (src != null && !src.startsWith('https:')) node.removeAttribute('src')
-    }
-    if (node.tagName === 'A') {
-      node.setAttribute('target', '_blank')
-      node.setAttribute('rel', 'noopener noreferrer')
-    }
-  })
-}
-
-const ARTICLE_ALLOWED_TAGS = [
-  'a', 'p', 'br', 'strong', 'em', 'b', 'i', 'u', 'ul', 'ol', 'li', 'blockquote',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'img', 'figure', 'figcaption',
-  'code', 'pre', 'span', 'div', 'hr', 'table', 'thead', 'tbody', 'tr', 'td', 'th'
-]
-
 function formatDate(ms: number): string {
   return new Intl.DateTimeFormat(language.value, { dateStyle: 'medium' }).format(new Date(ms))
 }
@@ -45,8 +21,7 @@ function formatDateTime(ms: number): string {
 }
 
 function ArticleReader({ item, onBack }: { item: NewsArchiveItem; onBack: () => void }) {
-  ensureSanitizeHooks()
-  const html = useMemo(() => DOMPurify.sanitize(item.content, { ALLOWED_TAGS: ARTICLE_ALLOWED_TAGS }), [item.content])
+  const html = useMemo(() => sanitizeRichHtml(item.content), [item.content])
 
   function handleContentClick(e: MouseEvent) {
     const anchor = (e.target as HTMLElement).closest('a')
@@ -119,7 +94,7 @@ export function News() {
           <div class="nlist" style={{ display: 'flex', flexDirection: 'column', gap: 2 }} role="list">
             {visible.map((item) => (
               <div key={item.id} class="article-item" role="listitem" tabIndex={0} aria-current={selected?.id === item.id ? 'true' : undefined}
-                onClick={() => { setSelectedId(item.id); setReading(true) }} onKeyDown={(e) => { if (e.key === 'Enter') { setSelectedId(item.id); setReading(true) } }}>
+                onClick={() => { setSelectedId(item.id); setReading(true) }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); setReading(true) } }}>
                 <Art seed={item.id} class="thumb" />
                 <div>
                   <h3 class={item.unread ? 'unread' : ''}>{item.title}</h3>

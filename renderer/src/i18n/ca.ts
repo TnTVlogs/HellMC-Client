@@ -103,6 +103,19 @@ const ca: Messages = {
     offline: 'Sense connexió: es mostren dades desades. Els servidors en línia no estaran disponibles.',
     sessionInvalid: 'La sessió del compte ja no és vàlida. Ves a Configuració › Compte i inicia la sessió de nou.'
   },
+  legal: {
+    title: "Abans de començar",
+    intro: "HellMC Client es connecta a Microsoft, Mojang, GitHub i als servidors que es mostren al launcher, de manera que poden veure la teva adreça IP. Llegeix com es tracten les teves dades:",
+    privacyLink: "Política de privacitat",
+    termsLink: "Termes d'ús",
+    acceptLabel: "He llegit i accepto els Termes d'ús i la Política de privacitat.",
+    telemetryTitle: "Ajuda a millorar HellMC (opcional)",
+    telemetryHelp: "Comparteix dades d'ús mínimes i anònimes: un identificador aleatori, la versió de l'app, el sistema operatiu i si s'ha fet servir el launcher. Sense nom, sense guardar la IP, sense dades del joc. Ho pots canviar després a Configuració.",
+    continue: "Continua",
+    quit: "Surt",
+    updated: "Hem actualitzat els termes i la política de privacitat. Revisa'ls per continuar.",
+    notOfficial: "HellMC Client no està afiliat, avalat ni patrocinat per Mojang Studios ni per Microsoft. Minecraft és una marca registrada de Mojang Synergies AB."
+  },
   boot: {
     updateRequired: {
       download: "Descarrega l'actualització",
@@ -118,7 +131,10 @@ const ca: Messages = {
     starting: 'Iniciant…',
     needNetworkTitle: 'Connecta\'t per començar',
     needNetworkBody: 'HellMC necessita connexió a internet el primer cop que s\'executa.',
-    retry: 'Torna-ho a provar'
+    retry: 'Torna-ho a provar',
+    errorTitle: 'Alguna cosa ha fallat',
+    errorBody: 'La interfície ha trobat un error inesperat. Pots tornar-la a carregar; les teves dades estan segures.',
+    errorCopy: "Copia els detalls de l'error"
   },
   welcome: {
     title: 'Benvingut a HellMC',
@@ -167,6 +183,16 @@ const ca: Messages = {
       offlineTitle: 'Compte offline',
       offlineUsernamePlaceholder: 'Nom d\'usuari',
       addOffline: 'Afegeix compte',
+      wipeTitle: "Tanca la sessió i esborra les dades locals",
+      wipeHelp: "Elimina tots els comptes i els tokens d’inici de sessió desats, l’acceptació dels termes, la memòria cau i els logs. Es conserven els teus móns i les versions instal·lades. El launcher es reinicia.",
+      wipeButton: "Esborra…",
+      wipeConfirmTitle: "Esborrar les dades locals?",
+      wipeConfirmMessage: "Es tancarà la sessió de tots els comptes i el launcher es reiniciarà.",
+      wipeConfirm: "Esborra i reinicia",
+      wipeCancel: "Cancel·la",
+      removeConfirmTitle: "Eliminar aquest compte?",
+      removeConfirmMessage: "S’eliminarà d’aquest launcher. El podràs tornar a afegir més endavant.",
+      wipeGameRunning: "Tanca primer el joc.",
       empty: 'Encara no hi ha cap compte.',
       active: 'Actiu',
       select: 'Fes servir aquest compte',
@@ -183,6 +209,9 @@ const ca: Messages = {
       dataDirectory: 'Carpeta de dades',
       dataDirectoryChange: 'Canvia…',
       dataDirectoryRestartHint: 'S\'aplica en reiniciar el launcher.',
+      dataDirectoryPending: "Canviarà a {path} en reiniciar.",
+      dataDirectoryRestartNow: 'Reinicia ara',
+      dataDirectoryNote: 'Les dades existents no es mouen: les versions es tornaran a baixar a la carpeta nova.',
       sharedDataRoot: 'Ubicació de les dades compartides',
       sharedDataRootHelp: 'On guarden les versions marcades «compartides» els seus mons, packs de recursos, shaders, captures i opcions. Aplica a totes les versions compartides alhora.',
       sharedDataRootHellmc: 'HellMC (per defecte)',
@@ -213,7 +242,18 @@ const ca: Messages = {
       performanceOff: 'Desactivat',
       sidebarCollapsed: 'Replega la barra lateral',
       devMode: 'Mode desenvolupador',
-      devModeHint: 'Clica unes quantes vegades el número de versió a Sobre per revelar això.'
+      devModeHint: 'Clica unes quantes vegades el número de versió a Sobre per revelar això.',
+      discordPresence: "Mostra l’activitat a Discord",
+      discordPresenceHelp: "Mostra al teu perfil de Discord a què jugues.",
+      hardwareAcceleration: "Acceleració per maquinari",
+      hardwareAccelerationHelp: "Interfície més fluida a la majoria d’ordinadors. Desactiva-la si veus errors visuals. S’aplica en reiniciar.",
+      onGameStart: "En iniciar el joc",
+      onGameStartHelp: "Tancar el launcher allibera memòria en ordinadors antics; el joc continua obert.",
+      onGameStartKeep: "Mantén obert",
+      onGameStartMinimize: "Minimitza",
+      onGameStartClose: "Tanca el launcher",
+      telemetry: "Comparteix dades d’ús anònimes",
+      telemetryHelp: "Mínimes i anònimes. Ajuda a millorar HellMC."
     },
     updates: {
       download: "Descarrega l'actualització",
@@ -238,6 +278,10 @@ const ca: Messages = {
       nebulaNotice: 'Servidor de distribució basat en Nebula (Daniel D. Scalzi, MIT).',
       thirdPartyLicenses: 'Llicències de tercers',
       lgplLicense: 'Llicència LGPL-3.0 (HellMC-Core)',
+      openLogs: 'Obre la carpeta de logs',
+      copyReport: "Copia l'informe de diagnòstic",
+      reportCopied: "Informe copiat. Enganxa'l quan demanis suport.",
+      viewLogs: 'Veure logs',
       website: 'Web',
       source: 'Codi font',
       support: 'Suport'
@@ -284,7 +328,9 @@ const ca: Messages = {
       NEEDS_NETWORK: "Cal connexió a internet per continuar.",
       LAUNCH_FAILED: "No s'ha pogut iniciar el joc.",
       SPAWN_FAILED: "No s'ha pogut obrir el procés del joc.",
-      ALREADY_RUNNING: "Aquesta versió ja s'està executant o iniciant."
+      ALREADY_RUNNING: "Aquesta versió ja s'està executant o iniciant.",
+      VERSION_BUSY: "Aquesta versió s'està instal·lant, verificant o eliminant. Espera que acabi.",
+      GAME_EXITED: "El joc s'ha tancat inesperadament (codi {code})."
     }
   },
   servers: {
@@ -344,6 +390,7 @@ const ca: Messages = {
       title: 'Comparteix mons, packs de recursos i opcions amb altres versions',
       help: 'Els mons, textures, shaders, captures i opcions es comparteixen amb les altres versions que també ho tinguin activat. Els mods i la seva configuració es queden sempre separats per versió.',
       changeNotice: 'Aquest canvi s’aplicarà la propera vegada que juguis amb aquesta versió.',
+      savesWarning: "Els móns es comparteixen entre versions. Fes una còpia dels móns importants abans d’obrir-los amb una versió de Minecraft més antiga.",
       forcedNotice: 'Aquesta versió sempre té les seves pròpies dades.',
       forcedTooltip: 'L’administrador del servidor ha fixat que aquesta versió mai comparteixi dades amb les altres.'
     },
@@ -357,6 +404,8 @@ const ca: Messages = {
       downloadAuto: 'Baixa Java automàticament',
       downloading: 'Baixant Java…',
       downloadFailed: 'La baixada de Java ha fallat. Torna-ho a provar o tria una instal·lació de Java manualment.',
+      jvmRejected: 'Opcions de JVM rebutjades: les que carreguen codi (-javaagent, -agentlib…) necessiten el mode desenvolupador.',
+      forcedNote: 'Triat manualment: es fa servir encara que no coincideixi amb el Java recomanat per a aquesta versió.',
       phase: {
         fetchingJdk: 'Buscant la versió adequada…',
         downloadingJava: 'Baixant Java',

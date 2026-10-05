@@ -4,6 +4,7 @@ import { authErrorMessage } from '../../utils/authError'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
 import { Avatar, Chip } from '../../components/ui'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { hellmc, type AuthStatus } from '../../api'
 import { accounts, selectedUuid, loadAccounts, selectAccount, addOfflineAccount, removeAccount } from '../../stores/account'
 
@@ -17,6 +18,9 @@ export function AccountSection() {
   const [error, setError] = useState<string | null>(null)
   const [msftBusy, setMsftBusy] = useState(false)
   const [msftError, setMsftError] = useState<string | null>(null)
+  const [confirmWipe, setConfirmWipe] = useState(false)
+  const [wipeError, setWipeError] = useState<string | null>(null)
+  const [confirmRemoveUuid, setConfirmRemoveUuid] = useState<string | null>(null)
   // Només es pot validar el compte actiu (`auth.validate`); `null` = encara validant.
   const [activeStatus, setActiveStatus] = useState<AuthStatus | null>(null)
 
@@ -29,6 +33,10 @@ export function AccountSection() {
   async function handleAdd(event: Event) {
     event.preventDefault()
     if (username.trim() === '') return
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(username.trim())) {
+      setError(t('welcome.invalidUsername'))
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -85,7 +93,7 @@ export function AccountSection() {
               {active
                 ? <Chip tone="ok">{t('settings.account.active')}</Chip>
                 : <Button size="sm" onClick={() => void selectAccount(account.uuid)}>{t('settings.account.select')}</Button>}
-              <Button size="sm" variant="ghost" onClick={() => void removeAccount(account.uuid)}>{t('settings.account.remove')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmRemoveUuid(account.uuid)}>{t('settings.account.remove')}</Button>
             </div>
           )
         })}
@@ -100,6 +108,41 @@ export function AccountSection() {
         </form>
         {error != null && <p class="error-text" style={{ marginTop: 'var(--space-2)' }}>{error}</p>}
       </Card>
+
+      <h2>{t('settings.account.wipeTitle')}</h2>
+      <Card pad>
+        <div class="set-row" style={{ paddingInline: 0 }}>
+          <div class="l"><span>{t('settings.account.wipeHelp')}</span></div>
+          <Button size="sm" variant="danger" onClick={() => { setWipeError(null); setConfirmWipe(true) }}>{t('settings.account.wipeButton')}</Button>
+        </div>
+        {wipeError != null && <p class="error-text" style={{ marginTop: 'var(--space-2)' }}>{wipeError}</p>}
+      </Card>
+
+      {confirmRemoveUuid != null && (
+        <ConfirmDialog
+          title={t('settings.account.removeConfirmTitle')}
+          message={t('settings.account.removeConfirmMessage')}
+          confirmLabel={t('settings.account.remove')}
+          cancelLabel={t('settings.account.wipeCancel')}
+          onCancel={() => setConfirmRemoveUuid(null)}
+          onConfirm={() => { const uuid = confirmRemoveUuid; setConfirmRemoveUuid(null); void removeAccount(uuid) }}
+        />
+      )}
+      {confirmWipe && (
+        <ConfirmDialog
+          title={t('settings.account.wipeConfirmTitle')}
+          message={t('settings.account.wipeConfirmMessage')}
+          confirmLabel={t('settings.account.wipeConfirm')}
+          cancelLabel={t('settings.account.wipeCancel')}
+          onCancel={() => setConfirmWipe(false)}
+          onConfirm={() => {
+            setConfirmWipe(false)
+            hellmc.legal.wipeLocalData().catch((err: unknown) => {
+              setWipeError(String(err).includes('GAME_RUNNING') ? t('settings.account.wipeGameRunning') : t('boot.errorBody'))
+            })
+          }}
+        />
+      )}
     </section>
   )
 }
