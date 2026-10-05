@@ -131,6 +131,8 @@ const ca: Messages = {
     starting: 'Iniciant…',
     needNetworkTitle: 'Connecta\'t per començar',
     needNetworkBody: 'HellMC necessita connexió a internet el primer cop que s\'executa.',
+    signatureTitle: 'No s’ha pogut verificar la distribució',
+    signatureBody: 'El servidor no ofereix ara mateix una distribució amb signatura vàlida. No és un problema de connexió: torna-ho a provar d’aquí un minut i, si continua, avisa l’equip de HellMC.',
     retry: 'Torna-ho a provar',
     errorTitle: 'Alguna cosa ha fallat',
     errorBody: 'La interfície ha trobat un error inesperat. Pots tornar-la a carregar; les teves dades estan segures.',

@@ -4,7 +4,7 @@ import { t } from '../i18n'
 import { hellmc } from '../api'
 import { Button } from '../components/Button'
 import { BrandFlame } from '../components/BrandFlame'
-import { loadDistro, distroLoading } from '../stores/distro'
+import { loadDistro, distroLoading, distroError } from '../stores/distro'
 import { loadSelection } from '../stores/selection'
 
 /** 07 §8.1: logotip + indicador subtil. Sense menció a Helios (D23). Passats 5 s, text «Iniciant…». */
@@ -29,6 +29,7 @@ export function Loading() {
 
 /** 07 §7.2 / 09 O7, O10: primera arrencada sense distribució (ni en cache). */
 export function NeedNetwork() {
+  const signatureProblem = distroError.value?.includes('DISTRIBUTION_SIGNATURE_INVALID') === true
   async function retry() {
     await loadDistro()
     await loadSelection()
@@ -39,7 +40,8 @@ export function NeedNetwork() {
       <main class="center-screen">
         <section class="card welcome">
           <div class="logo"><WifiOff size={36} /></div>
-          <div><h1>{t('boot.needNetworkTitle')}</h1><p class="muted" style={{ marginTop: 8 }}>{t('boot.needNetworkBody')}</p></div>
+          {/* Una signatura absent/invàlida no és un problema de xarxa: el missatge no ha de dir «connecta't». */}
+          <div><h1>{signatureProblem ? t('boot.signatureTitle') : t('boot.needNetworkTitle')}</h1><p class="muted" style={{ marginTop: 8 }}>{signatureProblem ? t('boot.signatureBody') : t('boot.needNetworkBody')}</p></div>
           <Button variant="primary" size="lg" disabled={distroLoading.value} onClick={() => void retry()}>{t('boot.retry')}</Button>
         </section>
       </main>

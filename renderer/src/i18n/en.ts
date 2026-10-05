@@ -131,6 +131,8 @@ export interface Messages {
     starting: string
     needNetworkTitle: string
     needNetworkBody: string
+    signatureTitle: string
+    signatureBody: string
     retry: string
     errorTitle: string
     errorBody: string
@@ -568,6 +570,8 @@ const en: Messages = {
     starting: 'Starting…',
     needNetworkTitle: 'Connect to start',
     needNetworkBody: 'HellMC needs an internet connection the first time it runs.',
+    signatureTitle: 'Could not verify the distribution',
+    signatureBody: 'The server is not offering a validly signed distribution right now. This is not a connection problem: try again in a minute, and if it keeps happening let the HellMC team know.',
     retry: 'Try again',
     errorTitle: 'Something went wrong',
     errorBody: 'The interface hit an unexpected error. You can reload it; your data is safe.',

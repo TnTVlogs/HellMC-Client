@@ -43,10 +43,10 @@ export function Terms() {
     <div class="app-shell" style={{ gridTemplateRows: 'minmax(0, 1fr)' }}>
       <div class="center-drag" />
       <main class="center-screen">
-        <form class="card welcome" aria-labelledby="terms-title" onSubmit={(e) => void submit(e)}>
+        <form class="card welcome terms" aria-labelledby="terms-title" onSubmit={(e) => void submit(e)}>
           <div class="logo"><BrandFlame size={40} /></div>
           <div>
-            <h1 id="terms-title" style={{ fontSize: 'var(--fs-xl)' }}>{t('legal.title')}</h1>
+            <h1 id="terms-title">{t('legal.title')}</h1>
             <p class="muted" style={{ marginTop: 8 }}>{termsUpdated.value ? t('legal.updated') : t('legal.intro')}</p>
           </div>
 
@@ -57,25 +57,27 @@ export function Terms() {
             </select>
           </div>
 
-          <p class="small">
+          <p class="terms-links">
             <ExtLink href={LINKS.privacy}>{t('legal.privacyLink')}</ExtLink>{' · '}<ExtLink href={LINKS.terms}>{t('legal.termsLink')}</ExtLink>
           </p>
 
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left' }}>
-            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted((e.target as HTMLInputElement).checked)} style={{ marginTop: 4 }} />
+          <label class="check-row">
+            <input type="checkbox" checked={accepted} onChange={(e) => setAccepted((e.target as HTMLInputElement).checked)} />
             <span>{t('legal.acceptLabel')}</span>
           </label>
 
-          <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left' }}>
-            <input type="checkbox" checked={telemetry} onChange={(e) => setTelemetryChoice((e.target as HTMLInputElement).checked)} style={{ marginTop: 4 }} />
-            <span><b>{t('legal.telemetryTitle')}</b><br /><span class="muted small">{t('legal.telemetryHelp')}</span></span>
+          <label class="check-row">
+            <input type="checkbox" checked={telemetry} onChange={(e) => setTelemetryChoice((e.target as HTMLInputElement).checked)} />
+            <span><b>{t('legal.telemetryTitle')}</b><span class="muted small">{t('legal.telemetryHelp')}</span></span>
           </label>
 
           {failed && <Banner tone="warn" icon={Info}>{t('boot.errorBody')}</Banner>}
 
-          <Button type="submit" variant="primary" size="lg" disabled={!accepted || busy}>{t('legal.continue')}</Button>
-          <Button type="button" variant="ghost" onClick={() => hellmc.window.close()}>{t('legal.quit')}</Button>
-          <p class="muted xs">{t('legal.notOfficial')}</p>
+          <div class="terms-actions">
+            <Button type="submit" variant="primary" size="lg" disabled={!accepted || busy}>{t('legal.continue')}</Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => hellmc.window.close()}>{t('legal.quit')}</Button>
+          </div>
+          <p class="muted xs terms-note">{t('legal.notOfficial')}</p>
         </form>
       </main>
     </div>

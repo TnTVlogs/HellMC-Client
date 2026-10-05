@@ -131,6 +131,8 @@ const es: Messages = {
     starting: 'Iniciando…',
     needNetworkTitle: 'Conéctate para empezar',
     needNetworkBody: 'HellMC necesita conexión a internet la primera vez que se ejecuta.',
+    signatureTitle: 'No se ha podido verificar la distribución',
+    signatureBody: 'El servidor no ofrece ahora mismo una distribución con firma válida. No es un problema de conexión: inténtalo de nuevo en un minuto y, si continúa, avisa al equipo de HellMC.',
     retry: 'Reintentar',
     errorTitle: 'Algo ha fallado',
     errorBody: 'La interfaz ha encontrado un error inesperado. Puedes volver a cargarla; tus datos están a salvo.',
