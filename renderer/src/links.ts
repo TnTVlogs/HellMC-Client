@@ -1,6 +1,12 @@
-// Enllaços fixos de HellMC. Els textos legals s'han de publicar a aquestes URL (vegeu docs/client-auditoria/06).
+// Enllaços fixos de HellMC. Els textos legals els publica la web (HellMC-Client-Web): català a l'arrel, /es/ i /en/ per als altres idiomes.
+const WEBSITE = 'https://hellmcclient.sergidalmau.dev'
+const PREFIX = { ca: '', es: '/es', en: '/en' } as const
+
 export const LINKS = {
-  website: 'https://hellmcclient.sergidalmau.dev',
-  privacy: 'https://hellmcclient.sergidalmau.dev/privacy',
-  terms: 'https://hellmcclient.sergidalmau.dev/terms'
+  website: WEBSITE,
+  privacy: `${WEBSITE}/privacy/`,
+  terms: `${WEBSITE}/terms/`
 } as const
+
+/** URL del text legal en l'idioma de la interfície. */
+export const legalLink = (kind: 'privacy' | 'terms', lang: keyof typeof PREFIX): string => `${WEBSITE}${PREFIX[lang]}/${kind}/`

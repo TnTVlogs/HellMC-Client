@@ -5,7 +5,7 @@ import { Button } from '../components/Button'
 import { BrandFlame } from '../components/BrandFlame'
 import { Banner } from '../components/ui'
 import { hellmc } from '../api'
-import { LINKS } from '../links'
+import { legalLink } from '../links'
 import { language, setLanguage } from '../stores/ui'
 import { acceptTerms, termsUpdated } from '../stores/legal'
 
@@ -58,7 +58,7 @@ export function Terms() {
           </div>
 
           <p class="terms-links">
-            <ExtLink href={LINKS.privacy}>{t('legal.privacyLink')}</ExtLink>{' · '}<ExtLink href={LINKS.terms}>{t('legal.termsLink')}</ExtLink>
+            <ExtLink href={legalLink('privacy', language.value)}>{t('legal.privacyLink')}</ExtLink>{' · '}<ExtLink href={legalLink('terms', language.value)}>{t('legal.termsLink')}</ExtLink>
           </p>
 
           <label class="check-row">

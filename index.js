@@ -596,15 +596,31 @@ ipcMain.handle('hellmc:open-lgpl-license', () => openBundledFile('LICENSE-LGPL-3
 // D15/D8: termes, política de privacitat i consentiment de telemetria (separat). `CURRENT_TERMS_VERSION` puja quan canvien
 // els textos: tothom torna a veure la pantalla (sense login si ja hi ha sessió).
 const CURRENT_TERMS_VERSION = 1
-ipcMain.handle('hellmc:legal-get', () => ({ currentVersion: CURRENT_TERMS_VERSION, ...ConfigManager.getLegal() }))
-ipcMain.handle('hellmc:legal-accept', (_event, telemetryOptIn) => {
+// Telemetria opt-in (docs/web-i-telemetria): l'identificador anònim mai surt del procés principal.
+const Telemetry = require('./app/assets/js/telemetry').create({
+    getLegal: () => ConfigManager.getLegal(),
+    setLegal: (patch) => ConfigManager.setLegal(patch),
+    save: () => ConfigManager.save(),
+    termsVersion: () => CURRENT_TERMS_VERSION,
+    appVersion: app.getVersion(),
+    platform: process.platform,
+    isDev
+})
+ipcMain.handle('hellmc:legal-get', () => {
+    // eslint-disable-next-line no-unused-vars
+    const { telemetryId, telemetryForget, ...visible } = ConfigManager.getLegal()
+    return { currentVersion: CURRENT_TERMS_VERSION, ...visible }
+})
+ipcMain.handle('hellmc:legal-accept', async (_event, telemetryOptIn) => {
     ConfigManager.setLegal({ termsAcceptedVersion: CURRENT_TERMS_VERSION, acceptedAt: new Date().toISOString(), telemetryOptIn: telemetryOptIn === true })
     ConfigManager.save()
+    await Telemetry.onConsentChanged()
 })
-ipcMain.handle('hellmc:legal-set-telemetry', (_event, value) => {
+ipcMain.handle('hellmc:legal-set-telemetry', async (_event, value) => {
     if (typeof value !== 'boolean') throw new Error('INVALID_VALUE')
     ConfigManager.setLegal({ telemetryOptIn: value })
     ConfigManager.save()
+    await Telemetry.onConsentChanged()
 })
 
 // D16: «Tanca la sessió i esborra les dades»: comptes i tokens, acceptació legal, cache i logs. No toca les dades del joc
@@ -612,6 +628,7 @@ ipcMain.handle('hellmc:legal-set-telemetry', (_event, value) => {
 ipcMain.handle('hellmc:wipe-local-data', async () => {
     if (runningInstances.size > 0) throw new Error('GAME_RUNNING')
     ConfigManager.removeAllAccounts()
+    await Telemetry.disable() // demana al servidor que esborri el rastre i descarta l'identificador local
     ConfigManager.setLegal({ termsAcceptedVersion: null, acceptedAt: null, telemetryOptIn: false })
     ConfigManager.save()
     const userData = app.getPath('userData')
@@ -1920,6 +1937,7 @@ app.on('web-contents-created', (_event, contents) => {
 
 // S5: desxifra els tokens abans de res més (cap finestra ni handler els necessita abans).
 app.on('ready', () => ConfigManager.unlockSecrets())
+app.on('ready', () => Telemetry.start())
 app.on('ready', createWindow)
 app.on('ready', createMenu)
 app.on('ready', cleanStaleNatives)

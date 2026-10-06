@@ -145,7 +145,11 @@ const DEFAULT_CONFIG = {
     legal: {
         termsAcceptedVersion: null,
         acceptedAt: null,
-        telemetryOptIn: false
+        telemetryOptIn: false,
+        // Telemetria: UUID aleatori (només mentre hi ha consentiment) i, si en retirar-lo no s'ha pogut avisar el servidor,
+        // l'id pendent d'esborrar. Mai surten del procés principal (vegeu telemetry.js).
+        telemetryId: null,
+        telemetryForget: null
     },
     // 2.5 (07 §6, «Java»: «valors globals per defecte»): seed per a `defaultJavaConfig` quan es
     // crea l'entrada d'una versió **nova** — `null` = segueix detectant/preguntant per versió com

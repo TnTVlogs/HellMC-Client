@@ -3,8 +3,8 @@ import { t } from '../../i18n'
 import { Button } from '../../components/Button'
 import { BrandFlame } from '../../components/BrandFlame'
 import { hellmc } from '../../api'
-import { devModeRevealed } from '../../stores/ui'
-import { LINKS as APP_LINKS } from '../../links'
+import { devModeRevealed, language } from '../../stores/ui'
+import { legalLink } from '../../links'
 
 const LINKS = {
   website: 'https://hellmcclient.sergidalmau.dev',
@@ -79,8 +79,8 @@ export function AboutSection() {
           <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openLgplLicense()}>{t('settings.about.lgplLicense')}</Button>
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(APP_LINKS.privacy)}>{t('legal.privacyLink')}</Button>
-          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(APP_LINKS.terms)}>{t('legal.termsLink')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(legalLink('privacy', language.value))}>{t('legal.privacyLink')}</Button>
+          <Button size="sm" variant="ghost" onClick={() => void hellmc.system.openExternal(legalLink('terms', language.value))}>{t('legal.termsLink')}</Button>
           <Button size="sm" onClick={() => void hellmc.system.openLogsFolder()}>{t('settings.about.openLogs')}</Button>
           <Button size="sm" onClick={() => void copyReport()}>{t('settings.about.copyReport')}</Button>
           {reportCopied && <span class="muted small" role="status">{t('settings.about.reportCopied')}</span>}
