@@ -6,7 +6,7 @@ publish:
   provider: github
   owner: TnTVlogs
   repo: HellMC-Client
-  releaseType: release
+  releaseType: draft
 
 
 
