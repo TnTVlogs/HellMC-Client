@@ -78,9 +78,26 @@ function broadcastUpdaterEvent(updaterEvent) {
         win.webContents.send('hellmc:updater-event', updaterEvent)
     }
 }
+/**
+ * Canal de les versions de prova. electron-updater (GitHub) només troba una release si l'etiqueta és de la forma `vX.Y.Z-alpha.N` o
+ * `vX.Y.Z-beta.N` (primer identificador de la pre-versió = `alpha` o `beta`, SENSE número enganxat: «alpha2» es llegeix com un canal propi i
+ * no veu mai l'«alpha3»). El client mira el canal del seu propi tipus (`alpha` o `beta`): des d'un `alpha` veu els `alpha` nous i també els
+ * `beta` (es pot passar d'alpha a beta, mai a l'inrevés). Un client estable no fixa canal.
+ */
+function updaterChannelFor(version) {
+    const id = semver.prerelease(version)?.[0]
+    const match = typeof id === 'string' ? /^(alpha|beta)/.exec(id) : null
+    return match != null ? match[1] : null
+}
+
 function configureAutoUpdater(allowPrerelease) {
-    if (allowPrerelease != null) {
-        autoUpdater.allowPrerelease = allowPrerelease
+    // Un client de prova (versió amb pre-versió) ha de poder veure sempre les pre-releases, encara que l'ajust guardat digui el contrari.
+    const currentIsPrerelease = (semver.prerelease(app.getVersion()) ?? []).length > 0
+    autoUpdater.allowPrerelease = currentIsPrerelease ? true : allowPrerelease === true
+    const channel = updaterChannelFor(app.getVersion())
+    if (channel != null) {
+        autoUpdater.channel = channel
+        autoUpdater.allowDowngrade = false       // fixar el canal activa `allowDowngrade` per defecte: no es vol baixar mai de versió
     }
 
     if (isDev) {
