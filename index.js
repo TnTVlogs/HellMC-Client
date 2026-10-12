@@ -770,11 +770,10 @@ ipcMain.handle('hellmc:app-relaunch', () => {
     app.exit(0)
 })
 
-// ── Discord RPC «en partida» (P17, 06 §8.1): mod HellMC-Presence ────────────────────────────────
-// El mod (jar universal Fabric/Forge/NeoForge, repo `HellMC-Presence`) viu dins el procés del joc i
+// ── Discord RPC «en partida» (P17, 06 §8.1): mòdul presence del HellMC Runtime ────────────────────────────────
+// El mòdul `presence` del runtime (HellMC-Runtime/presence) viu dins el procés del joc i
 // llegeix `hellmc-presence.json` de la carpeta d'instància — aquí s'escriu abans de cada llançament
 // amb el que ve del `distribution.json` (`discord` global + `server.discord`) i els textos traduïts.
-const PRESENCE_MOD_RE = /hellmc[_-]presence/i
 const PRESENCE_TEXTS = {
     en: { menu: 'In the main menu', singleplayer: 'Playing singleplayer', joining: 'Loading…', joined: 'Playing on {server}', playingAt: 'Playing on {ip}', localServer: 'Local server', titleSingleplayer: 'Singleplayer', titleMultiplayer: 'Multiplayer (3rd-party Server)' },
     es: { menu: 'En el menú principal', singleplayer: 'Jugando en solitario', joining: 'Cargando…', joined: 'Jugando en {server}', playingAt: 'Jugando en {ip}', localServer: 'Servidor local', titleSingleplayer: 'Un jugador', titleMultiplayer: 'Multijugador (servidor de terceros)' },
@@ -929,6 +928,183 @@ ipcMain.handle('hellmc:auth-validate', async () => {
         return { status: 'invalid' }
     }
 })
+
+// ── Skins i capes (docs/client-cosmetics/14-skins.md) ─────────────────────────────────────────
+// Comptes Microsoft: canvi real via l'API oficial de Minecraft Services. Comptes offline: només
+// biblioteca i selecció LOCALS (mai es puja res). El token de Minecraft no surt d'aquest procés.
+const SkinsManager = require('./app/assets/js/skinsmanager')
+const MAX_SKIN_FILE_BYTES = 1024 * 1024
+
+async function getSkinsToken() {
+    const selected = ConfigManager.getSelectedAccount()
+    if (selected == null || selected.type !== 'microsoft') return null
+    const status = await AuthManager.validateSelectedStatus()
+    if (status === 'invalid') return null
+    const current = ConfigManager.getSelectedAccount()
+    return current != null && typeof current.accessToken === 'string' ? current.accessToken : null
+}
+const skins = SkinsManager.create({
+    fetchFn: (...args) => fetch(...args),
+    getToken: getSkinsToken,
+    libraryDir: path.join(app.getPath('userData'), 'skins')
+})
+
+function selectedAccountKind() {
+    const selected = ConfigManager.getSelectedAccount()
+    return { uuid: selected != null ? selected.uuid : null, microsoft: selected != null && selected.type === 'microsoft' }
+}
+
+/** Les excepcions de `SkinsManager` ja porten `SKINS_ERROR:<CODI>`; la resta s'amaguen sota un codi genèric. */
+async function skinsGuard(fn) {
+    try {
+        return await fn()
+    } catch (err) {
+        if (err instanceof SkinsManager.SkinsError) throw err
+        console.error('[skins]', err)
+        throw new SkinsManager.SkinsError('UNKNOWN')
+    }
+}
+
+async function withTextures(profile) {
+    const load = async (url) => {
+        try {
+            return (await skins.fetchTexture(url)).dataUrl
+        } catch {
+            return null
+        }
+    }
+    return {
+        uuid: profile.uuid,
+        name: profile.name,
+        skins: await Promise.all(profile.skins.map(async (s) => ({ ...s, image: await load(s.url) }))),
+        capes: await Promise.all(profile.capes.map(async (c) => ({ ...c, image: await load(c.url) })))
+    }
+}
+function libraryWithImages() {
+    const { skins: list, selection } = skins.listLibrary()
+    return {
+        skins: list.map((s) => ({ ...s, image: skins.readLibraryPng(s.id).dataUrl })),
+        selection
+    }
+}
+
+ipcMain.handle('hellmc:skins-library', () => skinsGuard(async () => libraryWithImages()))
+ipcMain.handle('hellmc:skins-profile', () => skinsGuard(async () => {
+    if (!selectedAccountKind().microsoft) return null
+    return await withTextures(await skins.getProfile())
+}))
+ipcMain.handle('hellmc:skins-add-file', (event) => skinsGuard(async () => {
+    const senderWin = BrowserWindow.fromWebContents(event.sender)
+    const result = await dialog.showOpenDialog(senderWin, { properties: ['openFile'], filters: [{ name: 'PNG', extensions: ['png'] }] })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const file = result.filePaths[0]
+    const stat = fs.statSync(file)
+    if (!stat.isFile() || stat.size > MAX_SKIN_FILE_BYTES) throw new SkinsManager.SkinsError('INVALID_PNG')
+    // La variant (classic/slim) no es pot deduir del PNG: per defecte classic, es pot canviar a la vista abans d'aplicar.
+    return skins.addToLibrary({ name: path.basename(file, path.extname(file)), variant: 'classic', png: fs.readFileSync(file), source: 'file' })
+}))
+ipcMain.handle('hellmc:skins-import-name', (_event, name) => skinsGuard(async () => {
+    const found = await skins.lookupByName(name)
+    const texture = await skins.fetchTexture(found.skinUrl)
+    return skins.addToLibrary({ name: found.name, variant: found.variant, png: texture.buffer, source: 'name' })
+}))
+ipcMain.handle('hellmc:skins-import-current', () => skinsGuard(async () => {
+    if (!selectedAccountKind().microsoft) throw new SkinsManager.SkinsError('NOT_MICROSOFT')
+    const profile = await skins.getProfile()
+    const active = profile.skins.find((s) => s.active)
+    if (active == null) throw new SkinsManager.SkinsError('NOT_FOUND')
+    const texture = await skins.fetchTexture(active.url)
+    return skins.addToLibrary({ name: profile.name, variant: active.variant, png: texture.buffer, source: 'account' })
+}))
+ipcMain.handle('hellmc:skins-remove', (_event, id) => skinsGuard(async () => skins.removeFromLibrary(id)))
+ipcMain.handle('hellmc:skins-rename', (_event, id, name) => skinsGuard(async () => skins.renameInLibrary(id, name)))
+ipcMain.handle('hellmc:skins-set-variant', (_event, id, variant) => skinsGuard(async () => skins.setVariantInLibrary(id, variant)))
+// Aplicar: Microsoft → puja a Mojang (tothom la veu); offline → només selecció local.
+ipcMain.handle('hellmc:skins-apply', (_event, id) => skinsGuard(async () => {
+    const account = selectedAccountKind()
+    if (account.uuid == null) throw new SkinsManager.SkinsError('NO_TOKEN')
+    if (!account.microsoft) {
+        skins.setLocalSelection(account.uuid, id)
+        return { scope: 'local' }
+    }
+    const entry = skins.listLibrary().skins.find((s) => s.id === id)
+    if (entry == null) throw new SkinsManager.SkinsError('NOT_FOUND')
+    await skins.setSkinFromPng(skins.readLibraryPng(id).buffer, entry.variant)
+    return { scope: 'mojang' }
+}))
+ipcMain.handle('hellmc:skins-clear-local', () => skinsGuard(async () => {
+    const account = selectedAccountKind()
+    if (account.uuid != null) skins.setLocalSelection(account.uuid, null)
+}))
+ipcMain.handle('hellmc:skins-set-cape', (_event, capeId) => skinsGuard(async () => {
+    if (!selectedAccountKind().microsoft) throw new SkinsManager.SkinsError('NOT_MICROSOFT')
+    return await withTextures(await skins.setActiveCape(capeId))
+}))
+
+// ── HellMC Runtime (docs/client-cosmetics/09 i 19) ─────────────────────────────────────────────
+// HellMC Runtime: el baixa la distribució a `<instància>/hellmc-runtime/`; en desenvolupament, `runtime/` a l'arrel (HellMC-Runtime `build.sh --install-client`).
+const RuntimeManager = require('./app/assets/js/runtimemanager')
+const runtime = RuntimeManager.create({
+    devRuntimeDir: app.isPackaged ? null : path.join(__dirname, 'runtime'),
+    dataDir: app.getPath('userData'),
+    clientVersion: app.getVersion()
+})
+
+// ── Armari (docs/client-cosmetics/17-armari-i-seleccio.md) ───────────────────────────────────
+// El launcher escriu `<userData>/wardrobe/equipped.json` i el catàleg local; el joc ho llegeix. Per compte (uuid).
+const WardrobeManager = require('./app/assets/js/wardrobemanager')
+const wardrobe = WardrobeManager.create({ dir: path.join(app.getPath('userData'), 'wardrobe') })
+// Catàleg del servidor (els administradors el gestionen al panell): es baixa en arrencar i abans de cada partida.
+const CatalogSync = require('./app/assets/js/catalogsync').create({ wardrobe, log: (msg) => devLog(msg) })
+
+function wardrobeAccount() {
+    const uuid = selectedAccountKind().uuid
+    if (uuid == null) throw new WardrobeManager.WardrobeError('INVALID_ACCOUNT')
+    return uuid
+}
+
+/** Les excepcions de `WardrobeManager` ja porten `WARDROBE_ERROR:<CODI>`; la resta s'amaguen sota un codi genèric. */
+async function wardrobeGuard(fn) {
+    try {
+        return await fn()
+    } catch (err) {
+        if (err instanceof WardrobeManager.WardrobeError) throw err
+        console.error('[wardrobe]', err)
+        throw new WardrobeManager.WardrobeError('UNKNOWN')
+    }
+}
+
+function wardrobeState() {
+    return { catalog: wardrobe.catalog(), equipped: wardrobe.getEquipped(wardrobeAccount()) }
+}
+
+ipcMain.handle('hellmc:wardrobe-state', () => wardrobeGuard(async () => wardrobeState()))
+ipcMain.handle('hellmc:wardrobe-sync', () => wardrobeGuard(async () => {
+    await CatalogSync.sync()
+    return wardrobeState()
+}))
+ipcMain.handle('hellmc:wardrobe-read-preview', (_event, id) => wardrobeGuard(async () => wardrobe.readPreview(id)))
+ipcMain.handle('hellmc:wardrobe-save-preview', (_event, id, dataUrl) => wardrobeGuard(async () => {
+    wardrobe.savePreview(id, dataUrl)
+    return wardrobeState()
+}))
+ipcMain.handle('hellmc:wardrobe-read-item', (_event, id) => wardrobeGuard(async () => wardrobe.readItem(id)))
+ipcMain.handle('hellmc:wardrobe-set-settings', (_event, patch) => wardrobeGuard(async () => {
+    wardrobe.setSettings(wardrobeAccount(), patch)
+    return wardrobeState()
+}))
+ipcMain.handle('hellmc:wardrobe-set-cosmetic', (_event, slot, id) => wardrobeGuard(async () => {
+    wardrobe.setCosmetic(wardrobeAccount(), slot, id)
+    return wardrobeState()
+}))
+ipcMain.handle('hellmc:wardrobe-set-emote', (_event, index, id) => wardrobeGuard(async () => {
+    wardrobe.setEmote(wardrobeAccount(), index, id)
+    return wardrobeState()
+}))
+ipcMain.handle('hellmc:wardrobe-remove', (_event, id) => wardrobeGuard(async () => {
+    wardrobe.removeItem(id)
+    return wardrobeState()
+}))
 
 // ── 2.1/2.11: llançament real (repair/descàrrega/procés), multi-instància de veritat ──────────
 // Seqüència de llançament (`game.createRepair` +
@@ -1145,9 +1321,17 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         devLog(`servers.dat: ${serversDatResult.status}${serversDatResult.reason ? ` (${serversDatResult.reason})` : ''}`)
 
         writePresenceConfig(gameDir, distro.rawDistribution, server, selectedVersion.rawVersion)
+        void CatalogSync.sync()                       // el joc llegeix la caché de l'Armari: posa-la al dia sense endarrerir el llançament
+
+        // Només hi pot haver els jars del runtime que la distribució declara (el runtime carrega tots els de la carpeta de mòduls).
+        const runtimeFiles = selectedVersion.modules
+            .filter((m) => m.rawModule.type === Type.File && m.rawModule.artifact.path?.startsWith(`${RuntimeManager.INSTANCE_FOLDER}/`))
+            .map((m) => m.getPath())
+        const prunedRuntime = runtime.prune(gameDir, runtimeFiles)
+        if (prunedRuntime.length > 0) devLog(`runtime: esborrats ${prunedRuntime.length} jar(s) antic(s)`)
 
         throwIfCancelled()
-        const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, account, app.getVersion(), server)
+        const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, account, app.getVersion(), server, runtime)
         const proc = pb.build()
         runningInstances.set(key, { id: key, versionId: target.versionId, serverId: target.serverId, startedAt: Date.now(), proc })
         broadcastInstances()
@@ -1462,8 +1646,6 @@ ipcMain.handle('hellmc:mods-list', async (_event, versionId) => {
     if (version == null) return []
     return version.modules
         .filter((m) => MOD_TYPES.includes(m.rawModule.type))
-        // HellMC-Presence és infraestructura (Discord RPC en partida, P17): mod obligatori i **ocult**.
-        .filter((m) => !PRESENCE_MOD_RE.test(m.rawModule.id))
         .map((m) => ({
             id: m.rawModule.id,
             key: m.getVersionlessMavenIdentifier(),
@@ -1938,6 +2120,7 @@ app.on('web-contents-created', (_event, contents) => {
 // S5: desxifra els tokens abans de res més (cap finestra ni handler els necessita abans).
 app.on('ready', () => ConfigManager.unlockSecrets())
 app.on('ready', () => Telemetry.start())
+app.on('ready', () => { setTimeout(() => { void CatalogSync.sync() }, 3000) })
 app.on('ready', createWindow)
 app.on('ready', createMenu)
 app.on('ready', cleanStaleNatives)

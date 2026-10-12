@@ -3,7 +3,7 @@ export interface ToggleProps {
   onChange: (checked: boolean) => void
   disabled?: boolean
   label?: string
-  /** Bloquejat per una dependència (només estil; `disabled` el fa inert). */
+  /** Bloquejat per una dependència: estil i inert (sense animació ni canvi), amb `title` com a explicació. */
   blocked?: boolean
   title?: string
 }
@@ -15,7 +15,7 @@ export function Toggle({ checked, onChange, disabled, label, blocked, title }: T
       <input
         type="checkbox"
         checked={checked}
-        disabled={disabled}
+        disabled={disabled || blocked}
         onChange={(event) => onChange((event.target as HTMLInputElement).checked)}
       />
       <i />

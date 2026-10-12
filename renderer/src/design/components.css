@@ -152,7 +152,7 @@ button.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--
 .toggle i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform var(--dur-base) var(--ease); box-shadow: 0 1px 2px rgba(0,0,0,.4); }
 .toggle input:checked + i { background: var(--accent-fill); border-color: transparent; }
 .toggle input:checked + i::after { transform: translateX(18px); }
-.toggle.blocked { opacity: .55; } .toggle.blocked input { cursor: not-allowed; }
+.toggle.blocked { opacity: .55; cursor: not-allowed; } .toggle.blocked input { cursor: not-allowed; }
 
 .progress { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
 .progress > i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: left; border-radius: 3px; }
@@ -419,7 +419,7 @@ input.field { min-width: 0; }
   .task { padding: var(--space-2); }
 }
 :root[data-perf="low"] .skeleton { animation: none; }
-@media (prefers-reduced-motion: reduce) { .spinner, .progress.indeterminate > i, .skeleton { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .skin-viewer-loading { transition: none; } .spinner, .progress.indeterminate > i, .skeleton { animation: none; } }
 
 .tabs, .snav { overflow-y: hidden; }
 * { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
@@ -443,3 +443,48 @@ input.field { min-width: 0; }
 .welcome.terms .check-row .muted { display: block; margin-top: 2px; line-height: 1.45; }
 .welcome.terms .terms-actions { display: flex; flex-direction: column; gap: var(--space-2); align-items: center; width: 100%; }
 .welcome.terms .terms-note { max-width: 46ch; opacity: .8; }
+
+/* ── Aparença (skins i capes, docs/client-cosmetics/14-skins.md) ─────────────────────────── */
+.appearance { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.appearance-viewer { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: 0; }
+.skin-viewer { position: relative; width: 100%; height: 420px; border-radius: var(--radius-md); background: radial-gradient(ellipse at 50% 35%, var(--surface-3), var(--surface-2)); overflow: hidden; cursor: grab; }
+.skin-viewer:active { cursor: grabbing; }
+.skin-viewer canvas { display: block; width: 100%; height: 100%; }
+.skin-viewer-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); background: color-mix(in srgb, var(--surface-2) 82%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease); }
+.skin-viewer-loading.on { opacity: 1; }
+.skin-viewer-msg { position: absolute; inset: auto 0 50% 0; text-align: center; padding: 0 var(--space-4); }
+.appearance-viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.appearance-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.appearance-pane { display: flex; flex-direction: column; gap: var(--space-4); }
+.ap-add { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.ap-import { display: flex; align-items: center; gap: var(--space-2); }
+.ap-import .field { width: 180px; }
+.skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: var(--space-3); }
+.skin-card { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-3); min-width: 0; text-align: center; color: var(--text); font: inherit; cursor: pointer; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.skin-card:hover { border-color: var(--border-strong); }
+.skin-card[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: var(--accent-soft); }
+.skin-card .ellipsis { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumb { image-rendering: pixelated; border-radius: var(--radius-sm); }
+.ap-actions { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); padding-top: var(--space-4); border-top: 1px solid var(--border); }
+.ap-buttons { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .appearance { grid-template-columns: minmax(0, 1fr); }
+  .appearance-viewer { position: static; }
+  .skin-viewer { height: 340px; }
+}
+
+/* ── Armari (docs/client-cosmetics/17-armari-i-seleccio.md) ───────────────────────────────── */
+.wd-card { cursor: default; }
+.wd-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; justify-content: center; }
+.wd-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
+.wd-slot { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3); background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-md); min-width: 0; }
+.wd-wheel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+@media (max-width: 600px) { .wd-wheel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wd-thumb { display: grid; place-items: center; width: 112px; height: 112px; padding: 0; background: var(--surface-2, var(--surface-1)); border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; overflow: hidden; }
+.wd-thumb:hover, .wd-thumb[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.wd-thumb img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.wd-thumb-empty { display: grid; place-items: center; color: var(--text-muted, var(--text)); opacity: .55; }
+.wd-title { max-width: 100%; }
+.wd-name { background: none; border: 0; padding: 0; font: inherit; color: var(--text); cursor: pointer; max-width: 100%; }
+.wd-name:hover b, .wd-name[aria-pressed="true"] b { color: var(--accent); }
+.wd-number { width: 96px; }

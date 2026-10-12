@@ -13,9 +13,6 @@ const ModGroups = require('./modgroups')
 
 const logger = LoggerUtil.getLogger('ProcessBuilder')
 
-// Mod HellMC-Presence (mateixa expressió que `index.js`): és alhora el mod i el Java agent de la finestra.
-const PRESENCE_MOD_RE = /hellmc[_-]presence/i
-
 /**
  * Only forge and fabric are top level mod loaders.
  * 
@@ -26,7 +23,11 @@ const PRESENCE_MOD_RE = /hellmc[_-]presence/i
  */
 class ProcessBuilder {
 
-    constructor(distroVersion, vanillaManifest, modManifest, authUser, launcherVersion, server = null) {
+    /**
+     * @param {{jvmArgs: (launch: {minecraftVersion: string, gameDir: string}) => string[]}|null} runtime HellMC Runtime
+     *   (`runtimemanager.js`): si hi és, aporta el seu `-javaagent`.
+     */
+    constructor(distroVersion, vanillaManifest, modManifest, authUser, launcherVersion, server = null, runtime = null) {
         this.gameDir = path.join(ConfigManager.getInstanceDirectory(), distroVersion.rawVersion.id)
         this.commonDir = ConfigManager.getCommonDirectory()
         this.version = distroVersion
@@ -37,6 +38,7 @@ class ProcessBuilder {
         this.modManifest = modManifest
         this.authUser = authUser
         this.launcherVersion = launcherVersion
+        this.runtime = runtime
         this.forgeModListFile = path.join(this.gameDir, 'forgeMods.list') // 1.13+
         this.fmlDir = path.join(this.gameDir, 'forgeModList.json')
         this.llDir = path.join(this.gameDir, 'liteloaderModList.json')
@@ -481,6 +483,7 @@ class ProcessBuilder {
             args.push('-Xdock:name=HellMCClient')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
+        args = args.concat(this._runtimeArgs())
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.version.rawVersion.id))
         args.push('-Xms' + ConfigManager.getMinRAM(this.version.rawVersion.id))
         args = args.concat(ConfigManager.getJVMOptions(this.version.rawVersion.id))
@@ -496,35 +499,16 @@ class ProcessBuilder {
     }
 
     /**
-     * `-javaagent:` del mod HellMC-Presence (repo `HellMC-Presence`, `client-redesign/06 §8.1`): el mateix jar és el mod i un
-     * Java agent que intercepta `GLFW.glfwSetWindowTitle/glfwCreateWindow/glfwSetWindowIcon`, de manera que la finestra mai
-     * mostra «Minecraft» ni la icona del joc (ni 1-2 s). Sense l'agent el mod ho fa igualment, però amb retard.
+     * Arguments del HellMC Runtime (`-javaagent` + `-Dhellmc.*`); buit si el client no el porta o està desactivat.
+     * Només el client v2 el crea (distribution-v2.json); el runtime a més es valida a si mateix en arrencar.
      *
-     * @param {Array.<Object>} mods The mods that will be launched with this process.
-     * @returns {string|null} The JVM argument, or null when the mod is not part of this version (or the jar is missing).
+     * @returns {Array.<string>}
      */
-    _presenceAgentArg(mods) {
-        const presence = mods.find(m => PRESENCE_MOD_RE.test(m.rawModule.id) || PRESENCE_MOD_RE.test(path.basename(m.getPath())))
-        if (presence == null) {
-            return null
+    _runtimeArgs() {
+        if (this.runtime == null) {
+            return []
         }
-        const jar = presence.getPath()
-        if (!fs.existsSync(jar)) {
-            logger.warn('HellMC-Presence jar not found, launching without the agent:', jar)
-            return null
-        }
-        // Un jar sense `Premain-Class` (versió antiga del mod) fa que la JVM aborti en arrencar: millor sense agent.
-        try {
-            const manifest = new AdmZip(jar).readAsText('META-INF/MANIFEST.MF')
-            if (!/^Premain-Class:/mi.test(manifest)) {
-                logger.warn('HellMC-Presence jar has no Premain-Class (old version of the mod), launching without the agent:', jar)
-                return null
-            }
-        } catch (err) {
-            logger.warn('Could not read the HellMC-Presence jar, launching without the agent:', err)
-            return null
-        }
-        return `-javaagent:${jar}`
+        return this.runtime.jvmArgs({ minecraftVersion: this.version.rawVersion.minecraftVersion, gameDir: this.gameDir })
     }
 
     /**
@@ -564,12 +548,8 @@ class ProcessBuilder {
             args.push('-Xdock:name=HellMCClient')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', 'images', 'minecraft.icns'))
         }
-        // HellMC-Presence com a Java agent: posa el títol i la icona de la finestra des del primer instant (vegeu
-        // `_presenceAgentArg`). Ha d'anar abans de la classe principal.
-        const presenceAgent = this._presenceAgentArg(mods)
-        if (presenceAgent != null) {
-            args.push(presenceAgent)
-        }
+        // HellMC Runtime (cosmètics, emotes, menú del joc): només client v2+; veure `runtimemanager.js`.
+        args = args.concat(this._runtimeArgs())
         args.push('-Xmx' + ConfigManager.getMaxRAM(this.version.rawVersion.id))
         args.push('-Xms' + ConfigManager.getMinRAM(this.version.rawVersion.id))
         args = args.concat(ConfigManager.getJVMOptions(this.version.rawVersion.id))

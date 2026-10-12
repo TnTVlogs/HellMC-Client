@@ -109,6 +109,30 @@ const hellmcApi = {
         remove: (uuid) => ipcRenderer.invoke('hellmc:auth-remove', uuid),
         validate: () => ipcRenderer.invoke('hellmc:auth-validate')
     },
+    skins: {
+        library: () => ipcRenderer.invoke('hellmc:skins-library'),
+        profile: () => ipcRenderer.invoke('hellmc:skins-profile'),
+        addFile: () => ipcRenderer.invoke('hellmc:skins-add-file'),
+        importByName: (name) => ipcRenderer.invoke('hellmc:skins-import-name', name),
+        importCurrent: () => ipcRenderer.invoke('hellmc:skins-import-current'),
+        remove: (id) => ipcRenderer.invoke('hellmc:skins-remove', id),
+        rename: (id, name) => ipcRenderer.invoke('hellmc:skins-rename', id, name),
+        setVariant: (id, variant) => ipcRenderer.invoke('hellmc:skins-set-variant', id, variant),
+        apply: (id) => ipcRenderer.invoke('hellmc:skins-apply', id),
+        clearLocal: () => ipcRenderer.invoke('hellmc:skins-clear-local'),
+        setCape: (capeId) => ipcRenderer.invoke('hellmc:skins-set-cape', capeId)
+    },
+    wardrobe: {
+        state: () => ipcRenderer.invoke('hellmc:wardrobe-state'),
+        sync: () => ipcRenderer.invoke('hellmc:wardrobe-sync'),
+        readPreview: (id) => ipcRenderer.invoke('hellmc:wardrobe-read-preview', id),
+        savePreview: (id, dataUrl) => ipcRenderer.invoke('hellmc:wardrobe-save-preview', id, dataUrl),
+        setSettings: (patch) => ipcRenderer.invoke('hellmc:wardrobe-set-settings', patch),
+        readItem: (id) => ipcRenderer.invoke('hellmc:wardrobe-read-item', id),
+        setCosmetic: (slot, id) => ipcRenderer.invoke('hellmc:wardrobe-set-cosmetic', slot, id),
+        setEmote: (index, id) => ipcRenderer.invoke('hellmc:wardrobe-set-emote', index, id),
+        remove: (id) => ipcRenderer.invoke('hellmc:wardrobe-remove', id)
+    },
     launch: {
         start: (target) => ipcRenderer.invoke('hellmc:launch-start', target),
         cancel: (target) => ipcRenderer.invoke('hellmc:launch-cancel', target),

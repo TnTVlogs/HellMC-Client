@@ -68,6 +68,33 @@ export interface Account {
   displayName: string
 }
 
+export type SkinVariant = 'classic' | 'slim'
+
+/** docs/client-cosmetics/14-skins.md: biblioteca LOCAL (PNG ja com a data URL, el renderer no fa xarxa). */
+export interface LibrarySkin {
+  id: string
+  name: string
+  variant: SkinVariant
+  source: string
+  addedAt: string
+  image: string
+}
+
+export interface ProfileSkin { id: string; url: string; active: boolean; variant: SkinVariant; image: string | null }
+export interface ProfileCape { id: string; url: string; active: boolean; alias: string; image: string | null }
+/** Perfil real de Mojang del compte Microsoft actiu. */
+export interface MojangProfile { uuid: string; name: string; skins: ProfileSkin[]; capes: ProfileCape[] }
+
+/** docs/client-cosmetics/17-armari-i-seleccio.md: catàleg local i selecció del compte actiu. */
+export type WardrobeKind = 'cosmetic' | 'emote'
+export type WardrobeSlot = 'head' | 'face' | 'back' | 'body' | 'feet'
+export interface WardrobeItem { id: string; kind: WardrobeKind; name: string; slot: WardrobeSlot | null; access: string; source: string; hasPreview: boolean }
+export interface WardrobeItemData { kind: WardrobeKind; model: string; attach: string; offset: number[]; scale: number }
+/** Ajustos del joc (el runtime els llegeix d'`equipped.json`). */
+export interface WardrobeSettings { hideOthers: boolean; maxDistance: number; autoCamera: boolean; wheelKey: string; menuKey: string }
+export interface WardrobeEquipped { cosmetics: Record<WardrobeSlot, string | null>; emotes: (string | null)[]; settings: WardrobeSettings }
+export interface WardrobeState { catalog: WardrobeItem[]; equipped: WardrobeEquipped }
+
 export type AuthStatus = 'ok' | 'offline' | 'invalid'
 
 export interface LaunchProgress {
@@ -219,6 +246,36 @@ export interface HellMCApi {
     addOffline(username: string): Promise<Account>
     remove(uuid: string): Promise<void>
     validate(): Promise<{ status: AuthStatus }>
+  }
+  skins: {
+    library(): Promise<{ skins: LibrarySkin[]; selection: Record<string, string> }>
+    /** `null` si el compte actiu no és Microsoft. */
+    profile(): Promise<MojangProfile | null>
+    /** Obre el selector de fitxers del sistema; `null` si es cancel·la. */
+    addFile(): Promise<LibrarySkin | null>
+    importByName(name: string): Promise<LibrarySkin>
+    importCurrent(): Promise<LibrarySkin>
+    remove(id: string): Promise<void>
+    rename(id: string, name: string): Promise<void>
+    setVariant(id: string, variant: SkinVariant): Promise<void>
+    /** Microsoft → puja a Mojang (tothom la veu); offline → només selecció local. */
+    apply(id: string): Promise<{ scope: 'mojang' | 'local' }>
+    clearLocal(): Promise<void>
+    setCape(capeId: string | null): Promise<MojangProfile>
+  }
+  wardrobe: {
+    state(): Promise<WardrobeState>
+    /** Baixa el catàleg del servidor (els administradors el gestionen al panell). Sense xarxa, deixa el que hi ha. */
+    sync(): Promise<WardrobeState>
+    /** Previsualització quieta d'un element (PNG com a data URL), o `null` si encara no n'hi ha. */
+    readPreview(id: string): Promise<string | null>
+    savePreview(id: string, dataUrl: string): Promise<WardrobeState>
+    /** Model de Blockbench (text) i dades d'enganxament, per a la previsualització. */
+    readItem(id: string): Promise<WardrobeItemData>
+    setSettings(patch: Partial<WardrobeSettings>): Promise<WardrobeState>
+    setCosmetic(slot: WardrobeSlot, id: string | null): Promise<WardrobeState>
+    setEmote(index: number, id: string | null): Promise<WardrobeState>
+    remove(id: string): Promise<WardrobeState>
   }
   /** 2.1: no existia al disseny original (06 §5) — calia un lloc per exposar
    * `configmanager.getSelectedServer/Version/LastVersionByServer` (01 §5) via IPC, ja que el

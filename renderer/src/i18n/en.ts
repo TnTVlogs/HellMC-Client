@@ -7,6 +7,8 @@ export interface Messages {
     servers: string
     versions: string
     news: string
+    appearance: string
+    wardrobe: string
     settings: string
     discord: string
     website: string
@@ -436,6 +438,127 @@ export interface Messages {
     confirmMessage: string
     confirmForceClose: string
     cancel: string
+  },
+  wardrobe: {
+    subtitle: string
+    tabCosmetics: string
+    tabEmotes: string
+    slot: {
+      head: string
+      face: string
+      back: string
+      body: string
+      feet: string
+    },
+    none: string
+    equip: string
+    unequip: string
+    equipped: string
+    emptyCosmetics: string
+    generatingPreviews: string
+    noPreview: string
+    emptyEmotes: string
+    wheel: string
+    wheelHint: string
+    sector: string
+    emptySector: string
+    clearSector: string
+    placeHere: string
+    delete: string
+    deleteTitle: string
+    deleteMessage: string
+    deleteConfirm: string
+    cancel: string
+    gameHint: string
+    viewerHint: string
+    search: string
+    noResults: string
+    tabSettings: string
+    hideOthers: string
+    maxDistance: string
+    autoCamera: string
+    wheelKey: string
+    menuKey: string
+    errors: {
+      UNKNOWN: string
+      INVALID_MODEL: string
+      INVALID_ID: string
+      INVALID_ACCOUNT: string
+      INVALID_SLOT: string
+      INVALID_KIND: string
+      NOT_FOUND: string
+      WRONG_SLOT: string
+      LIBRARY_FULL: string
+      KEY_IN_USE: string
+      INVALID_SETTINGS: string
+      INVALID_PREVIEW: string
+    }
+  },
+  skins: {
+    subtitle: string
+    tabSkins: string
+    tabCapes: string
+    offlineNotice: string
+    mojangNotice: string
+    currentTitle: string
+    importCurrent: string
+    addFile: string
+    importByName: string
+    namePlaceholder: string
+    import: string
+    libraryTitle: string
+    empty: string
+    apply: string
+    applyLocal: string
+    appliedMojang: string
+    appliedLocal: string
+    inUseLocal: string
+    inUseMojang: string
+    clearLocal: string
+    variant: string
+    variantClassic: string
+    variantSlim: string
+    rename: string
+    renamePrompt: string
+    delete: string
+    deleteTitle: string
+    deleteMessage: string
+    deleteConfirm: string
+    cancel: string
+    save: string
+    noCape: string
+    noCapes: string
+    activate: string
+    capeActive: string
+    capesOnlyMicrosoft: string
+    capesTitle: string
+    viewerIdle: string
+    viewerWalk: string
+    viewerHint: string
+    loading: string
+    previewing: string
+    sourceFile: string
+    sourceName: string
+    sourceAccount: string
+    viewerError: string
+    errors: {
+      NO_TOKEN: string
+      NOT_FOUND: string
+      RATE_LIMITED: string
+      NETWORK: string
+      REJECTED: string
+      HTTP_ERROR: string
+      INVALID_PNG: string
+      INVALID_SIZE: string
+      INVALID_VARIANT: string
+      INVALID_NAME: string
+      INVALID_URL: string
+      INVALID_CAPE: string
+      INVALID_ID: string
+      LIBRARY_FULL: string
+      NOT_MICROSOFT: string
+      UNKNOWN: string
+    }
   }
 }
 
@@ -446,6 +569,8 @@ const en: Messages = {
     servers: 'Servers',
     versions: 'Versions',
     news: 'News',
+    appearance: 'Appearance',
+    wardrobe: 'Wardrobe',
     settings: 'Settings',
     discord: 'Discord',
     website: 'Website'
@@ -875,6 +1000,127 @@ const en: Messages = {
     confirmMessage: 'This will immediately close {version}. Any unsaved progress in that game will be lost.',
     confirmForceClose: 'Yes, force close',
     cancel: 'Cancel'
+  },
+  wardrobe: {
+    subtitle: 'Cosmetics and emotes you wear in game',
+    tabCosmetics: 'Cosmetics',
+    tabEmotes: 'Emotes',
+    slot: {
+      head: 'Head',
+      face: 'Face',
+      back: 'Back',
+      body: 'Body',
+      feet: 'Feet'
+    },
+    none: 'Nothing equipped',
+    equip: 'Equip',
+    unequip: 'Take off',
+    equipped: 'Equipped',
+    emptyCosmetics: 'No cosmetics available yet. Administrators add them and they show up here on their own.',
+    generatingPreviews: 'Generating previews…',
+    noPreview: 'No preview',
+    emptyEmotes: 'No emotes available yet. Administrators add them and they show up here on their own.',
+    wheel: 'Emote wheel',
+    wheelHint: 'Pick a sector, then pick the emote to place in it. In game: hold B.',
+    sector: 'Sector {n}',
+    emptySector: 'Empty',
+    clearSector: 'Empty this sector',
+    placeHere: 'Place in sector {n}',
+    delete: 'Delete',
+    deleteTitle: 'Delete this item?',
+    deleteMessage: '«{name}» will be removed from this computer and from your wardrobe.',
+    deleteConfirm: 'Yes, delete',
+    cancel: 'Cancel',
+    gameHint: 'Changes show in game within a second; no restart needed.',
+    viewerHint: 'Click a name to preview it · drag to rotate',
+    search: 'Search…',
+    noResults: 'No results.',
+    tabSettings: 'Settings',
+    hideOthers: 'Hide other players’ cosmetics',
+    maxDistance: 'Maximum distance (blocks)',
+    autoCamera: 'Switch camera when doing an emote',
+    wheelKey: 'Emote wheel key',
+    menuKey: 'In-game wardrobe key',
+    errors: {
+      UNKNOWN: 'Something went wrong with the wardrobe.',
+      INVALID_MODEL: 'The file is not a valid Blockbench model (max. 8 MB).',
+      INVALID_ID: 'Invalid item.',
+      INVALID_ACCOUNT: 'Select an account first.',
+      INVALID_SLOT: 'Invalid slot.',
+      INVALID_KIND: 'Invalid item type.',
+      NOT_FOUND: 'Item not found.',
+      WRONG_SLOT: 'This cosmetic goes in a different slot.',
+      LIBRARY_FULL: 'Your wardrobe is full.',
+      KEY_IN_USE: 'That key is already used by the other action.',
+      INVALID_SETTINGS: 'Invalid settings.',
+      INVALID_PREVIEW: 'The preview could not be saved.'
+    }
+  },
+  skins: {
+    subtitle: 'Skins and capes for your account',
+    tabSkins: 'Skins',
+    tabCapes: 'Capes',
+    offlineNotice: 'Offline account: the skin you choose is saved only on this computer and only you will see it. No other player will see it. To change your skin for everyone you need a Microsoft account.',
+    mojangNotice: 'Changes are sent to Mojang and everyone sees them on every server. It can take a moment, and you will see it in game after you reconnect.',
+    currentTitle: 'Current skin on your account',
+    importCurrent: 'Save my current skin',
+    addFile: 'Add PNG file',
+    importByName: 'Import by player name',
+    namePlaceholder: 'Player name',
+    import: 'Import',
+    libraryTitle: 'My skins',
+    empty: 'You have no saved skins yet. Add a PNG file or import one by player name.',
+    apply: 'Apply to my account',
+    applyLocal: 'Use this skin',
+    appliedMojang: 'Skin updated on your Microsoft account.',
+    appliedLocal: 'Skin saved. Only you will see it.',
+    inUseLocal: 'In use (only you)',
+    inUseMojang: 'In use',
+    clearLocal: 'Stop using it',
+    variant: 'Arm model',
+    variantClassic: 'Classic',
+    variantSlim: 'Slim',
+    rename: 'Rename',
+    renamePrompt: 'Name',
+    delete: 'Delete',
+    deleteTitle: 'Delete this skin?',
+    deleteMessage: '«{name}» will be removed from your saved skins on this computer. It will not change your account.',
+    deleteConfirm: 'Yes, delete',
+    cancel: 'Cancel',
+    save: 'Save',
+    noCape: 'No cape',
+    noCapes: 'Your account has no capes.',
+    activate: 'Wear this cape',
+    capeActive: 'In use',
+    capesOnlyMicrosoft: 'Capes are only available with a Microsoft account.',
+    capesTitle: 'Your capes',
+    viewerIdle: 'Still',
+    viewerWalk: 'Walking',
+    viewerHint: 'Drag to rotate · scroll to zoom',
+    loading: 'Loading…',
+    previewing: 'Preview',
+    sourceFile: 'File',
+    sourceName: 'Imported',
+    sourceAccount: 'My account',
+    viewerError: 'The 3D preview could not start on this computer.',
+    errors: {
+      NO_TOKEN: 'Your Microsoft session has expired. Sign in again from Settings › Account.',
+      NOT_FOUND: 'Not found.',
+      RATE_LIMITED: 'Too many requests. Wait a minute and try again.',
+      NETWORK: 'No connection to Minecraft services.',
+      REJECTED: 'Minecraft rejected the change.',
+      HTTP_ERROR: 'Minecraft services returned an error. Try again later.',
+      INVALID_PNG: 'The file is not a valid PNG skin (max 1 MB).',
+      INVALID_SIZE: 'The skin must be 64×64 or 64×32 pixels.',
+      INVALID_VARIANT: 'Invalid arm model.',
+      INVALID_NAME: 'Enter a valid Minecraft name (3–16 letters, numbers or _).',
+      INVALID_URL: 'Invalid texture address.',
+      INVALID_CAPE: 'Invalid cape.',
+      INVALID_ID: 'Invalid item.',
+      LIBRARY_FULL: 'Your skin library is full.',
+      NOT_MICROSOFT: 'This needs a Microsoft account.',
+      UNKNOWN: 'Something went wrong.'
+    }
   }
 }
 

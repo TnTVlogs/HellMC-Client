@@ -17,7 +17,7 @@ asar: true
 compression: 'maximum'
 
 files:
-  - '!{dist,renderer,test,biome.json,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc}'
+  - '!{dist,runtime,renderer,test,biome.json,.gitignore,.vscode,docs,dev-app-update.yml,.nvmrc}'
 
 extraResources:
   - 'libraries'

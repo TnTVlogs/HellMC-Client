@@ -7,6 +7,8 @@ import { ServerDetail } from './views/ServerDetail'
 import { Versions } from './views/Versions'
 import { VersionDetail } from './views/VersionDetail'
 import { News } from './views/News'
+import { Appearance } from './views/Appearance'
+import { Wardrobe } from './views/Wardrobe'
 import { Loading, NeedNetwork, UpdateRequired } from './views/Boot'
 import { Welcome } from './views/Welcome'
 import { Terms } from './views/Terms'
@@ -40,6 +42,12 @@ export function App() {
       break
     case 'news':
       view = <News />
+      break
+    case 'appearance':
+      view = <Appearance />
+      break
+    case 'wardrobe':
+      view = <Wardrobe />
       break
     case 'settings':
       view = <Settings />
