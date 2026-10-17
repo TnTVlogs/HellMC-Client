@@ -122,7 +122,7 @@ function AccountZone() {
             <button key={a.uuid} type="button" class="nav-item" style={{ height: 48, width: '100%' }}
               aria-current={a.uuid === account?.uuid ? 'true' : undefined}
               onClick={() => { setOpen(false); void selectAccount(a.uuid).then(loadAccounts) }}>
-              <Avatar name={a.displayName} />
+              <Avatar name={a.displayName} uuid={a.uuid} />
               <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, minWidth: 0 }}>
                 <b class="small" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.displayName}</b>
                 <span class="xs faint">{a.type === 'microsoft' ? 'Microsoft' : t('ui.offlineLabel')}</span>
@@ -138,7 +138,7 @@ function AccountZone() {
       <div class="account">
         <button ref={triggerRef} type="button" onClick={() => setOpen((v) => !v)} title={name} aria-label={t('ui.switchAccount')}
           style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', background: 'none', border: 0, padding: 0, cursor: 'pointer', minWidth: 0, flex: 1, textAlign: 'left' }}>
-          <Avatar name={name} />
+          <Avatar name={name} uuid={account?.uuid} />
           <div class="who"><b>{name}</b><span class="muted xs">{kind}</span></div>
         </button>
         <button type="button" class={`icon-btn${route.value.name === 'settings' ? ' current' : ''}`} title={t('nav.settings')} aria-label={t('nav.settings')} onClick={() => navigate('/settings')}>
@@ -166,6 +166,12 @@ export function Shell({ children }: { children: ComponentChildren }) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  // El visor 3D es prepara en segon pla un cop la interfície ja és pintada: en obrir Aparença o Armari ja hi és.
+  useEffect(() => {
+    const id = window.setTimeout(preloadSkinViewer, 1500)
+    return () => window.clearTimeout(id)
   }, [])
 
   return (

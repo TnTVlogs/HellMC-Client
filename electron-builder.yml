@@ -14,6 +14,12 @@ copyright: 'Copyright © 2017-2026 Daniel D. Scalzi, TnTVlogs'
 
 
 asar: true
+# LGPL (B8): `hellmc-core` va FORA de l'asar (a `resources/app.asar.unpacked/node_modules/hellmc-core`) perquè es pugui
+# substituir per una versió modificada copiant fitxers (vegeu NOTICE, «Com substituir hellmc-core»). Aquests fitxers
+# NO queden coberts per la validació d'integritat de l'asar (`enableEmbeddedAsarIntegrityValidation`): decisió assumida.
+# Les seves dependències (got, winston…) continuen dins l'asar; Electron les resol per la ruta virtual de l'asar.
+asarUnpack:
+  - 'node_modules/hellmc-core/**'
 compression: 'maximum'
 
 files:
@@ -67,10 +73,11 @@ directories:
   buildResources: 'build'
   output: 'dist'
 
-# S10: *fuses* d'Electron. `runAsNode` es queda activat: el receptor de descàrregues (`HellMC-Core`) es llança amb
-# `child_process.fork` sobre el binari d'Electron i en depèn (només es podrà desactivar migrant-lo a `utilityProcess`).
+# S10: *fuses* d'Electron. `runAsNode` desactivat (B23): el receptor de descàrregues (`HellMC-Core`) ja no es llança amb
+# `child_process.fork` sobre el binari d'Electron sinó amb `utilityProcess` (`src-node/receiverSpawner.js`). Cap altre codi
+# fa servir `ELECTRON_RUN_AS_NODE`. Rollback d'una línia: `runAsNode: true` (i injectar `NodeForkSpawner` a Core).
 electronFuses:
-  runAsNode: true
+  runAsNode: false
   enableNodeCliInspectArguments: false
   enableEmbeddedAsarIntegrityValidation: true
   onlyLoadAppFromAsar: true

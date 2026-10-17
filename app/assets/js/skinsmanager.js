@@ -16,6 +16,14 @@ const SESSION_SERVER = 'https://sessionserver.mojang.com'
 const TEXTURE_HOST = 'textures.minecraft.net'
 const MAX_PNG_BYTES = 1024 * 1024
 const MAX_LIBRARY = 200
+/** Errors de connectivitat: amb aquests es serveix el que hi ha a la caché en lloc de fallar (xarxa que bloqueja Mojang, sense internet, límit de peticions). */
+const UNREACHABLE = new Set(['NETWORK', 'HTTP_ERROR', 'RATE_LIMITED'])
+/** APIs públiques i gratuïtes que serveixen la skin pel UUID; només es consulten si Mojang no respon i no hi ha res a la caché. */
+const SKIN_APIS = [
+    (uuid) => `https://mc-heads.net/skin/${uuid}`,
+    (uuid) => `https://crafatar.com/skins/${uuid}`,
+    (uuid) => `https://minotar.net/skin/${uuid}`
+]
 const VARIANTS = ['classic', 'slim']
 const PngUtil = require('./pngutil')
 
@@ -71,6 +79,32 @@ function isValidMinecraftName(name) {
  */
 function create({ fetchFn, getToken, libraryDir }) {
     const libraryFile = path.join(libraryDir, 'library.json')
+    const cacheDir = path.join(libraryDir, 'cache')
+
+    // ── caché (perfil, textures i última skin de cada compte) ───────────────────────────────
+    function normUuid(value) {
+        const plain = typeof value === 'string' ? value.replace(/-/g, '').toLowerCase() : ''
+        return /^[0-9a-f]{32}$/.test(plain) ? plain : null
+    }
+    function cacheWrite(file, data) {
+        try {
+            fs.mkdirSync(cacheDir, { recursive: true })
+            fs.writeFileSync(`${file}.tmp`, data)
+            fs.renameSync(`${file}.tmp`, file)
+        } catch {
+            // la caché és només una optimització: si no es pot escriure, no passa res
+        }
+    }
+    function cacheRead(file) {
+        try {
+            return fs.readFileSync(file)
+        } catch {
+            return null
+        }
+    }
+    const textureFile = (url) => path.join(cacheDir, `tex-${crypto.createHash('sha1').update(url).digest('hex')}.png`)
+    const accountSkinFile = (uuid) => path.join(cacheDir, `skin-${uuid}.png`)
+    const profileFile = (uuid) => path.join(cacheDir, `profile-${uuid}.json`)
 
     // ── xarxa ──────────────────────────────────────────────────────────────────────────────
     async function request(url, init, { auth = false, timeoutMs = 15000 } = {}) {
@@ -111,10 +145,42 @@ function create({ fetchFn, getToken, libraryDir }) {
         }
     }
 
-    /** Perfil del compte actiu: skin i capes (amb les que té i quina és activa). */
-    async function getProfile() {
-        const response = await request(`${MC_SERVICES}/minecraft/profile`, { method: 'GET' }, { auth: true })
-        return mapProfile(await response.json())
+    /** Perfil desat de l'última vegada que Mojang va respondre (re-validat: només textures del seu host). */
+    function readCachedProfile(key) {
+        const buffer = cacheRead(profileFile(key))
+        if (buffer == null) return null
+        try {
+            const raw = JSON.parse(buffer.toString('utf8'))
+            const usable = (item) => item != null && typeof item.url === 'string' && isTextureUrl(item.url)
+            return {
+                uuid: String(raw.uuid),
+                name: String(raw.name),
+                skins: (raw.skins || []).filter(usable).map((s) => ({ id: String(s.id), url: secureTextureUrl(s.url), active: s.active === true, variant: s.variant === 'slim' ? 'slim' : 'classic' })),
+                capes: (raw.capes || []).filter(usable).map((c) => ({ id: String(c.id), url: secureTextureUrl(c.url), active: c.active === true, alias: String(c.alias || '') }))
+            }
+        } catch {
+            return null
+        }
+    }
+
+    /**
+     * Perfil del compte actiu: skin i capes (amb les que té i quina és activa). Si Mojang no es pot contactar
+     * i n'hi ha un de desat per a `accountUuid`, es retorna aquest amb `stale: true`.
+     */
+    async function getProfile(accountUuid) {
+        const key = normUuid(accountUuid)
+        try {
+            const response = await request(`${MC_SERVICES}/minecraft/profile`, { method: 'GET' }, { auth: true })
+            const profile = mapProfile(await response.json())
+            if (key != null) cacheWrite(profileFile(key), JSON.stringify(profile))
+            return profile
+        } catch (err) {
+            if (key != null && err instanceof SkinsError && UNREACHABLE.has(err.code)) {
+                const cached = readCachedProfile(key)
+                if (cached != null) return { ...cached, stale: true }
+            }
+            throw err
+        }
     }
 
     async function setSkinFromPng(input, variant) {
@@ -142,20 +208,85 @@ function create({ fetchFn, getToken, libraryDir }) {
         return mapProfile(await response.json())
     }
 
-    /** Baixa una textura oficial i la retorna com a data URL (així el renderer no depèn de CORS ni fa xarxa). */
-    async function fetchTexture(url) {
-        if (!isTextureUrl(url)) throw new SkinsError('INVALID_URL')
-        const response = await request(secureTextureUrl(url), { method: 'GET' })
-        const length = Number(response.headers?.get('content-length'))
-        if (Number.isFinite(length) && length > MAX_PNG_BYTES) throw new SkinsError('INVALID_PNG')
-        const raw = Buffer.from(await response.arrayBuffer())
-        let buffer
+    function cleanTexture(raw) {
         try {
-            buffer = PngUtil.clean(raw, { maxWidth: 2048, maxHeight: 1024, maxBytes: MAX_PNG_BYTES }).data
+            return PngUtil.clean(raw, { maxWidth: 2048, maxHeight: 1024, maxBytes: MAX_PNG_BYTES }).data
         } catch {
             throw new SkinsError('INVALID_PNG')
         }
+    }
+
+    /** Skin d'un jugador pel UUID des d'una API pública (per quan textures.minecraft.net no és accessible). `null` si cap respon. */
+    async function fetchSkinFromApi(uuid) {
+        const key = normUuid(uuid)
+        if (key == null) return null
+        for (const build of SKIN_APIS) {
+            try {
+                const response = await request(build(key), { method: 'GET' }, { timeoutMs: 8000 })
+                const length = Number(response.headers?.get('content-length'))
+                if (Number.isFinite(length) && length > MAX_PNG_BYTES) continue
+                return parsePng(Buffer.from(await response.arrayBuffer())).data
+            } catch {
+                // aquesta API no respon o no serveix una skin vàlida: es prova la següent
+            }
+        }
+        return null
+    }
+
+    /**
+     * Baixa una textura oficial i la retorna com a data URL (així el renderer no depèn de CORS ni fa xarxa). Cada
+     * textura baixada es desa (la URL és un hash del contingut: no caduca); si Mojang no respon es serveix la desada.
+     * Amb `accountUuid` (la skin activa d'un compte) es recorda com a «última skin» del compte i, si no hi ha res
+     * desat, es prova una API pública.
+     */
+    async function fetchTexture(url, { accountUuid } = {}) {
+        if (!isTextureUrl(url)) throw new SkinsError('INVALID_URL')
+        const secure = secureTextureUrl(url)
+        const key = normUuid(accountUuid)
+        let buffer
+        try {
+            const response = await request(secure, { method: 'GET' })
+            const length = Number(response.headers?.get('content-length'))
+            if (Number.isFinite(length) && length > MAX_PNG_BYTES) throw new SkinsError('INVALID_PNG')
+            buffer = cleanTexture(Buffer.from(await response.arrayBuffer()))
+            cacheWrite(textureFile(secure), buffer)
+        } catch (err) {
+            if (!(err instanceof SkinsError && UNREACHABLE.has(err.code))) throw err
+            const cached = cacheRead(textureFile(secure))
+            if (cached != null) buffer = cleanTexture(cached)
+            else if (key != null) buffer = await fetchSkinFromApi(key)
+            if (buffer == null) throw err
+        }
+        if (key != null) cacheWrite(accountSkinFile(key), buffer)
         return { buffer, dataUrl: dataUrl(buffer) }
+    }
+
+    /**
+     * Skin que representa un compte Microsoft (per al cap de l'avatar): la real si `live` i Mojang respon, si no la
+     * darrera que es va veure, i com a últim recurs una API pública. PNG net, o `null`.
+     */
+    async function accountSkin(accountUuid, { live = false } = {}) {
+        const key = normUuid(accountUuid)
+        if (key == null) return null
+        if (live) {
+            try {
+                const active = (await getProfile(accountUuid)).skins.find((s) => s.active)
+                if (active != null) return (await fetchTexture(active.url, { accountUuid })).buffer
+            } catch {
+                // sense Mojang: es passa a la caché
+            }
+        }
+        const cached = cacheRead(accountSkinFile(key))
+        if (cached != null) {
+            try {
+                return parsePng(cached).data
+            } catch {
+                // desada malmesa: es descarta
+            }
+        }
+        const viaApi = await fetchSkinFromApi(key)
+        if (viaApi != null) cacheWrite(accountSkinFile(key), viaApi)
+        return viaApi
     }
 
     /** Skin i capa públiques d'un jugador pel seu nom (per importar). */
@@ -283,7 +414,7 @@ function create({ fetchFn, getToken, libraryDir }) {
     }
 
     return {
-        getProfile, setSkinFromPng, setActiveCape, fetchTexture, lookupByName,
+        getProfile, setSkinFromPng, setActiveCape, fetchTexture, fetchSkinFromApi, accountSkin, lookupByName,
         listLibrary, addToLibrary, removeFromLibrary, renameInLibrary, setVariantInLibrary, readLibraryPng, setLocalSelection
     }
 }

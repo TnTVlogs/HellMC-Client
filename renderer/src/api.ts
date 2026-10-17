@@ -83,7 +83,14 @@ export interface LibrarySkin {
 export interface ProfileSkin { id: string; url: string; active: boolean; variant: SkinVariant; image: string | null }
 export interface ProfileCape { id: string; url: string; active: boolean; alias: string; image: string | null }
 /** Perfil real de Mojang del compte Microsoft actiu. */
-export interface MojangProfile { uuid: string; name: string; skins: ProfileSkin[]; capes: ProfileCape[] }
+export interface MojangProfile {
+  uuid: string
+  name: string
+  skins: ProfileSkin[]
+  capes: ProfileCape[]
+  /** Mojang no ha respost: són les dades desades de l'última vegada. */
+  stale?: boolean
+}
 
 /** docs/client-cosmetics/17-armari-i-seleccio.md: catàleg local i selecció del compte actiu. */
 export type WardrobeKind = 'cosmetic' | 'emote'
@@ -251,6 +258,8 @@ export interface HellMCApi {
     library(): Promise<{ skins: LibrarySkin[]; selection: Record<string, string> }>
     /** `null` si el compte actiu no és Microsoft. */
     profile(): Promise<MojangProfile | null>
+    /** Skin que representa un compte (PNG com a data URL; per al cap de l'avatar), o `null` si no se'n troba cap. */
+    avatar(uuid: string): Promise<string | null>
     /** Obre el selector de fitxers del sistema; `null` si es cancel·la. */
     addFile(): Promise<LibrarySkin | null>
     importByName(name: string): Promise<LibrarySkin>

@@ -22,7 +22,7 @@
     "dist:mac": "npm run dist -- -m",
     "dist:linux": "npm run dist -- -l",
     "lint": "biome lint .",
-    "test": "vitest run --config renderer/vite.config.mts && node test/modgroups.test.js && node test/serversdat.test.js && node test/configmanager.test.js && node test/applog.test.js && node test/security.test.js && node test/preload-constants.test.js && node test/offline-uuid.test.js && node test/datasharing.test.js && node test/telemetry.test.js && node test/skins.test.js && node test/wardrobe.test.js && node test/runtime.test.js && node test/catalogsync.test.js && node test/pngutil.test.js"
+    "test": "vitest run --config renderer/vite.config.mts && node test/modgroups.test.js && node test/serversdat.test.js && node test/configmanager.test.js && node test/applog.test.js && node test/security.test.js && node test/preload-constants.test.js && node test/offline-uuid.test.js && node test/datasharing.test.js && node test/telemetry.test.js && node test/skins.test.js && node test/wardrobe.test.js && node test/runtime.test.js && node test/catalogsync.test.js && node test/pngutil.test.js && node test/receiver-spawner.test.js"
   },
   "engines": {
     "node": "22.x.x"
@@ -34,8 +34,8 @@
     "dompurify": "^3.4.16",
     "electron-updater": "^6.7.3",
     "fs-extra": "^11.3.3",
-    "hellmc-core": "file:../HellMC-Core",
-    "hellmc-distribution-types": "file:../HellMC-Distribution-Types",
+    "hellmc-core": "github:TnTVlogs/HellMC-Core#v3.0.0-hellmc.1",
+    "hellmc-distribution-types": "github:TnTVlogs/HellMC-Distribution-Types#v1.0.0",
     "lucide-preact": "^1.51.0",
     "marked": "^18.0.14",
     "mcstatus-util": "^5.4.6",
@@ -62,10 +62,12 @@
     "type": "git",
     "url": "git+https://github.com/TnTVlogs/HellMC-Client.git"
   },
+  "overrides": {
+    "hellmc-distribution-types": "$hellmc-distribution-types"
+  },
   "allowScripts": {
     "esbuild@0.25.12": true,
     "electron-winstaller@5.4.0": true,
-    "file:../../HellMC-Distribution-Types": true,
     "electron@44.4.5": true
   }
 }

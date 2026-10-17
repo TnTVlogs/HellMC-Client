@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { Check, FileUp, Info, Pencil, Plus, Trash2, UserRound } from 'lucide-preact'
 import { t } from '../i18n'
 import type { LibrarySkin, SkinVariant } from '../api'
@@ -30,7 +30,13 @@ export function Appearance() {
   const busy = appearanceBusy.value
 
   const [tab, setTab] = useState<'skins' | 'capes'>('skins')
-  const [sel, setSel] = useState<string | null>(null)
+  // Selecció inicial calculada amb el que ja hi ha a les stores (en tornar a la vista el visor neix amb la skin bona).
+  const [sel, setSel] = useState<string | null>(() => {
+    const current = profile.value?.skins.find((s) => s.active) != null
+    const local = accountUuid != null ? localSelection.value[accountUuid] : undefined
+    if (isMicrosoft && current) return CURRENT
+    return local != null && lib.some((s) => s.id === local) ? local : lib[0]?.id ?? null
+  })
   const [capeSel, setCapeSel] = useState<string | null | undefined>(undefined)
   const [walking, setWalking] = useState(false)
   const [importName, setImportName] = useState('')
@@ -38,11 +44,16 @@ export function Appearance() {
   const [renameValue, setRenameValue] = useState('')
   const [deleting, setDeleting] = useState<LibrarySkin | null>(null)
 
+  // Només es reinicia en CANVIAR de compte; en entrar a la vista es conserva la selecció calculada i es refresquen les dades.
+  const lastAccount = useRef(accountUuid)
   useEffect(() => {
-    setSel(null)
-    setCapeSel(undefined)
-    setTab('skins')
-    void loadAppearance()
+    if (lastAccount.current !== accountUuid) {
+      lastAccount.current = accountUuid
+      setSel(null)
+      setCapeSel(undefined)
+      setTab('skins')
+    }
+    void loadAppearance(accountUuid)
   }, [accountUuid])
 
   // Selecció inicial (o si l'element seleccionat ha desaparegut).
@@ -94,6 +105,7 @@ export function Appearance() {
 
       {account != null && !isMicrosoft && <Banner tone="info" icon={Info}>{t('skins.offlineNotice')}</Banner>}
       {isMicrosoft && <p class="muted small">{t('skins.mojangNotice')}</p>}
+      {prof?.stale === true && <Banner tone="info" icon={Info}>{t('skins.cachedNotice')}</Banner>}
       {appearanceError.value != null && <Banner tone="warn">{appearanceError.value}</Banner>}
       {appearanceNotice.value != null && <p class="small" role="status" style={{ color: 'var(--success)' }}>{appearanceNotice.value}</p>}
 

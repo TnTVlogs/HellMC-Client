@@ -1,6 +1,8 @@
 import { signal } from '@preact/signals'
 import { hellmc, type LibrarySkin, type MojangProfile } from '../api'
 import { t } from '../i18n'
+import { selectedUuid } from './account'
+import { loadAvatar } from './avatars'
 
 // docs/client-cosmetics/14-skins.md: biblioteca local de skins + perfil real de Mojang (només
 // comptes Microsoft). Cap component escriu aquests signals directament, només les accions d'aquí.
@@ -42,22 +44,40 @@ async function reloadLibrary(): Promise<void> {
   localSelection.value = result.selection
 }
 
-/** Carrega biblioteca i perfil. Si el perfil de Mojang falla, la biblioteca local es mostra igualment. */
-export async function loadAppearance(): Promise<void> {
-  appearanceLoading.value = true
+/** El cap del compte actiu es torna a demanar: la skin pot haver canviat (o s'acaba de desar a la caché). */
+function refreshAvatar(): void {
+  if (selectedUuid.value != null) void loadAvatar(selectedUuid.value, true)
+}
+
+/** Compte del qual `library` i `profile` ja tenen dades: en tornar-hi es mostren a l'instant i es refresquen en segon pla. */
+let loadedFor: string | null = null
+
+/**
+ * Carrega biblioteca i perfil. Si el perfil de Mojang falla, la biblioteca local es mostra igualment. Si ja hi ha dades
+ * d'aquest compte no es mostra l'indicador de càrrega (es veuen les que hi ha mentre es refresquen).
+ */
+export async function loadAppearance(accountUuid: string | null): Promise<void> {
+  const warm = accountUuid != null && loadedFor === accountUuid
+  if (!warm) {
+    library.value = []
+    profile.value = null
+    appearanceLoading.value = true
+  }
   appearanceError.value = null
   try {
     await reloadLibrary()
+    loadedFor = accountUuid
     try {
       profile.value = await hellmc.skins.profile()
     } catch (err) {
-      profile.value = null
+      if (!warm) profile.value = null
       appearanceError.value = skinsErrorMessage(err)
     }
   } catch (err) {
     appearanceError.value = skinsErrorMessage(err)
   } finally {
     appearanceLoading.value = false
+    refreshAvatar()
   }
 }
 
@@ -116,6 +136,7 @@ export async function applySkin(id: string): Promise<void> {
     await reloadLibrary()
     if (scope === 'mojang') profile.value = await hellmc.skins.profile()
     appearanceNotice.value = t(scope === 'mojang' ? 'skins.appliedMojang' : 'skins.appliedLocal')
+    refreshAvatar()
   })
 }
 
@@ -123,6 +144,7 @@ export async function clearLocalSkin(): Promise<void> {
   await run(async () => {
     await hellmc.skins.clearLocal()
     await reloadLibrary()
+    refreshAvatar()
   })
 }
 

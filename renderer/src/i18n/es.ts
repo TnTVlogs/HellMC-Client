@@ -334,6 +334,9 @@ const es: Messages = {
       SPAWN_FAILED: "No se ha podido abrir el proceso del juego.",
       ALREADY_RUNNING: "Esta versión ya se está ejecutando o iniciando.",
       VERSION_BUSY: "Esta versión se está instalando, verificando o eliminando. Espera a que termine.",
+      MODULE_HASH_MISSING: "Un módulo de la distribución no tiene hash SHA-256 y no se puede verificar. Avisa al administrador del servidor.",
+      MODULE_HASH_INVALID: "Un módulo de la distribución tiene un hash SHA-256 mal formado. Avisa al administrador del servidor.",
+      RECEIVER_EXITED: "El proceso de descarga se ha detenido de forma inesperada. Puede ser el antivirus; vuelve a intentarlo o añade una excepción para HellMC.",
       GAME_EXITED: "El juego se ha cerrado inesperadamente (código {code})."
     }
   },
@@ -541,6 +544,8 @@ const es: Messages = {
     sourceName: 'Importada',
     sourceAccount: 'Mi cuenta',
     viewerError: 'La vista previa 3D no se ha podido iniciar en este ordenador.',
+    cachedNotice: 'No se puede contactar con Mojang: se muestra la última skin guardada.',
+    viewerReload: 'Recargar el visor',
     errors: {
       NO_TOKEN: 'Tu sesión de Microsoft ha caducado. Inicia sesión de nuevo en Configuración › Cuenta.',
       NOT_FOUND: 'No encontrado.',

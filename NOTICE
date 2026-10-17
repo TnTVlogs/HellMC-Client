@@ -14,3 +14,16 @@ This product uses:
     https://github.com/TnTVlogs/HellMC-Distribution-Types
 
 Full license texts: LICENSE.txt, THIRD_PARTY_LICENSES.txt.
+
+How to replace hellmc-core (LGPL-3.0, section 4)
+  HellMC-Core is a separate module, not merged into any bundle, and it is shipped OUTSIDE the app.asar archive so that
+  you can replace it with your own modified version:
+    1. Get the corresponding source: https://github.com/TnTVlogs/HellMC-Core (the tag matching the installed version).
+    2. Build it (npm install && npm run build) so that the "dist" folder exists.
+    3. Close HellMC Client and copy your "dist" folder and package.json over
+         <install folder>/resources/app.asar.unpacked/node_modules/hellmc-core/
+       (on Windows it is normally a folder under %LOCALAPPDATA%\Programs).
+    4. Start the launcher. The download process (dist/dl/receivers/ReceiverExecutor.js) and all of hellmc-core are
+       now loaded from your copy. Its own dependencies (got, winston...) still come from app.asar.
+  Note: files in app.asar.unpacked are not covered by the asar integrity check; app.asar itself must stay unmodified.
+  Alternatively, rebuild the whole client from source with your own copy of HellMC-Core.

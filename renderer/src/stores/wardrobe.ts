@@ -46,11 +46,15 @@ async function run(action: () => Promise<WardrobeState | null>): Promise<void> {
   }
 }
 
-export async function loadWardrobe(): Promise<void> {
-  wardrobeLoading.value = true
+/** Compte del qual el catàleg i la selecció ja són aquí: en tornar-hi es veuen a l'instant i es refresquen en segon pla. */
+let loadedFor: string | null = null
+
+export async function loadWardrobe(accountUuid: string | null): Promise<void> {
+  if (accountUuid == null || loadedFor !== accountUuid) wardrobeLoading.value = true
   wardrobeError.value = null
   try {
     apply(await hellmc.wardrobe.state())
+    loadedFor = accountUuid
   } catch (err) {
     wardrobeError.value = wardrobeErrorMessage(err)
   } finally {
@@ -70,6 +74,12 @@ export const removeItem = (id: string) => run(() => {
 // ── Previsualització 3D (models llegits pel procés principal, interpretats aquí amb `utils/bbmodel`) ──
 const cosmeticCache = new Map<string, CosmeticSpec | null>()
 const emoteCache = new Map<string, EmoteSpec | null>()
+
+/** El que ja és a la memòria (sense llegir res): permet pintar el visor al primer fotograma en tornar a l'Armari. */
+export const peekCosmeticSpec = (id: string): CosmeticSpec | null => cosmeticCache.get(id) ?? null
+
+/** Skin que el visor de l'Armari mostra per a cada compte (uuid), perquè en tornar-hi no passi per Steve mentre es torna a llegir. */
+export const wardrobeSkins = new Map<string, { image: string | null; variant: 'classic' | 'slim' }>()
 
 /** Cosmètic llest per al visor, o `null` si el fitxer no es pot llegir (es memoritza; s'esborra en esborrar l'element). */
 export async function loadCosmeticSpec(id: string): Promise<CosmeticSpec | null> {

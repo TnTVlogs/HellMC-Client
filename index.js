@@ -1,5 +1,5 @@
 // Requirements
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } = require('electron')
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell, utilityProcess } = require('electron')
 const autoUpdater = require('electron-updater').autoUpdater
 const fs = require('fs')
 const isDev = require('./app/assets/js/isdev')
@@ -190,6 +190,9 @@ const ProcessBuilder = require('./app/assets/js/processbuilder')
 const DataSharing = require('./app/assets/js/datasharing')
 const ServersDat = require('./app/assets/js/serversdat')
 const { FullRepair, DistributionIndexProcessor, MojangIndexProcessor, downloadFile } = require('hellmc-core/dl')
+// B23/S10: el receptor de descàrregues corre en un `utilityProcess` (no `fork` sobre el binari amb `RunAsNode`).
+// `utilityProcess.fork` només es crida en llançar (app ja llesta); aquí només s'injecta l'estratègia.
+require('./src-node/receiverSpawner').installReceiverSpawner(FullRepair, utilityProcess)
 // 2.3 (JDK auto-download): `validateLocalFile` viu a `hellmc-core/common` (no a `hellmc-core/dl`
 // amb la resta d'utilitats de descàrrega) — mateix mòdul que `FullRepair`.
 const { validateLocalFile } = require('hellmc-core/common')
@@ -983,9 +986,10 @@ async function skinsGuard(fn) {
 }
 
 async function withTextures(profile) {
-    const load = async (url) => {
+    // La skin activa es recorda com a «última skin» del compte i, sense Mojang ni caché, es demana a una API pública.
+    const load = async (url, accountUuid) => {
         try {
-            return (await skins.fetchTexture(url)).dataUrl
+            return (await skins.fetchTexture(url, { accountUuid })).dataUrl
         } catch {
             return null
         }
@@ -993,7 +997,8 @@ async function withTextures(profile) {
     return {
         uuid: profile.uuid,
         name: profile.name,
-        skins: await Promise.all(profile.skins.map(async (s) => ({ ...s, image: await load(s.url) }))),
+        stale: profile.stale === true,
+        skins: await Promise.all(profile.skins.map(async (s) => ({ ...s, image: await load(s.url, s.active ? profile.uuid : undefined) }))),
         capes: await Promise.all(profile.capes.map(async (c) => ({ ...c, image: await load(c.url) })))
     }
 }
@@ -1008,7 +1013,20 @@ function libraryWithImages() {
 ipcMain.handle('hellmc:skins-library', () => skinsGuard(async () => libraryWithImages()))
 ipcMain.handle('hellmc:skins-profile', () => skinsGuard(async () => {
     if (!selectedAccountKind().microsoft) return null
-    return await withTextures(await skins.getProfile())
+    return await withTextures(await skins.getProfile(selectedAccountKind().uuid))
+}))
+// Skin que representa un compte (per al cap de l'avatar): offline → la seleccionada en local; Microsoft → la real,
+// la darrera vista o una API pública. PNG com a data URL, o null (el renderer mostra Steve).
+ipcMain.handle('hellmc:skins-avatar', (_event, uuid) => skinsGuard(async () => {
+    const account = typeof uuid === 'string' ? ConfigManager.getAuthAccount(uuid) : null
+    if (account == null || account.uuid !== uuid) return null
+    if (account.type !== 'microsoft') {
+        const { skins: list, selection } = skins.listLibrary()
+        const picked = list.find((s) => s.id === selection[account.uuid])
+        return picked != null ? skins.readLibraryPng(picked.id).dataUrl : null
+    }
+    const buffer = await skins.accountSkin(account.uuid, { live: selectedAccountKind().uuid === account.uuid })
+    return buffer != null ? `data:image/png;base64,${buffer.toString('base64')}` : null
 }))
 ipcMain.handle('hellmc:skins-add-file', (event) => skinsGuard(async () => {
     const senderWin = BrowserWindow.fromWebContents(event.sender)
@@ -1027,10 +1045,10 @@ ipcMain.handle('hellmc:skins-import-name', (_event, name) => skinsGuard(async ()
 }))
 ipcMain.handle('hellmc:skins-import-current', () => skinsGuard(async () => {
     if (!selectedAccountKind().microsoft) throw new SkinsManager.SkinsError('NOT_MICROSOFT')
-    const profile = await skins.getProfile()
+    const profile = await skins.getProfile(selectedAccountKind().uuid)
     const active = profile.skins.find((s) => s.active)
     if (active == null) throw new SkinsManager.SkinsError('NOT_FOUND')
-    const texture = await skins.fetchTexture(active.url)
+    const texture = await skins.fetchTexture(active.url, { accountUuid: profile.uuid })
     return skins.addToLibrary({ name: profile.name, variant: active.variant, png: texture.buffer, source: 'account' })
 }))
 ipcMain.handle('hellmc:skins-remove', (_event, id) => skinsGuard(async () => skins.removeFromLibrary(id)))
@@ -1408,7 +1426,9 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         // 07 §11: sense connexió i versió no instal·lada → diàleg «Cal connexió» (no un error genèric).
         const networkCodes = ['ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'ECONNREFUSED', 'ECONNRESET', 'ENETUNREACH', 'EHOSTUNREACH']
         const isNetwork = networkCodes.some((c) => err?.code === c || String(err?.message).includes(c))
-        send({ phase: 'error', percent: 0, error: { code: isNetwork ? 'NEEDS_NETWORK' : 'LAUNCH_FAILED', message: err?.message || String(err) } })
+        // Mòduls sense SHA-256 vàlid (hellmc-core `ArtifactHash`) o receptor de descàrregues mort (`RECEIVER_EXITED`): el missatge comença amb el codi estable, que el renderer tradueix.
+        const hashCode = /^(MODULE_HASH_MISSING|MODULE_HASH_INVALID|RECEIVER_EXITED):/.exec(String(err?.message))?.[1]
+        send({ phase: 'error', percent: 0, error: { code: hashCode ?? (isNetwork ? 'NEEDS_NETWORK' : 'LAUNCH_FAILED'), message: err?.message || String(err) } })
     } finally {
         if (releaseRepairLock != null) { releaseRepairLock(); releaseRepairLock = null }
         // Només si la clau encara és d'aquest llançament: després d'un cancel·lar, l'usuari pot haver-ne començat un de nou.

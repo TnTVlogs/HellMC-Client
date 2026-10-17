@@ -180,6 +180,8 @@ button.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--
 .playcard .art { aspect-ratio: 16 / 6; }
 .playcard .body { padding: var(--space-5); display: flex; flex-direction: column; gap: var(--space-4); }
 .pc-head { display: flex; align-items: center; gap: var(--space-3); margin-top: calc(var(--space-8) * -1); position: relative; z-index: 1; }
+.avatar.has-skin { background: none; overflow: hidden; }
+.avatar.has-skin .thumb { display: block; border-radius: 0; }
 .avatar.g1, .avatar.g2, .avatar.g3, .avatar.g4, .avatar.g5, .avatar.g6, .avatar.g7, .avatar.g8 { background: var(--g); }
 .sicon.img { object-fit: cover; background: var(--surface-2); }
 .sicon { width: 56px; height: 56px; border-radius: 14px; flex: none; display: grid; place-items: center; font-weight: 700; font-size: 1.2rem; color: #fff; border: 3px solid var(--surface-1); background: var(--g); }
@@ -449,10 +451,11 @@ input.field { min-width: 0; }
 .appearance-viewer { display: flex; flex-direction: column; gap: var(--space-4); position: sticky; top: 0; }
 .skin-viewer { position: relative; width: 100%; height: 420px; border-radius: var(--radius-md); background: radial-gradient(ellipse at 50% 35%, var(--surface-3), var(--surface-2)); overflow: hidden; cursor: grab; }
 .skin-viewer:active { cursor: grabbing; }
+.skin-viewer-slot { position: absolute; inset: 0; }
 .skin-viewer canvas { display: block; width: 100%; height: 100%; }
 .skin-viewer-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); background: color-mix(in srgb, var(--surface-2) 82%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease); }
 .skin-viewer-loading.on { opacity: 1; }
-.skin-viewer-msg { position: absolute; inset: auto 0 50% 0; text-align: center; padding: 0 var(--space-4); }
+.skin-viewer-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); text-align: center; padding: 0 var(--space-4); }
 .appearance-viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appearance-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .appearance-pane { display: flex; flex-direction: column; gap: var(--space-4); }

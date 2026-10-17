@@ -334,6 +334,9 @@ export interface Messages {
       SPAWN_FAILED: string
       ALREADY_RUNNING: string
       VERSION_BUSY: string
+      MODULE_HASH_MISSING: string
+      MODULE_HASH_INVALID: string
+      RECEIVER_EXITED: string
       GAME_EXITED: string
     }
   }
@@ -541,6 +544,8 @@ export interface Messages {
     sourceName: string
     sourceAccount: string
     viewerError: string
+    cachedNotice: string
+    viewerReload: string
     errors: {
       NO_TOKEN: string
       NOT_FOUND: string
@@ -896,6 +901,9 @@ const en: Messages = {
       SPAWN_FAILED: "The game process could not be opened.",
       ALREADY_RUNNING: "This version is already running or starting.",
       VERSION_BUSY: "This version is being installed, verified or removed. Wait for it to finish.",
+      MODULE_HASH_MISSING: "A distribution module has no SHA-256 hash and cannot be verified. Contact the server administrator.",
+      MODULE_HASH_INVALID: "A distribution module has a malformed SHA-256 hash. Contact the server administrator.",
+      RECEIVER_EXITED: "The download process stopped unexpectedly. Antivirus software may have blocked it; try again or add an exception for HellMC.",
       GAME_EXITED: "The game closed unexpectedly (code {code})."
     }
   },
@@ -1103,6 +1111,8 @@ const en: Messages = {
     sourceName: 'Imported',
     sourceAccount: 'My account',
     viewerError: 'The 3D preview could not start on this computer.',
+    cachedNotice: 'Mojang can’t be reached: showing the last saved skin.',
+    viewerReload: 'Reload viewer',
     errors: {
       NO_TOKEN: 'Your Microsoft session has expired. Sign in again from Settings › Account.',
       NOT_FOUND: 'Not found.',

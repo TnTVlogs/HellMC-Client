@@ -121,6 +121,47 @@ async function main() {
         assert.ok((await svc.fetchTexture('https://textures.minecraft.net/texture/9')).dataUrl.startsWith('data:image/png'))
         assert.equal(calls.at(-1).init.headers.Authorization, undefined, 'les textures no duen el token')
 
+        // ── caché: Mojang inaccessible → perfil i textures desats; sense res desat → API pública ──
+        const uuid = 'abcdef0123456789abcdef0123456789'
+        const skinUrl = 'https://textures.minecraft.net/texture/cached'
+        const cacheDir = path.join(dir, 'cache-lib')
+        let blocked = false
+        const apiCalls = []
+        const blockableFetch = async (url) => {
+            if (url.includes('mc-heads.net') || url.includes('crafatar.com') || url.includes('minotar.net')) {
+                apiCalls.push(url)
+                if (url.includes('mc-heads.net')) throw new Error('down')
+                return json(200, {})
+            }
+            if (blocked) throw new Error('blocked by network')
+            return url.includes('/minecraft/profile')
+                ? json(200, { id: uuid, name: 'Cached', skins: [{ id: 's', state: 'ACTIVE', variant: 'SLIM', url: skinUrl }], capes: [] })
+                : json(200, {})
+        }
+        const cached = create({ fetchFn: blockableFetch, getToken: async () => 'tok', libraryDir: cacheDir })
+        const live = await cached.getProfile(uuid)
+        assert.equal(live.stale, undefined)
+        await cached.fetchTexture(live.skins[0].url, { accountUuid: uuid })
+        blocked = true
+        const offline = await cached.getProfile(uuid)
+        assert.equal(offline.stale, true, 'sense Mojang es serveix el perfil desat')
+        assert.equal(offline.skins[0].variant, 'slim')
+        assert.ok((await cached.fetchTexture(skinUrl)).dataUrl.startsWith('data:image/png'), 'sense Mojang es serveix la textura desada')
+        assert.equal(apiCalls.length, 0, 'amb la textura desada no es consulta cap API')
+        await rejectAsync(cached.getProfile('11111111111111111111111111111111'), 'NETWORK')
+        await rejectAsync(cached.fetchTexture('https://textures.minecraft.net/texture/never'), 'NETWORK')
+        assert.ok((await cached.fetchTexture('https://textures.minecraft.net/texture/never', { accountUuid: uuid })).buffer.length > 0, 'sense caché es prova l’API pública')
+        assert.ok(apiCalls[0].includes('mc-heads.net') && apiCalls[1].includes('crafatar.com'), 'si la primera API falla es passa a la següent')
+        // «última skin» del compte (per al cap de l'avatar)
+        const fresh = create({ fetchFn: blockableFetch, getToken: async () => 'tok', libraryDir: path.join(dir, 'cache-lib2') })
+        assert.ok((await fresh.accountSkin(uuid, { live: true })).length > 0, 'sense res desat, API pública')
+        apiCalls.length = 0
+        assert.ok((await fresh.accountSkin(uuid)).length > 0)
+        assert.equal(apiCalls.length, 0, 'la segona vegada surt de la caché')
+        assert.equal(await fresh.accountSkin('no-uuid'), null)
+        const failedAll = create({ fetchFn: async () => { throw new Error('no net') }, getToken: async () => 'tok', libraryDir: path.join(dir, 'cache-lib3') })
+        assert.equal(await failedAll.accountSkin(uuid, { live: true }), null, 'tot caigut → null (el renderer mostra Steve)')
+
         // ── importar per nom ──
         await rejectAsync(svc.lookupByName('../etc'), 'INVALID_NAME')
         const texturesValue = Buffer.from(JSON.stringify({ textures: { SKIN: { url: 'http://textures.minecraft.net/texture/5', metadata: { model: 'slim' } }, CAPE: { url: 'https://textures.minecraft.net/texture/6' } } })).toString('base64')

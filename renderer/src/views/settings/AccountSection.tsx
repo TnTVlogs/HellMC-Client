@@ -78,7 +78,7 @@ export function AccountSection() {
           const active = account.uuid === selectedUuid.value
           return (
             <div key={account.uuid} class="account-row">
-              <Avatar name={account.displayName} />
+              <Avatar name={account.displayName} uuid={account.uuid} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <b>{account.displayName}</b>
                 <div class="muted small">

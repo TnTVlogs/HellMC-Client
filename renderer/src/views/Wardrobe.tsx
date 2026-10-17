@@ -11,8 +11,8 @@ import { Tabs } from '../components/Tabs'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { selectedAccount } from '../stores/account'
 import {
-  SLOTS, catalog, equippedCosmetics, equippedEmotes, loadCosmeticSpec, loadEmoteSpec, loadPreview, loadWardrobe, previews, previewsPending, removeItem, setCosmetic, setEmote, syncWardrobe,
-  updateSettings, wardrobeSettings, wardrobeBusy, wardrobeError, wardrobeLoading
+  SLOTS, catalog, equippedCosmetics, equippedEmotes, loadCosmeticSpec, loadEmoteSpec, loadPreview, loadWardrobe, peekCosmeticSpec, previews, previewsPending, removeItem, setCosmetic, setEmote, syncWardrobe,
+  updateSettings, wardrobeSettings, wardrobeSkins, wardrobeBusy, wardrobeError, wardrobeLoading
 } from '../stores/wardrobe'
 
 // docs/client-cosmetics/17-armari-i-seleccio.md i 20-cataleg-al-panell.md: el contingut el publiquen els administradors al panell
@@ -37,11 +37,14 @@ export function Wardrobe() {
   const [deleting, setDeleting] = useState<WardrobeItem | null>(null)
   /** Element «mirat»: un cosmètic es mostra posat (encara que no ho estigui) i un emote es reprodueix. */
   const [viewing, setViewing] = useState<string | null>(null)
-  const [skin, setSkin] = useState<{ image: string | null; variant: 'classic' | 'slim' }>({ image: null, variant: 'classic' })
-  const [specs, setSpecs] = useState<CosmeticSpec[]>([])
+  const [skin, setSkin] = useState<{ image: string | null; variant: 'classic' | 'slim' }>(
+    () => (accountUuid != null ? wardrobeSkins.get(accountUuid) : undefined) ?? { image: null, variant: 'classic' })
+  // Els cosmètics equipats ja llegits es pinten al primer fotograma (sense passar pel jugador nu).
+  const [specs, setSpecs] = useState<CosmeticSpec[]>(() =>
+    SLOTS.map((slot) => equippedCosmetics.value[slot]).map((id) => (id != null ? peekCosmeticSpec(id) : null)).filter((x): x is CosmeticSpec => x != null))
   const [emote, setEmoteSpec] = useState<EmoteSpec | null>(null)
 
-  useEffect(() => { void loadWardrobe().then(() => syncWardrobe()) }, [accountUuid])
+  useEffect(() => { void loadWardrobe(accountUuid).then(() => syncWardrobe()) }, [accountUuid])
   // Imatges de les targetes: es llegeixen de la caché quan l'element és a la llista (les que falten les genera `syncWardrobe`).
   const previewKey = items.filter((i) => i.hasPreview).map((i) => i.id).join('|')
   useEffect(() => { for (const id of previewKey === '' ? [] : previewKey.split('|')) void loadPreview(id) }, [previewKey])
@@ -49,16 +52,21 @@ export function Wardrobe() {
   // Skin del visor: la que el compte porta (local o, si és Microsoft, la de Mojang); sense xarxa si no cal.
   useEffect(() => {
     let stale = false
+    const show = (next: { image: string | null; variant: 'classic' | 'slim' }) => {
+      if (stale) return
+      if (accountUuid != null) wardrobeSkins.set(accountUuid, next)
+      setSkin(next)
+    }
     void (async () => {
       try {
         const lib = await hellmc.skins.library()
         const picked = accountUuid != null ? lib.skins.find((s) => s.id === lib.selection[accountUuid]) : undefined
-        if (picked != null) { if (!stale) setSkin({ image: picked.image, variant: picked.variant }); return }
+        if (picked != null) { show({ image: picked.image, variant: picked.variant }); return }
         const profile = selectedAccount.value?.type === 'microsoft' ? await hellmc.skins.profile() : null
         const active = profile?.skins.find((s) => s.active)
-        if (!stale) setSkin(active != null ? { image: active.image, variant: active.variant } : { image: null, variant: 'classic' })
+        show(active != null ? { image: active.image, variant: active.variant } : { image: null, variant: 'classic' })
       } catch {
-        if (!stale) setSkin({ image: null, variant: 'classic' })
+        if (accountUuid == null || !wardrobeSkins.has(accountUuid)) show({ image: null, variant: 'classic' })
       }
     })()
     return () => { stale = true }

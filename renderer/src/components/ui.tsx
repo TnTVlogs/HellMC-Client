@@ -1,7 +1,10 @@
 import type { ComponentChildren, JSX } from 'preact'
 import type { LucideIcon } from 'lucide-preact'
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { gradientClass, initialOf } from '../identity'
+import steveSkin from '../assets/steve.png'
+import { avatarSkins, loadAvatar } from '../stores/avatars'
+import { SkinFace } from './TextureThumb'
 
 /** Banner: la imatge si n'hi ha i carrega; si no (sense URL o URL trencada), el degradat de reserva del `seed`. */
 export function Art({ seed, url, class: cls }: { seed: string; url?: string | null; class?: string }) {
@@ -76,6 +79,13 @@ export function Banner({ tone = 'warn', icon: Icon, children, action }: { tone?:
   )
 }
 
-export function Avatar({ name, seed }: { name: string; seed?: string }) {
-  return <div class={`avatar ${gradientClass(seed ?? name)}`} aria-hidden="true">{initialOf(name)}</div>
+/**
+ * Imatge del compte: el cap de la skin que porta (o la darrera que es va veure) si s'hi passa l'`uuid`; Steve si
+ * no se'n troba cap; mentre es consulta (o sense `uuid`), la inicial sobre el degradat.
+ */
+export function Avatar({ name, seed, uuid }: { name: string; seed?: string; uuid?: string }) {
+  useEffect(() => { if (uuid != null) void loadAvatar(uuid) }, [uuid])
+  const known = uuid != null && uuid in avatarSkins.value
+  if (!known) return <div class={`avatar ${gradientClass(seed ?? name)}`} aria-hidden="true">{initialOf(name)}</div>
+  return <div class="avatar has-skin" aria-hidden="true"><SkinFace image={avatarSkins.value[uuid] ?? steveSkin} size={32} /></div>
 }

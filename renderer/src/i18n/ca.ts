@@ -334,6 +334,9 @@ const ca: Messages = {
       SPAWN_FAILED: "No s'ha pogut obrir el procés del joc.",
       ALREADY_RUNNING: "Aquesta versió ja s'està executant o iniciant.",
       VERSION_BUSY: "Aquesta versió s'està instal·lant, verificant o eliminant. Espera que acabi.",
+      MODULE_HASH_MISSING: "El fitxer d'un mòdul de la distribució no té hash SHA-256 i no es pot verificar. Avisa l'administrador del servidor.",
+      MODULE_HASH_INVALID: "Un mòdul de la distribució té un hash SHA-256 mal format. Avisa l'administrador del servidor.",
+      RECEIVER_EXITED: "El procés de descàrrega s'ha aturat de manera inesperada. Pot ser l'antivirus; torna-ho a provar o afegeix una excepció per a HellMC.",
       GAME_EXITED: "El joc s'ha tancat inesperadament (codi {code})."
     }
   },
@@ -541,6 +544,8 @@ const ca: Messages = {
     sourceName: 'Importada',
     sourceAccount: 'El meu compte',
     viewerError: 'La vista prèvia 3D no s’ha pogut iniciar en aquest ordinador.',
+    cachedNotice: 'No es pot contactar amb Mojang: es mostra l’última skin desada.',
+    viewerReload: 'Recarrega el visor',
     errors: {
       NO_TOKEN: 'La teva sessió de Microsoft ha caducat. Torna a iniciar sessió a Configuració › Compte.',
       NOT_FOUND: 'No trobat.',

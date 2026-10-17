@@ -112,6 +112,7 @@ const hellmcApi = {
     skins: {
         library: () => ipcRenderer.invoke('hellmc:skins-library'),
         profile: () => ipcRenderer.invoke('hellmc:skins-profile'),
+        avatar: (uuid) => ipcRenderer.invoke('hellmc:skins-avatar', uuid),
         addFile: () => ipcRenderer.invoke('hellmc:skins-add-file'),
         importByName: (name) => ipcRenderer.invoke('hellmc:skins-import-name', name),
         importCurrent: () => ipcRenderer.invoke('hellmc:skins-import-current'),
