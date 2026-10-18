@@ -1,9 +1,19 @@
 // Stub de `window.hellmc` (06 §11): els stores el llegeixen en importar-se; a les proves cada mètode
 // és una funció que resol a `undefined`, i les subscripcions retornen un `unsubscribe` buit.
+// Les proves poden substituir un mètode concret (`overrideHellmc('launch.onProgress', fn)`) perquè
+// l'objecte exportat per `api.ts` és aquest proxy i consulta el mapa a cada accés.
+const overrides = new Map<string, unknown>()
+export function overrideHellmc(path: string, value: unknown): void { overrides.set(path, value) }
+export function resetHellmcOverrides(): void { overrides.clear() }
+;(globalThis as unknown as { __hellmcOverride: typeof overrideHellmc; __hellmcReset: typeof resetHellmcOverrides }).__hellmcOverride = overrideHellmc
+;(globalThis as unknown as { __hellmcReset: typeof resetHellmcOverrides }).__hellmcReset = resetHellmcOverrides
+
 function stub(path: string[] = []): unknown {
   const fn = () => undefined
   return new Proxy(fn, {
     get(_target, prop: string) {
+      const full = [...path, prop].join('.')
+      if (overrides.has(full)) return overrides.get(full)
       if (prop === 'then') return undefined // no és una Promise
       if (prop === 'platform') return 'win32'
       if (prop === 'appVersion') return '0.0.0-test'
@@ -16,6 +26,12 @@ function stub(path: string[] = []): unknown {
     }
   })
 }
+
+import '@testing-library/jest-dom/vitest'
+import { cleanup } from '@testing-library/preact'
+import { afterEach } from 'vitest'
+
+afterEach(() => { cleanup(); resetHellmcOverrides() })
 
 ;(window as unknown as { hellmc: unknown }).hellmc = stub()
 

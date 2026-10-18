@@ -1,6 +1,6 @@
-import type { ComponentChildren } from 'preact'
+import type { ComponentChildren, JSX } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { Gamepad2, Globe, Home, Layers, MessageCircle, Newspaper, Plus, Server, Settings, Shirt, Sparkles, type LucideIcon } from 'lucide-preact'
+import { Gamepad2, Globe, Home, Layers, Newspaper, Plus, Server, Settings, Shirt, Sparkles, type LucideIcon } from 'lucide-preact'
 import { navigate, route, type RouteName } from '../router'
 import { t } from '../i18n'
 import { hellmc } from '../api'
@@ -9,6 +9,10 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { Popover } from './Popover'
 import { preloadSkinViewer } from './SkinViewer'
 import { BrandFlame } from './BrandFlame'
+import { DiscordIcon, GitHubIcon, InstagramIcon, XIcon, YouTubeIcon } from './BrandIcons'
+import { IconButton } from './IconButton'
+import { Tooltip } from './Tooltip'
+import { ToastHost } from './Toast'
 import { Avatar, Banner, RingProgress, StatusDot } from './ui'
 import { instances, killInstance } from '../stores/instances'
 import { distro } from '../stores/distro'
@@ -33,17 +37,29 @@ const NAV_ITEMS: { name: RouteName; labelKey: NavKey; Icon: LucideIcon }[] = [
 
 const LINKS = { discord: 'https://discord.gg/yScnSw7cFt', website: 'https://hellmcclient.sergidalmau.dev' }
 
+// Xarxes socials de la marca. Només es pinten les que tenen URL: YouTube i Instagram tenen icona (BrandIcons) però
+// encara no hi ha cap enllaç oficial; en afegir-lo aquí apareixeran soles.
+const SOCIALS: { id: string; label: string; url: string | null; Icon: (p: { size?: number }) => JSX.Element }[] = [
+  { id: 'discord', label: 'Discord', url: LINKS.discord, Icon: DiscordIcon },
+  { id: 'x', label: 'X', url: 'https://x.com/tntvlogs_', Icon: XIcon },
+  { id: 'github', label: 'GitHub', url: 'https://github.com/TnTVlogs', Icon: GitHubIcon },
+  { id: 'youtube', label: 'YouTube', url: null, Icon: YouTubeIcon },
+  { id: 'instagram', label: 'Instagram', url: null, Icon: InstagramIcon }
+]
+
 /** Tasca activa (07 §9): progrés circular + fase; porta a Inici on hi ha el detall. */
 function TaskIndicator() {
   const p = activeLaunch.value
   if (p == null) return null
   const label = t(`home.phase.${p.phase}`)
   return (
-    <button type="button" class="task" title={`${label} · ${Math.round(p.percent)}%`} onClick={() => navigate('/home')}
-      style={{ cursor: 'pointer', textAlign: 'left', color: 'inherit', font: 'inherit' }}>
-      <RingProgress value={p.percent} size={32} />
-      <div class="t"><b>{label}</b><span class="muted xs">{Math.round(p.percent)}%</span></div>
-    </button>
+    <Tooltip content={`${label} · ${Math.round(p.percent)}%`} placement="right">
+      <button type="button" class="task" onClick={() => navigate('/home')}
+        style={{ cursor: 'pointer', textAlign: 'left', color: 'inherit', font: 'inherit' }}>
+        <RingProgress value={p.percent} size={32} />
+        <div class="t"><b>{label}</b><span class="muted xs">{Math.round(p.percent)}%</span></div>
+      </button>
+    </Tooltip>
   )
 }
 
@@ -72,10 +88,12 @@ function InstancesIndicator() {
           </div>
         </Popover>
       )}
-      <button ref={triggerRef} type="button" class="nav-item" title={t('instances.running', { count: list.length })} onClick={() => setOpen((v) => !v)}>
-        <Gamepad2 size={20} />
-        <span class="nav-label">{t('instances.running', { count: list.length })}</span>
-      </button>
+      <Tooltip content={t('instances.running', { count: list.length })} placement="right">
+        <button ref={triggerRef} type="button" class="nav-item" onClick={() => setOpen((v) => !v)}>
+          <Gamepad2 size={20} />
+          <span class="nav-label">{t('instances.running', { count: list.length })}</span>
+        </button>
+      </Tooltip>
       {confirmingInstance != null && (
         <ConfirmDialog
           title={t('instances.confirmTitle')}
@@ -99,9 +117,11 @@ function MinecraftStatus() {
   const label = services == null ? t('ui.minecraftChecking') : state === 'on' ? t('ui.minecraftOk') : state === 'bad' ? t('ui.minecraftDown') : t('ui.minecraftPartial')
   const detail = services?.map((s) => `${s.ok ? '●' : '○'} ${names[s.id] ?? s.id}`).join('\n') ?? ''
   return (
-    <div class="mojang" title={detail !== '' ? `${label}\n${detail}` : label} role="status" aria-label={label}>
-      <StatusDot state={state} /><span class="t">{label}</span>
-    </div>
+    <Tooltip content={detail !== '' ? `${label}\n${detail}` : label} placement="right">
+      <div class="mojang" role="status" aria-label={label} tabIndex={0}>
+        <StatusDot state={state} /><span class="t">{label}</span>
+      </div>
+    </Tooltip>
   )
 }
 
@@ -136,14 +156,16 @@ function AccountZone() {
         </Popover>
       )}
       <div class="account">
-        <button ref={triggerRef} type="button" onClick={() => setOpen((v) => !v)} title={name} aria-label={t('ui.switchAccount')}
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', background: 'none', border: 0, padding: 0, cursor: 'pointer', minWidth: 0, flex: 1, textAlign: 'left' }}>
-          <Avatar name={name} uuid={account?.uuid} />
-          <div class="who"><b>{name}</b><span class="muted xs">{kind}</span></div>
-        </button>
-        <button type="button" class={`icon-btn${route.value.name === 'settings' ? ' current' : ''}`} title={t('nav.settings')} aria-label={t('nav.settings')} onClick={() => navigate('/settings')}>
+        <Tooltip content={name} placement="top">
+          <button ref={triggerRef} type="button" onClick={() => setOpen((v) => !v)} aria-label={t('ui.switchAccount')}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', background: 'none', border: 0, padding: 0, cursor: 'pointer', minWidth: 0, flex: 1, textAlign: 'left' }}>
+            <Avatar name={name} uuid={account?.uuid} />
+            <div class="who"><b>{name}</b><span class="muted xs">{kind}</span></div>
+          </button>
+        </Tooltip>
+        <IconButton label={t('nav.settings')} current={route.value.name === 'settings'} placement="top" onClick={() => navigate('/settings')}>
           <Settings size={18} />
-        </button>
+        </IconButton>
       </div>
     </div>
   )
@@ -184,29 +206,31 @@ export function Shell({ children }: { children: ComponentChildren }) {
         <aside class="sidebar">
           <nav class="nav" aria-label={t('nav.ariaLabel')}>
             {NAV_ITEMS.map(({ name, labelKey, Icon }) => (
-              <button
-                key={name}
-                type="button"
-                class="nav-item"
-                aria-current={route.value.name === name ? 'page' : undefined}
-                title={t(labelKey)}
-                aria-label={t(labelKey)}
-                onClick={() => navigate(`/${name}`)}
-                onPointerEnter={name === 'appearance' ? preloadSkinViewer : undefined}
-                onFocus={name === 'appearance' ? preloadSkinViewer : undefined}
-              >
-                <Icon size={20} />
-                <span class="nav-label">{t(labelKey)}</span>
-                {name === 'news' && unreadCount.value > 0 && <span class="badge">{unreadCount.value}</span>}
-              </button>
+              <Tooltip key={name} content={t(labelKey)} placement="right">
+                <button
+                  type="button"
+                  class="nav-item"
+                  aria-current={route.value.name === name ? 'page' : undefined}
+                  aria-label={t(labelKey)}
+                  onClick={() => navigate(`/${name}`)}
+                  onPointerEnter={name === 'appearance' ? preloadSkinViewer : undefined}
+                  onFocus={name === 'appearance' ? preloadSkinViewer : undefined}
+                >
+                  <Icon size={20} />
+                  <span class="nav-label">{t(labelKey)}</span>
+                  {name === 'news' && unreadCount.value > 0 && <span class="badge">{unreadCount.value}</span>}
+                </button>
+              </Tooltip>
             ))}
           </nav>
           <div class="sb-spacer" />
           <TaskIndicator />
           <InstancesIndicator />
           <div class="social" aria-label={t('ui.social')}>
-            <button type="button" class="icon-btn" title="Discord" aria-label="Discord" onClick={() => void hellmc.system.openExternal(LINKS.discord)}><MessageCircle size={18} /></button>
-            <button type="button" class="icon-btn" title={t('nav.website')} aria-label={t('nav.website')} onClick={() => void hellmc.system.openExternal(LINKS.website)}><Globe size={18} /></button>
+            {SOCIALS.filter((x) => x.url != null).map(({ id, label, url, Icon }) => (
+              <IconButton key={id} label={label} placement="right" onClick={() => void hellmc.system.openExternal(url!)}><Icon size={18} /></IconButton>
+            ))}
+            <IconButton label={t('nav.website')} placement="right" onClick={() => void hellmc.system.openExternal(LINKS.website)}><Globe size={18} /></IconButton>
           </div>
           <MinecraftStatus />
           <AccountZone />
@@ -223,6 +247,7 @@ export function Shell({ children }: { children: ComponentChildren }) {
           </div>
         </main>
       </div>
+      <ToastHost />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { Info, User, Wifi } from 'lucide-preact'
+import { Select } from '../components/Select'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { BrandFlame } from '../components/BrandFlame'
@@ -77,9 +78,8 @@ export function Welcome() {
             <div class="row">
               <div class="field-row" style={{ textAlign: 'left' }}>
                 <label for="w-lang">{t('welcome.language')}</label>
-                <select id="w-lang" class="field" value={language.value} onChange={(e) => setLanguage((e.target as HTMLSelectElement).value as (typeof languages)[number][0])}>
-                  {languages.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-                </select>
+                <Select id="w-lang" value={language.value} onChange={(v) => setLanguage(v as (typeof languages)[number][0])}
+                  options={languages.map(([code, label]) => ({ value: code, label }))} />
               </div>
               <div class="field-row" style={{ textAlign: 'left' }}>
                 <label>{t('welcome.theme')}</label>

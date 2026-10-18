@@ -32,6 +32,10 @@ const es: Messages = {
     availableAt: 'Disponible en',
     changeServer: 'Cambiar de servidor',
     copyAddress: 'Copiar dirección',
+    toastClose: 'Cerrar notificación',
+    notifications: 'Notificaciones',
+    copied: 'Dirección copiada',
+    copyFailed: 'No se ha podido copiar al portapapeles',
     credits: 'Créditos y licencias',
     descAutoConnect: 'Entra al servidor al abrir el juego (solo si has elegido un servidor)',
     descDetached: 'El juego sigue abierto si cierras el launcher',
@@ -308,6 +312,11 @@ const es: Messages = {
     close: 'Cerrar',
     retry: 'Reintentar',
     microsoftOffline: 'Sin conexión: no podrás entrar en servidores en línea.',
+    eta: '{time} restantes',
+    more: 'Más opciones',
+    menuSettings: 'Ajustes de la versión',
+    menuCopyAddress: 'Copiar dirección del servidor',
+    menuNoServer: 'Jugar sin servidor',
     phase: {
       idle: 'Inactivo',
       starting: 'Iniciando…',
@@ -344,7 +353,10 @@ const es: Messages = {
     playWithoutServer: 'Jugar sin servidor',
     playWithoutServerDesc: 'Elige una versión y juega en local o en cualquier servidor.',
     empty: 'Aún no hay servidores publicados.',
-    versionsCount: '{count} versiones'
+    versionsCount: '{count} versiones',
+    offlineCache: 'Estás sin conexión. Se muestra la última lista de servidores guardada; los jugadores son los últimos conocidos.',
+    offlineStale: 'Último conocido',
+    lastKnown: 'Último estado conocido, hace {time}'
   },
   serverDetail: {
     notFound: 'Servidor no encontrado.',

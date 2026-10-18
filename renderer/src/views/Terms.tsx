@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks'
 import { Info } from 'lucide-preact'
+import { Select } from '../components/Select'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { BrandFlame } from '../components/BrandFlame'
@@ -52,9 +53,8 @@ export function Terms() {
 
           <div class="field-row" style={{ textAlign: 'left' }}>
             <label for="terms-lang">{t('welcome.language')}</label>
-            <select id="terms-lang" class="field" value={language.value} onChange={(e) => setLanguage((e.target as HTMLSelectElement).value as (typeof LANGUAGES)[number][0])}>
-              {LANGUAGES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
-            </select>
+            <Select id="terms-lang" value={language.value} onChange={(v) => setLanguage(v as (typeof LANGUAGES)[number][0])}
+              options={LANGUAGES.map(([code, label]) => ({ value: code, label }))} />
           </div>
 
           <p class="terms-links">

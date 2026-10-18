@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'preact/hooks'
-import { ArrowLeftRight, Play, RefreshCw, X } from 'lucide-preact'
+import { ArrowLeftRight, Copy, MoreHorizontal, Play, RefreshCw, Settings2, X } from 'lucide-preact'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { IconButton } from '../components/IconButton'
+import { Popover } from '../components/Popover'
+import { Select } from '../components/Select'
+import { Skeleton, SkeletonGroup, SkeletonText } from '../components/Skeleton'
 import { Art, Chip, Progress, ServerIcon, StatusDot } from '../components/ui'
 import { hellmc } from '../api'
 import { navigate } from '../router'
 import { distro } from '../stores/distro'
-import { effectiveSelection, selectVersion } from '../stores/selection'
+import { effectiveSelection, selectServer, selectVersion } from '../stores/selection'
 import { selectedAccount } from '../stores/account'
 import { launch, cancelLaunch, launchProgress, isLaunching } from '../stores/launch'
 import { online } from '../stores/network'
 import { items as newsItems, loadArchive, loading as newsLoading, sources } from '../stores/news'
-import { pings, pingServer } from '../stores/status'
+import { pings, watchPing } from '../stores/status'
 import { statuses, refreshStatus } from '../stores/versions'
+import { copyWithToast } from '../utils/clipboard'
+import { formatDuration } from '../utils/format'
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -34,18 +40,23 @@ function NewsColumn() {
         <h1 id="news-h">{t('news.title')}</h1>
         <span class="spacer" />
         {sources.value.length > 1 && (
-          <select class="field sm" aria-label={t('news.title')} value={source} onChange={(e) => setSource((e.target as HTMLSelectElement).value)}>
-            <option value="all">{t('news.filterAll')}</option>
-            {sources.value.map((s) => <option key={s.id} value={s.id}>{s.name ?? t('news.global')}</option>)}
-          </select>
+          <Select size="sm" ariaLabel={t('news.title')} value={source} onChange={setSource}
+            options={[{ value: 'all', label: t('news.filterAll') }, ...sources.value.map((s) => ({ value: s.id, label: s.name ?? t('news.global') }))]} />
         )}
-        <button type="button" class="icon-btn" title={t('news.refresh')} aria-label={t('news.refresh')} disabled={newsLoading.value} onClick={() => void loadArchive()}>
+        <IconButton label={t('news.refresh')} disabled={newsLoading.value} onClick={() => void loadArchive()}>
           <RefreshCw size={18} />
-        </button>
+        </IconButton>
       </div>
 
       {featured == null ? (
-        <Card pad><p class="muted">{newsLoading.value ? t('news.loading') : t('news.empty')}</p></Card>
+        newsLoading.value ? (
+          <SkeletonGroup label={t('news.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <Card pad><Skeleton height={140} radius={8} style={{ marginBottom: 12 }} /><Skeleton width="45%" height={20} style={{ marginBottom: 10 }} /><SkeletonText lines={2} /></Card>
+            <div class="news-grid">{[0, 1, 2].map((i) => <Card key={i} pad><Skeleton height={70} radius={8} style={{ marginBottom: 10 }} /><SkeletonText lines={2} /></Card>)}</div>
+          </SkeletonGroup>
+        ) : (
+          <Card pad><p class="muted">{t('news.empty')}</p></Card>
+        )
       ) : (
         <>
           <article class="card news-featured" onClick={() => navigate('/news')}>
@@ -109,9 +120,15 @@ function PlayCard() {
   const errorCode = progress.phase === 'error' ? progress.error?.code : undefined
   const showDialog = (errorCode === 'AUTH_INVALID' || errorCode === 'NEEDS_NETWORK') && dismissed !== progress
 
+  // Ping del servidor triat: ara, cada minut i en tornar a la pestanya (només visible, 06 §10).
   useEffect(() => {
-    if (server != null) void pingServer(server.id, server.address)
-  }, [server?.id])
+    if (server == null) return
+    return watchPing(server.id, server.address)
+  }, [server?.id, server?.address])
+
+  // Menú «⋯»: l'ancora és el botó que l'ha obert (null = tancat).
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
+  const closeMenu = () => setMenuAnchor(null)
 
   // 07 §2.2: l'etiqueta del botó depèn de l'estat d'instal·lació de la versió triada.
   useEffect(() => {
@@ -163,13 +180,9 @@ function PlayCard() {
 
         <div class="field-row">
           <label for="pc-version">{t('serverDetail.version')}</label>
-          <select id="pc-version" class="field" disabled={busy || options.length === 0} value={selection.versionId ?? ''}
-            onChange={(e) => void selectVersion((e.target as HTMLSelectElement).value)}>
-            {options.length === 0 && <option value="">{t('home.noVersionAvailable')}</option>}
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>{o.version!.name}{o.recommended ? ` · ${t('serverDetail.recommended')}` : ''}</option>
-            ))}
-          </select>
+          <Select id="pc-version" disabled={busy || options.length === 0} value={selection.versionId ?? ''}
+            placeholder={t('home.noVersionAvailable')} onChange={(v) => void selectVersion(v)}
+            options={options.map((o) => ({ value: o.id, label: `${o.version!.name}${o.recommended ? ` · ${t('serverDetail.recommended')}` : ''}` }))} />
         </div>
 
         {account?.type === 'offline' && <p class="xs" style={{ color: 'var(--warning)' }}>{t('home.offlineAccountWarning')}</p>}
@@ -178,6 +191,9 @@ function PlayCard() {
         <div class="pc-progress" aria-live="polite">
           <div class="row"><span>{phaseLabel}</span><span class="num">{progress.percent > 0 ? `${Math.round(progress.percent)}%` : ''}</span></div>
           <Progress value={progress.percent > 0 ? progress.percent : null} />
+          {progress.phase === 'downloading' && progress.etaSeconds != null && (
+            <span class="eta num">{t('home.eta', { time: formatDuration(progress.etaSeconds) })}</span>
+          )}
         </div>
 
         {progress.phase === 'error' && progress.error != null && !showDialog && (
@@ -203,8 +219,32 @@ function PlayCard() {
               <Play size={20} fill="currentColor" /> {playLabel}
             </Button>
           )}
-          <a class="btn ghost sm block" href="#/servers"><ArrowLeftRight size={16} /> {t('ui.changeServer')}</a>
+          <div class="pc-more">
+            <a class="btn ghost sm block" href="#/servers"><ArrowLeftRight size={16} /> {t('ui.changeServer')}</a>
+            <IconButton label={t('home.more')} aria-haspopup="menu" aria-expanded={menuAnchor != null}
+              onClick={(e) => setMenuAnchor(menuAnchor != null ? null : e.currentTarget)}>
+              <MoreHorizontal size={18} />
+            </IconButton>
+          </div>
         </div>
+        {menuAnchor != null && (
+          <Popover anchor={menuAnchor} onClose={closeMenu} width={260}>
+            <div class="menu-list">
+              <button type="button" role="menuitem" class="menu-item" disabled={version == null}
+                onClick={() => { closeMenu(); if (version != null) navigate(`/versions/${version.id}`) }}>
+                <Settings2 size={16} /> {t('home.menuSettings')}
+              </button>
+              <button type="button" role="menuitem" class="menu-item" disabled={server == null}
+                onClick={() => { closeMenu(); if (server != null) void copyWithToast(server.address) }}>
+                <Copy size={16} /> {t('home.menuCopyAddress')}
+              </button>
+              <button type="button" role="menuitem" class="menu-item" disabled={busy || server == null}
+                onClick={() => { closeMenu(); void selectServer(null) }}>
+                <Play size={16} /> {t('home.menuNoServer')}
+              </button>
+            </div>
+          </Popover>
+        )}
       </div>
 
       {showDialog && errorCode === 'AUTH_INVALID' && (

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import { marked } from 'marked'
 import { sanitizeRichHtml } from '../utils/sanitize'
 import { Box, Check, ExternalLink, Info, Lock, Play, Search, ShieldCheck, Trash2, Download } from 'lucide-preact'
+import { Tooltip } from '../components/Tooltip'
 import { t } from '../i18n'
 import { Button } from '../components/Button'
 import { Card } from '../components/Card'
@@ -217,7 +218,7 @@ function DataSharingToggle({ versionId }: { versionId: string }) {
   if (pref == null) return null
 
   if (pref.forced) {
-    return <p class="muted small" title={t('versionDetail.dataSharing.forcedTooltip')}>{t('versionDetail.dataSharing.forcedNotice')}</p>
+    return <Tooltip content={t('versionDetail.dataSharing.forcedTooltip')}><p class="muted small">{t('versionDetail.dataSharing.forcedNotice')}</p></Tooltip>
   }
 
   return (

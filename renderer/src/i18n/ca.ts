@@ -32,6 +32,10 @@ const ca: Messages = {
     availableAt: 'Disponible a',
     changeServer: 'Canvia de servidor',
     copyAddress: 'Copia l’adreça',
+    toastClose: 'Tanca la notificació',
+    notifications: 'Notificacions',
+    copied: 'Adreça copiada',
+    copyFailed: 'No s’ha pogut copiar al porta-retalls',
     credits: 'Crèdits i llicències',
     descAutoConnect: 'Entra al servidor en obrir el joc (només si has triat un servidor)',
     descDetached: 'El joc continua obert si tanques el launcher',
@@ -308,6 +312,11 @@ const ca: Messages = {
     close: 'Tanca',
     retry: 'Torna-ho a provar',
     microsoftOffline: 'Sense connexió: no podràs entrar a servidors en línia.',
+    eta: 'Queden {time}',
+    more: 'Més opcions',
+    menuSettings: 'Ajustaments de la versió',
+    menuCopyAddress: 'Copia l’adreça del servidor',
+    menuNoServer: 'Juga sense servidor',
     phase: {
       idle: 'Inactiu',
       starting: 'Iniciant…',
@@ -344,7 +353,10 @@ const ca: Messages = {
     playWithoutServer: 'Jugar sense servidor',
     playWithoutServerDesc: 'Tria una versió i juga en local o a qualsevol servidor.',
     empty: 'Encara no hi ha servidors publicats.',
-    versionsCount: '{count} versions'
+    versionsCount: '{count} versions',
+    offlineCache: 'Estàs fora de línia. Es mostra l’última llista de servidors desada; els jugadors són els darrers coneguts.',
+    offlineStale: 'Darrer conegut',
+    lastKnown: 'Darrer estat conegut, fa {time}'
   },
   serverDetail: {
     notFound: 'Servidor no trobat.',

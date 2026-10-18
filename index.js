@@ -193,6 +193,7 @@ const { FullRepair, DistributionIndexProcessor, MojangIndexProcessor, downloadFi
 // B23/S10: el receptor de descàrregues corre en un `utilityProcess` (no `fork` sobre el binari amb `RunAsNode`).
 // `utilityProcess.fork` només es crida en llançar (app ja llesta); aquí només s'injecta l'estratègia.
 require('./src-node/receiverSpawner').installReceiverSpawner(FullRepair, utilityProcess)
+const { createEtaEstimator } = require('./src-node/downloadEta')
 // 2.3 (JDK auto-download): `validateLocalFile` viu a `hellmc-core/common` (no a `hellmc-core/dl`
 // amb la resta d'utilitats de descàrrega) — mateix mòdul que `FullRepair`.
 const { validateLocalFile } = require('hellmc-core/common')
@@ -1330,7 +1331,14 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         await step(repair.verifyFiles((percent) => { if (!launchState.cancelled) send({ phase: 'verifying-files', percent }) }))
 
         send({ phase: 'downloading', percent: 0 })
-        await step(repair.download((percent) => { if (!launchState.cancelled) send({ phase: 'downloading', percent }) }))
+        // ETA (07 §2.2): el receptor només dóna percentatges sencers, així que s'estima el temps restant amb la velocitat en %/s.
+        const downloadEta = createEtaEstimator()
+        downloadEta.sample(0)
+        await step(repair.download((percent) => {
+            if (launchState.cancelled) return
+            const etaSeconds = downloadEta.sample(percent)
+            send(etaSeconds != null ? { phase: 'downloading', percent, etaSeconds } : { phase: 'downloading', percent })
+        }))
         repair.destroyReceiver()
         launchState.repair = null
         if (releaseRepairLock != null) { releaseRepairLock(); releaseRepairLock = null }

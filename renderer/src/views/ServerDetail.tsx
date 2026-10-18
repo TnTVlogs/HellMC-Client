@@ -11,9 +11,12 @@ import { navigate } from '../router'
 import { distro } from '../stores/distro'
 import { selectServer, selectVersion } from '../stores/selection'
 import { launch } from '../stores/launch'
-import { pings, pingServer } from '../stores/status'
+import { pings, watchPing } from '../stores/status'
 import { statuses, refreshStatus } from '../stores/versions'
 import { formatBytes } from '../utils/format'
+import { copyWithToast } from '../utils/clipboard'
+import { IconButton } from '../components/IconButton'
+import { Select } from '../components/Select'
 
 // 07 §3.2: detall del servidor — hero, descripció (Markdown sanititzat), notícies del servidor,
 // i a la dreta desplegable de versions + Jugar + dades. «Jugar» selecciona i navega a Inici, on hi
@@ -28,7 +31,7 @@ export function ServerDetail({ id }: { id: string }) {
 
   useEffect(() => {
     if (server == null) return
-    void pingServer(server.id, server.address)
+    const stopWatching = watchPing(server.id, server.address)
     hellmc.selection.getLastVersionForServer(server.id).then((stored) => {
       if (stored != null && server.versions.some((v) => v.id === stored)) {
         setVersionId(stored)
@@ -40,6 +43,7 @@ export function ServerDetail({ id }: { id: string }) {
     if (server.rss != null) hellmc.news.get({ serverId: server.id }).then((r) => setNews(r.items.slice(0, 5))).catch(() => { /* sense notícies */ })
     for (const entry of server.versions) void refreshStatus(entry.id)
     // Només `server?.id`: el refresc de `distro` canvia la referència de `server` a cada poll.
+    return stopWatching
   }, [server?.id])
 
   if (d == null) return <p class="muted">{t('home.loadingDistro')}</p>
@@ -72,18 +76,15 @@ export function ServerDetail({ id }: { id: string }) {
   }
 
   async function copyAddress() {
-    await navigator.clipboard.writeText(server!.address)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    if (await copyWithToast(server!.address)) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
   }
 
   const versionSelect = (
-    <select class="field" style={{ width: '100%' }} aria-label={t('serverDetail.version')} value={versionId ?? ''}
-      onChange={(e) => setVersionId((e.target as HTMLSelectElement).value)}>
-      {options.map(({ entry, version }) => (
-        <option key={entry.id} value={entry.id}>{version.label ?? version.name}{entry.recommended === true ? ` · ${t('serverDetail.recommended')}` : ''}</option>
-      ))}
-    </select>
+    <Select style={{ width: '100%' }} ariaLabel={t('serverDetail.version')} value={versionId ?? ''} onChange={setVersionId}
+      options={options.map(({ entry, version }) => ({ value: entry.id, label: `${version.label ?? version.name}${entry.recommended === true ? ` · ${t('serverDetail.recommended')}` : ''}` }))} />
   )
 
   return (
@@ -155,9 +156,9 @@ export function ServerDetail({ id }: { id: string }) {
             </Button>
             <div class="copy">
               <span>{server.address}</span>
-              <button type="button" class="icon-btn" title={t('ui.copyAddress')} aria-label={t('ui.copyAddress')} onClick={() => void copyAddress()}>
+              <IconButton label={t('ui.copyAddress')} onClick={() => void copyAddress()}>
                 {copied ? <Check size={18} /> : <Copy size={18} />}
-              </button>
+              </IconButton>
             </div>
             {versionId != null && (
               <a class="btn sm ghost" href={`#/versions/${versionId}`}><ExternalLink size={16} /> {t('ui.versionSettings')}</a>

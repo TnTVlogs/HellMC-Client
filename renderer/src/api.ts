@@ -111,6 +111,8 @@ export interface LaunchProgress {
   error?: { code: string; message: string; exitCode?: number; details?: string[] }
   /** Destí al qual correspon aquest progrés (hi pot haver diversos llançaments alhora). */
   target?: { serverId: string | null; versionId: string }
+  /** Segons restants estimats (només a la fase `downloading`, quan ja hi ha prou mostres). */
+  etaSeconds?: number
 }
 
 /** 2.11: una instància de joc en execució (multi-instància real — diverses versions/servidors

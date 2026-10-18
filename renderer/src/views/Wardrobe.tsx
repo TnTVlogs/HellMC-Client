@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'preact/hooks'
 import { Check, PersonStanding, Shirt, Trash2 } from 'lucide-preact'
+import { Tooltip } from '../components/Tooltip'
+import { Select } from '../components/Select'
 import { t } from '../i18n'
 import { hellmc, type WardrobeItem, type WardrobeSlot } from '../api'
 import type { CosmeticSpec, EmoteSpec } from '../utils/bbmodel'
@@ -99,7 +101,7 @@ export function Wardrobe() {
         <button type="button" class="wd-thumb" aria-label={item.name} aria-pressed={viewing === item.id} onClick={() => setViewing(viewing === item.id ? null : item.id)}>
           {previews.value[item.id] != null
             ? <img src={previews.value[item.id]} alt="" width={112} height={112} draggable={false} />
-            : <span class="wd-thumb-empty" title={t('wardrobe.noPreview')}><Shirt size={32} /></span>}
+            : <Tooltip content={t('wardrobe.noPreview')}><span class="wd-thumb-empty"><Shirt size={32} /></span></Tooltip>}
         </button>
         <b class="small ellipsis wd-title">{item.name}</b>
         <span class="xs muted">{item.slot != null ? t(`wardrobe.slot.${item.slot}`) : ''}</span>
@@ -216,17 +218,13 @@ export function Wardrobe() {
             </div>
             <div class="field-row">
               <label for="wd-wheel-key">{t('wardrobe.wheelKey')}</label>
-              <select id="wd-wheel-key" class="field wd-number" value={wardrobeSettings.value.wheelKey} disabled={busy}
-                onChange={(e) => void updateSettings({ wheelKey: (e.target as HTMLSelectElement).value })}>
-                {LETTERS.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
+              <Select id="wd-wheel-key" class="wd-number" value={wardrobeSettings.value.wheelKey} disabled={busy}
+                onChange={(v) => void updateSettings({ wheelKey: v })} options={LETTERS.map((l) => ({ value: l, label: l }))} />
             </div>
             <div class="field-row">
               <label for="wd-menu-key">{t('wardrobe.menuKey')}</label>
-              <select id="wd-menu-key" class="field wd-number" value={wardrobeSettings.value.menuKey} disabled={busy}
-                onChange={(e) => void updateSettings({ menuKey: (e.target as HTMLSelectElement).value })}>
-                {LETTERS.map((l) => <option key={l} value={l}>{l}</option>)}
-              </select>
+              <Select id="wd-menu-key" class="wd-number" value={wardrobeSettings.value.menuKey} disabled={busy}
+                onChange={(v) => void updateSettings({ menuKey: v })} options={LETTERS.map((l) => ({ value: l, label: l }))} />
             </div>
           </div>
         )}

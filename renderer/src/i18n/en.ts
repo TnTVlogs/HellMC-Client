@@ -32,6 +32,10 @@ export interface Messages {
     availableAt: string
     changeServer: string
     copyAddress: string
+    toastClose: string
+    notifications: string
+    copied: string
+    copyFailed: string
     credits: string
     descAutoConnect: string
     descDetached: string
@@ -308,6 +312,11 @@ export interface Messages {
     close: string
     retry: string
     microsoftOffline: string
+    eta: string
+    more: string
+    menuSettings: string
+    menuCopyAddress: string
+    menuNoServer: string
     phase: {
       idle: string
       starting: string
@@ -345,6 +354,9 @@ export interface Messages {
     playWithoutServerDesc: string
     empty: string
     versionsCount: string
+    offlineCache: string
+    offlineStale: string
+    lastKnown: string
   }
   serverDetail: {
     notFound: string
@@ -599,6 +611,10 @@ const en: Messages = {
     availableAt: 'Available at',
     changeServer: 'Change server',
     copyAddress: 'Copy address',
+    toastClose: 'Dismiss notification',
+    notifications: 'Notifications',
+    copied: 'Address copied',
+    copyFailed: 'Could not copy to the clipboard',
     credits: 'Credits and licenses',
     descAutoConnect: 'Join the server when the game opens (only if you picked a server)',
     descDetached: 'The game stays open if you close the launcher',
@@ -875,6 +891,11 @@ const en: Messages = {
     close: 'Close',
     retry: 'Try again',
     microsoftOffline: 'No connection: you will not be able to join online servers.',
+    eta: '{time} left',
+    more: 'More options',
+    menuSettings: 'Version settings',
+    menuCopyAddress: 'Copy server address',
+    menuNoServer: 'Play without a server',
     phase: {
       idle: 'Idle',
       starting: 'Starting…',
@@ -911,7 +932,10 @@ const en: Messages = {
     playWithoutServer: 'Play without a server',
     playWithoutServerDesc: 'Pick a version and play locally or on any server.',
     empty: 'No servers published yet.',
-    versionsCount: '{count} versions'
+    versionsCount: '{count} versions',
+    offlineCache: 'You are offline. Showing the last saved list of servers; player counts are the last known ones.',
+    offlineStale: 'Last known',
+    lastKnown: 'Last known status, {time} ago'
   },
   serverDetail: {
     notFound: 'Server not found.',

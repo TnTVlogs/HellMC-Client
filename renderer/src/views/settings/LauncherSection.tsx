@@ -1,3 +1,4 @@
+import { Select } from '../../components/Select'
 import { t } from '../../i18n'
 import { Card } from '../../components/Card'
 import { Toggle } from '../../components/Toggle'
@@ -41,10 +42,8 @@ export function LauncherSection() {
       <Card>
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.language')}</b><span>{t('ui.descLanguage')}</span></div>
-          <select class="field sm" aria-label={t('settings.launcher.language')} value={language.value}
-            onChange={(e) => setLanguage((e.target as HTMLSelectElement).value as Language)}>
-            {LANGUAGES.map((l) => <option key={l} value={l}>{LANGUAGE_LABELS[l]}</option>)}
-          </select>
+          <Select size="sm" ariaLabel={t('settings.launcher.language')} value={language.value} onChange={(v) => setLanguage(v as Language)}
+            options={LANGUAGES.map((l) => ({ value: l, label: LANGUAGE_LABELS[l] }))} />
         </div>
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.theme')}</b><span>{t('ui.descTheme')}</span></div>

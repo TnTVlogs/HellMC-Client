@@ -7,6 +7,11 @@ import { items, sources, fromCache, fetchedAt, loading, loadArchive, markRead } 
 import { hellmc, type NewsArchiveItem } from '../api'
 import { Button } from '../components/Button'
 import { Art } from '../components/ui'
+import { Skeleton, SkeletonGroup } from '../components/Skeleton'
+import { VirtualList } from '../components/VirtualList'
+
+/** Alçada fixa de cada fila de la llista (necessària per virtualitzar quan l'arxiu és gran, 06 §10). */
+const ROW_HEIGHT = 84
 
 // 07 §5: arxiu complet + lector (dues columnes a ≥ 1100 px, llista que obre el lector en estret).
 // `stores/news.ts` ja carrega l'arxiu en arrencar (`main.tsx`) perquè el comptador de la barra
@@ -86,23 +91,33 @@ export function News() {
         <Button size="sm" variant="ghost" disabled={loading.value} onClick={() => void loadArchive()}>{t('news.refresh')}</Button>
       </div>
 
-      {loading.value && items.value.length === 0 && <p class="muted">{t('news.loading')}</p>}
+      {loading.value && items.value.length === 0 && (
+        <SkeletonGroup label={t('news.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+              <Skeleton width={64} height={48} radius={8} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}><Skeleton width="80%" height={16} /><Skeleton width="35%" height={12} /></div>
+            </div>
+          ))}
+        </SkeletonGroup>
+      )}
       {!loading.value && visible.length === 0 && <p class="muted">{t('news.empty')}</p>}
 
       {visible.length > 0 && (
         <div class={`newsview${reading ? ' reading' : ''}`}>
-          <div class="nlist" style={{ display: 'flex', flexDirection: 'column', gap: 2 }} role="list">
-            {visible.map((item) => (
-              <div key={item.id} class="article-item" role="listitem" tabIndex={0} aria-current={selected?.id === item.id ? 'true' : undefined}
-                onClick={() => { setSelectedId(item.id); setReading(true) }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); setReading(true) } }}>
+          <VirtualList class="nlist" items={visible} rowHeight={ROW_HEIGHT} gap={2} getKey={(item) => item.id}
+            renderItem={(item, _i, a11y) => (
+              <div class="article-item" role="listitem" tabIndex={0} aria-current={selected?.id === item.id ? 'true' : undefined} {...a11y}
+                style={{ height: ROW_HEIGHT, boxSizing: 'border-box', overflow: 'hidden', alignItems: 'center' }}
+                onClick={() => { setSelectedId(item.id); setReading(true) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedId(item.id); setReading(true) } }}>
                 <Art seed={item.id} class="thumb" />
-                <div>
-                  <h3 class={item.unread ? 'unread' : ''}>{item.title}</h3>
+                <div style={{ minWidth: 0 }}>
+                  <h3 class={item.unread ? 'unread' : ''} style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.title}</h3>
                   <span class="meta">{formatDate(item.date)} · {item.source.name ?? t('news.global')}</span>
                 </div>
               </div>
-            ))}
-          </div>
+            )} />
           {selected != null && <ArticleReader item={selected} onBack={() => setReading(false)} />}
         </div>
       )}
