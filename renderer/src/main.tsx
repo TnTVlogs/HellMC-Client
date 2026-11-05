@@ -20,9 +20,21 @@ document.documentElement.dataset.platform = hellmc.system.platform
 
 render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('app')!)
 
+// Informes d'errors (plans/08): el renderer no té xarxa; passa el text al procés principal, que el neteja i decideix si l'envia.
+function reportRendererError(error: unknown, fallbackMessage = ''): void {
+  try {
+    const err = error instanceof Error ? error : null
+    hellmc.errors.report({ name: err?.name ?? 'Error', message: err?.message ?? (typeof error === 'string' ? error : fallbackMessage), stack: err?.stack ?? '' })
+  } catch {
+    /* informar d'un error mai en pot provocar un altre */
+  }
+}
+window.addEventListener('error', (event) => reportRendererError(event.error, event.message))
+
 // F2: cap promesa rebutjada queda sense registrar (abans eren errors invisibles).
 window.addEventListener('unhandledrejection', (event) => {
   console.error('[renderer] unhandledrejection', event.reason)
+  reportRendererError(event.reason, 'unhandledrejection')
 })
 
 // No bloqueja el primer render (06 §6): els signals de cada store ja tenen valors per defecte

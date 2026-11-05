@@ -25,12 +25,18 @@ export async function loadLegal(): Promise<void> {
   }
 }
 
-export async function acceptTerms(telemetryOptIn: boolean): Promise<void> {
-  await hellmc.legal.accept(telemetryOptIn)
+export async function acceptTerms(telemetryOptIn: boolean, errorReportOptIn = false): Promise<void> {
+  await hellmc.legal.accept(telemetryOptIn, errorReportOptIn)
   await loadLegal()
 }
 
 export async function setTelemetry(value: boolean): Promise<void> {
   await hellmc.legal.setTelemetry(value)
+  await loadLegal()
+}
+
+/** Informes d'errors automàtics (plans/08): casella pròpia, separada de la telemetria d'ús. */
+export async function setErrorReports(value: boolean): Promise<void> {
+  await hellmc.legal.setErrorReports(value)
   await loadLegal()
 }

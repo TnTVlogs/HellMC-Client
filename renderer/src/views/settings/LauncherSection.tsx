@@ -13,7 +13,7 @@ import {
   hardwareAcceleration, setHardwareAcceleration,
   onGameStart, setOnGameStart, type OnGameStart
 } from '../../stores/ui'
-import { legal, setTelemetry } from '../../stores/legal'
+import { legal, setErrorReports, setTelemetry } from '../../stores/legal'
 
 const UI_SCALES = [85, 100, 115, 130]
 const LANGUAGES: Language[] = ['ca', 'es', 'en']
@@ -84,6 +84,10 @@ export function LauncherSection() {
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.telemetry')}</b><span>{t('settings.launcher.telemetryHelp')}</span></div>
           <Toggle checked={legal.value?.telemetryOptIn === true} onChange={(v) => void setTelemetry(v)} label={t('settings.launcher.telemetry')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.errorReports')}</b><span>{t('settings.launcher.errorReportsHelp')}</span></div>
+          <Toggle checked={legal.value?.errorReportOptIn === true} onChange={(v) => void setErrorReports(v)} label={t('settings.launcher.errorReports')} />
         </div>
         {(devMode.value || devModeRevealed.value) && (
           <div class="set-row">

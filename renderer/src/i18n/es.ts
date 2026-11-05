@@ -117,10 +117,22 @@ const es: Messages = {
     acceptLabel: "He leído y acepto los Términos de uso y la Política de privacidad.",
     telemetryTitle: "Ayuda a mejorar HellMC (opcional)",
     telemetryHelp: "Comparte datos de uso mínimos y anónimos: un identificador aleatorio, la versión de la app, el sistema operativo y si se ha usado el launcher. Sin nombre, sin guardar la IP, sin datos del juego. Puedes cambiarlo después en Configuración.",
+    errorReportTitle: "Enviar informes de errores automáticamente (opcional)",
+    errorReportHelp: "Si HellMC falla, envía un informe de error limpio: el texto del error, la versión de la app, el sistema operativo y las últimas líneas del registro, sin rutas, nombres, tokens ni IP guardada. No lleva identificador salvo que también compartas datos de uso. Puedes cambiarlo después en Configuración.",
     continue: "Continuar",
     quit: "Salir",
     updated: "Hemos actualizado los términos y la política de privacidad. Revísalos para continuar.",
     notOfficial: "HellMC Client no está afiliado, respaldado ni patrocinado por Mojang Studios ni por Microsoft. Minecraft es una marca registrada de Mojang Synergies AB."
+  },
+  errorPrompt: {
+    title: "HellMC se cerró con un error",
+    body: "La última vez HellMC se cerró por un error. ¿Quieres enviar un informe anónimo para ayudar a corregirlo? No se envía nada si no lo eliges.",
+    send: "Enviar el informe",
+    skip: "No lo envíes",
+    never: "No volver a preguntar",
+    show: "Ver qué se envía",
+    hide: "Ocultar lo que se envía",
+    previewLabel: "Informe exacto que se enviaría"
   },
   boot: {
     updateRequired: {
@@ -261,7 +273,9 @@ const es: Messages = {
       onGameStartMinimize: "Minimizar",
       onGameStartClose: "Cerrar el launcher",
       telemetry: "Compartir datos de uso anónimos",
-      telemetryHelp: "Mínimos y anónimos. Ayuda a mejorar HellMC."
+      telemetryHelp: "Mínimos y anónimos. Ayuda a mejorar HellMC.",
+      errorReports: "Enviar informes de errores automáticamente",
+      errorReportsHelp: "Limpios y anónimos. Sin esto, se te pregunta antes de enviar ningún informe."
     },
     updates: {
       download: 'Descargar la actualización',

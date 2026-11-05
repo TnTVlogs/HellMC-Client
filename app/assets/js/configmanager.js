@@ -149,7 +149,12 @@ const DEFAULT_CONFIG = {
         // Telemetria: UUID aleatori (només mentre hi ha consentiment) i, si en retirar-lo no s'ha pogut avisar el servidor,
         // l'id pendent d'esborrar. Mai surten del procés principal (vegeu telemetry.js).
         telemetryId: null,
-        telemetryForget: null
+        telemetryForget: null,
+        // Informes d'errors (plans/08): casella pròpia, separada de la telemetria d'ús i desmarcada per defecte.
+        errorReportOptIn: false,
+        // «No ho tornis a preguntar» del diàleg de fallada greu i data (ms) de l'últim diàleg (màx. un per hora). Locals.
+        crashPromptDisabled: false,
+        crashPromptAt: null
     },
     // 2.5 (07 §6, «Java»: «valors globals per defecte»): seed per a `defaultJavaConfig` quan es
     // crea l'entrada d'una versió **nova** — `null` = segueix detectant/preguntant per versió com

@@ -62,7 +62,9 @@ let creating: Promise<Shared> | null = null
 
 // Recuperació: si el context WebGL es perd (controlador, GPU, suspensió) el visor es descarta i es recrea sol. Si falla
 // MAX_FAILURES vegades seguides, es deixa d'insistir i la vista ofereix un botó per recarregar-lo.
-const MAX_FAILURES = 3
+const MAX_FAILURES = 5
+/** Espera abans del reintent n (ms): una GPU que es reinicia triga més d'un segon a tornar. */
+const backoff = (n: number) => Math.min(500 * 2 ** (n - 1), 4000)
 /** Un visor que ha viscut tant de temps es considera sa: la seva pèrdua de context compta com a fallada nova, no consecutiva. */
 const HEALTHY_MS = 10_000
 let failures = 0
@@ -140,7 +142,13 @@ async function createShared(): Promise<Shared> {
     if (shared !== made || made.owner == null) return
     made.viewer.renderPaused = document.hidden
   })
-  canvas.addEventListener('webglcontextlost', (event) => { event.preventDefault(); retire(made) })
+  canvas.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault()
+    console.warn('SkinViewer: context WebGL perdut; es recrearà el visor')
+    retire(made)
+  })
+  // Un visor que ha aguantat HEALTHY_MS sa i estalvi: les fallades anteriors (transitòries) deixen de comptar.
+  window.setTimeout(() => { if (shared === made) failures = 0 }, HEALTHY_MS)
   return made
 }
 
@@ -152,7 +160,7 @@ function ensureShared(): Promise<Shared> {
 
 /** Crea el visor en segon pla (descàrrega del mòdul, WebGL, shaders) abans que l'usuari obri la vista. */
 export function preloadSkinViewer(): void {
-  void ensureShared().catch(() => { /* es reintentarà en muntar el visor */ })
+  void ensureShared().catch((err) => { console.warn('SkinViewer: precàrrega fallida (es reintentarà en muntar la vista)', err) })
 }
 
 export interface SkinViewerProps {
@@ -238,12 +246,16 @@ export function SkinViewer({ skin, variant, cape, walking, loading = false, cosm
     }
     if (shared != null) attach(shared)
     else {
-      ensureShared().then(attach, () => {
+      const start = () => ensureShared().then(attach, (err) => {
         failures += 1
+        console.error('SkinViewer: no s’ha pogut crear el visor 3D', err)
         if (cancelled) return
         if (failures >= MAX_FAILURES) setFailed(true)
-        else timer = window.setTimeout(() => setAttempt((n) => n + 1), 500 * failures)
+        else timer = window.setTimeout(() => setAttempt((n) => n + 1), backoff(failures))
       })
+      // Després d'una fallada o d'una pèrdua de context no es recrea a l'instant: la GPU necessita un moment.
+      if (failures > 0) timer = window.setTimeout(start, backoff(failures))
+      else void start()
     }
     return () => {
       cancelled = true
@@ -261,6 +273,8 @@ export function SkinViewer({ skin, variant, cape, walking, loading = false, cosm
   }, [attempt])
 
   function reload() {
+    // Si hi ha un visor, però és mort (llenç en blanc), es descarta perquè se'n creï un de nou.
+    if (shared != null) retire(shared)
     failures = 0
     setFailed(false)
     setAttempt((n) => n + 1)
@@ -289,7 +303,8 @@ export function SkinViewer({ skin, variant, cape, walking, loading = false, cosm
         if (stale || viewer.disposed) return
         viewer.renderPaused = false
         await afterPaint()
-      } catch {
+      } catch (err) {
+        console.error('SkinViewer: no s’ha pogut carregar la skin', err)
         if (!stale) setFailed(true)
       } finally {
         if (!stale) setSkinPending(false)

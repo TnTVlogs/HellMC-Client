@@ -33,6 +33,15 @@ export interface LegalState {
   termsAcceptedVersion: number | null
   acceptedAt: string | null
   telemetryOptIn: boolean
+  /** Informes d'errors automàtics (plans/08): casella pròpia, desmarcada per defecte. */
+  errorReportOptIn: boolean
+}
+
+/** Informe greu de l'última vegada, a punt per al diàleg; `json` és EXACTAMENT el que s'enviaria. */
+export interface PendingErrorPrompt {
+  count: number
+  report: Record<string, unknown>
+  json: string
 }
 
 /** 2.3: forma real (`configmanager.js` `javaConfig[versionId]`) — abans `Record<string, unknown>`
@@ -399,10 +408,18 @@ export interface HellMCApi {
   legal: {
     get(): Promise<LegalState>
     /** Desa l'acceptació de la versió actual; `telemetryOptIn` és el consentiment separat (per defecte no). */
-    accept(telemetryOptIn: boolean): Promise<void>
+    accept(telemetryOptIn: boolean, errorReportOptIn?: boolean): Promise<void>
     setTelemetry(value: boolean): Promise<void>
+    setErrorReports(value: boolean): Promise<void>
     /** D16: tanca totes les sessions i esborra comptes/tokens, acceptació, cache i logs; reinicia el launcher. */
     wipeLocalData(): Promise<void>
+  }
+  /** Informes d'errors (plans/08): el procés principal neteja, desa i envia; el renderer només informa. */
+  errors: {
+    report(error: { name: string; message: string; stack: string }): void
+    /** Informe greu pendent per preguntar (un cop per arrencada) o `null`. */
+    getPendingPrompt(): Promise<PendingErrorPrompt | null>
+    answerPrompt(choice: 'send' | 'dismiss' | 'never'): Promise<void>
   }
   updater: {
     check(): Promise<void>

@@ -13,6 +13,7 @@ import { DiscordIcon, GitHubIcon, InstagramIcon, XIcon, YouTubeIcon } from './Br
 import { IconButton } from './IconButton'
 import { Tooltip } from './Tooltip'
 import { ToastHost } from './Toast'
+import { ErrorReportPrompt } from './ErrorReportPrompt'
 import { Avatar, Banner, RingProgress, StatusDot } from './ui'
 import { instances, killInstance } from '../stores/instances'
 import { distro } from '../stores/distro'
@@ -248,6 +249,7 @@ export function Shell({ children }: { children: ComponentChildren }) {
         </main>
       </div>
       <ToastHost />
+      <ErrorReportPrompt />
     </div>
   )
 }

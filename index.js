@@ -50,12 +50,28 @@ app.on('second-instance', () => {
         win.focus()
     }
 })
+// Informes d'errors (plans/08): el mòdul es crea més avall, quan ja hi ha la config; fins llavors `report` no fa res.
+let ErrorReports = null
+function reportError(kind, errLike, extra = {}) {
+    try {
+        const err = errLike instanceof Error ? errLike : null
+        void ErrorReports?.capture({
+            kind,
+            name: err?.name ?? extra.name ?? 'Error',
+            message: err?.message ?? (typeof errLike === 'string' ? errLike : extra.message ?? String(errLike)),
+            stack: err?.stack ?? '',
+            ...extra
+        })
+    } catch { /* informar d'un error mai en pot provocar un altre */ }
+}
 // Errors no capturats: es registren (sense el diàleg natiu d'Electron) i l'app continua.
 process.on('uncaughtException', (err) => {
     console.error('[main] uncaughtException', err)
+    reportError('main', err, { severe: true })
 })
 process.on('unhandledRejection', (reason) => {
     console.error('[main] unhandledRejection', reason)
+    reportError('main', reason, { severe: true, name: 'UnhandledRejection' })
 })
 
 // Setup auto updater.
@@ -252,6 +268,15 @@ app.on('child-process-gone', (_event, details) => {
         console.error('[main] GPU process gone:', details.reason, '— hardware acceleration will be disabled on next start')
         ConfigManager.setUiConfig({ hardwareAcceleration: false })
         ConfigManager.save()
+    }
+    // Informes d'errors: només les fallades greus (§3 del pla 08).
+    if (['crashed', 'oom', 'launch-failed'].includes(details.reason)) {
+        reportError('child', `${details.type} process gone: ${details.reason}`, { severe: true, name: 'ChildProcessGone' })
+    }
+})
+app.on('render-process-gone', (_event, _webContents, details) => {
+    if (['crashed', 'oom', 'launch-failed'].includes(details.reason)) {
+        reportError('child', `renderer process gone: ${details.reason}`, { severe: true, name: 'RenderProcessGone' })
     }
 })
 
@@ -627,15 +652,68 @@ const Telemetry = require('./app/assets/js/telemetry').create({
     platform: process.platform,
     isDev
 })
+// Informes d'errors opt-in (plans/08): la neteja i la cua viuen a `errorReports.js`; el renderer no té xarxa i només hi arriba per IPC.
+ErrorReports = require('./app/assets/js/errorReports').create({
+    getLegal: () => ConfigManager.getLegal(),
+    setLegal: (patch) => ConfigManager.setLegal(patch),
+    save: () => ConfigManager.save(),
+    termsVersion: () => CURRENT_TERMS_VERSION,
+    appVersion: app.getVersion(),
+    platform: process.platform,
+    osVersion: os.release(),
+    arch: process.arch,
+    electronVersion: process.versions.electron,
+    isDev,
+    queueFile: path.join(app.getPath('userData'), 'error-queue.json'),
+    getLastLog: () => AppLog.tailFile(AppLog.getLogFile(), 40),
+    // Rutes i noms que no han de sortir mai: la instància i les carpetes de dades, el perfil de l'usuari i els jugadors coneguts.
+    getContext: () => {
+        const replacements = []
+        const add = (fn, label) => { try { const p = fn(); if (typeof p === 'string' && p !== '') replacements.push([p, label]) } catch { /* encara no hi ha config */ } }
+        add(() => ConfigManager.getInstanceDirectory(), '<instance>')
+        add(() => ConfigManager.getCommonDirectory(), '<common>')
+        add(() => ConfigManager.getDataDirectory(), '<data>')
+        add(() => ConfigManager.getLauncherDirectory(), '<launcher>')
+        add(() => app.getPath('userData'), '<userData>')
+        add(() => app.getAppPath(), '<app>')
+        add(() => process.resourcesPath, '<app>')
+        add(() => os.tmpdir(), '<tmp>')
+        add(() => os.homedir(), '~')
+        const names = []
+        try {
+            for (const account of Object.values(ConfigManager.getAuthAccounts() ?? {})) names.push(account?.displayName, account?.username)
+        } catch { /* sense comptes */ }
+        return { replacements, names: names.filter((n) => typeof n === 'string') }
+    }
+})
 ipcMain.handle('hellmc:legal-get', () => {
     // eslint-disable-next-line no-unused-vars
-    const { telemetryId, telemetryForget, ...visible } = ConfigManager.getLegal()
+    const { telemetryId, telemetryForget, crashPromptAt, ...visible } = ConfigManager.getLegal()
     return { currentVersion: CURRENT_TERMS_VERSION, ...visible }
 })
-ipcMain.handle('hellmc:legal-accept', async (_event, telemetryOptIn) => {
-    ConfigManager.setLegal({ termsAcceptedVersion: CURRENT_TERMS_VERSION, acceptedAt: new Date().toISOString(), telemetryOptIn: telemetryOptIn === true })
+ipcMain.handle('hellmc:legal-accept', async (_event, telemetryOptIn, errorReportOptIn) => {
+    ConfigManager.setLegal({ termsAcceptedVersion: CURRENT_TERMS_VERSION, acceptedAt: new Date().toISOString(), telemetryOptIn: telemetryOptIn === true, errorReportOptIn: errorReportOptIn === true })
     ConfigManager.save()
     await Telemetry.onConsentChanged()
+    await ErrorReports.onConsentChanged()
+})
+ipcMain.handle('hellmc:legal-set-error-reports', async (_event, value) => {
+    if (typeof value !== 'boolean') throw new Error('INVALID_VALUE')
+    ConfigManager.setLegal({ errorReportOptIn: value })
+    ConfigManager.save()
+    await ErrorReports.onConsentChanged()
+})
+// Errors del renderer (window.onerror / unhandledrejection): arriben com a text pla i es netegen al principal.
+ipcMain.on('hellmc:report-error', (_event, payload) => {
+    if (payload == null || typeof payload !== 'object') return
+    const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '')
+    reportError('renderer', null, { name: str(payload.name, 200) || 'Error', message: str(payload.message, 2000), stack: str(payload.stack, 32 * 1024) })
+})
+// Diàleg de fallada greu de l'última vegada (un cop per arrencada): el renderer el demana i respon amb una de les tres opcions.
+ipcMain.handle('hellmc:error-prompt-get', () => ErrorReports.getPendingPrompt())
+ipcMain.handle('hellmc:error-prompt-answer', async (_event, choice) => {
+    if (!['send', 'dismiss', 'never'].includes(choice)) throw new Error('INVALID_VALUE')
+    await ErrorReports.answerPrompt(choice)
 })
 ipcMain.handle('hellmc:legal-set-telemetry', async (_event, value) => {
     if (typeof value !== 'boolean') throw new Error('INVALID_VALUE')
@@ -650,7 +728,8 @@ ipcMain.handle('hellmc:wipe-local-data', async () => {
     if (runningInstances.size > 0) throw new Error('GAME_RUNNING')
     ConfigManager.removeAllAccounts()
     await Telemetry.disable() // demana al servidor que esborri el rastre i descarta l'identificador local
-    ConfigManager.setLegal({ termsAcceptedVersion: null, acceptedAt: null, telemetryOptIn: false })
+    ConfigManager.setLegal({ termsAcceptedVersion: null, acceptedAt: null, telemetryOptIn: false, errorReportOptIn: false, crashPromptDisabled: false, crashPromptAt: null })
+    ErrorReports.clear()
     ConfigManager.save()
     const userData = app.getPath('userData')
     for (const name of ['distribution.json', 'distribution.json.sig', 'newscache.json', 'config.json.bak', 'config.json.bak-v1']) {
@@ -1396,6 +1475,10 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
                 const details = AppLog.tailFile(proc.gameOutputPath, 25)
                 const latest = AppLog.tailFile(path.join(gameDir, 'logs', 'latest.log'), 25)
                 devLog(`game exited with code ${exitCode} after ${Date.now() - startedAt} ms`)
+                // Plans/08 §3: fallada greu = el joc cau pocs segons despres d'arrencar (crash en carrega).
+                if (Date.now() - startedAt < 60_000) {
+                    reportError('game', `Game exited with code ${exitCode}`, { severe: true, name: 'GameExited', lastLog: details.length > 0 ? details : latest })
+                }
                 send({
                     phase: 'error',
                     percent: 0,
@@ -1436,6 +1519,8 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         const isNetwork = networkCodes.some((c) => err?.code === c || String(err?.message).includes(c))
         // Mòduls sense SHA-256 vàlid (hellmc-core `ArtifactHash`) o receptor de descàrregues mort (`RECEIVER_EXITED`): el missatge comença amb el codi estable, que el renderer tradueix.
         const hashCode = /^(MODULE_HASH_MISSING|MODULE_HASH_INVALID|RECEIVER_EXITED):/.exec(String(err?.message))?.[1]
+        // Plans/08 §3: el Core/receptor falla abans d'iniciar (no es xarxa ni cancel·lacio).
+        if (!isNetwork) reportError('game', err, { severe: true, name: hashCode ?? 'LaunchFailed' })
         send({ phase: 'error', percent: 0, error: { code: hashCode ?? (isNetwork ? 'NEEDS_NETWORK' : 'LAUNCH_FAILED'), message: err?.message || String(err) } })
     } finally {
         if (releaseRepairLock != null) { releaseRepairLock(); releaseRepairLock = null }
@@ -2165,6 +2250,7 @@ app.on('web-contents-created', (_event, contents) => {
 // S5: desxifra els tokens abans de res més (cap finestra ni handler els necessita abans).
 app.on('ready', () => ConfigManager.unlockSecrets())
 app.on('ready', () => Telemetry.start())
+app.on('ready', () => ErrorReports.start())
 app.on('ready', () => { setTimeout(() => { void CatalogSync.sync() }, 3000) })
 app.on('ready', createWindow)
 app.on('ready', createMenu)

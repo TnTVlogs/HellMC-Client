@@ -23,6 +23,7 @@ function ExtLink({ href, children }: { href: string; children: string }) {
 export function Terms() {
   const [accepted, setAccepted] = useState(false)
   const [telemetry, setTelemetryChoice] = useState(false)
+  const [errorReports, setErrorReportsChoice] = useState(false)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -32,7 +33,7 @@ export function Terms() {
     setBusy(true)
     setFailed(false)
     try {
-      await acceptTerms(telemetry)
+      await acceptTerms(telemetry, errorReports)
     } catch (err) {
       console.error('[terms] accept failed', err)
       setFailed(true)
@@ -69,6 +70,11 @@ export function Terms() {
           <label class="check-row">
             <input type="checkbox" checked={telemetry} onChange={(e) => setTelemetryChoice((e.target as HTMLInputElement).checked)} />
             <span><b>{t('legal.telemetryTitle')}</b><span class="muted small">{t('legal.telemetryHelp')}</span></span>
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" checked={errorReports} onChange={(e) => setErrorReportsChoice((e.target as HTMLInputElement).checked)} />
+            <span><b>{t('legal.errorReportTitle')}</b><span class="muted small">{t('legal.errorReportHelp')}</span></span>
           </label>
 
           {failed && <Banner tone="warn" icon={Info}>{t('boot.errorBody')}</Banner>}

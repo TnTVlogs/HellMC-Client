@@ -455,7 +455,7 @@ input.field { min-width: 0; }
 .skin-viewer canvas { display: block; width: 100%; height: 100%; }
 .skin-viewer-loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); background: color-mix(in srgb, var(--surface-2) 82%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease); }
 .skin-viewer-loading.on { opacity: 1; }
-.skin-viewer-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); text-align: center; padding: 0 var(--space-4); }
+.skin-viewer-msg { position: absolute; inset: 0; z-index: 2; background: color-mix(in srgb, var(--surface-2) 92%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); text-align: center; padding: 0 var(--space-4); }
 .appearance-viewer-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .appearance-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
 .appearance-pane { display: flex; flex-direction: column; gap: var(--space-4); }

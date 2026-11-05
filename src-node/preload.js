@@ -205,9 +205,16 @@ const hellmcApi = {
     },
     legal: {
         get: () => ipcRenderer.invoke('hellmc:legal-get'),
-        accept: (telemetryOptIn) => ipcRenderer.invoke('hellmc:legal-accept', telemetryOptIn),
+        accept: (telemetryOptIn, errorReportOptIn) => ipcRenderer.invoke('hellmc:legal-accept', telemetryOptIn, errorReportOptIn === true),
+        setErrorReports: (value) => ipcRenderer.invoke('hellmc:legal-set-error-reports', value),
         setTelemetry: (value) => ipcRenderer.invoke('hellmc:legal-set-telemetry', value),
         wipeLocalData: () => ipcRenderer.invoke('hellmc:wipe-local-data')
+    },
+    // Informes d'errors (plans/08): el renderer no té xarxa, així que només envia el text de l'error al principal, que el neteja i decideix.
+    errors: {
+        report: (error) => ipcRenderer.send('hellmc:report-error', error),
+        getPendingPrompt: () => ipcRenderer.invoke('hellmc:error-prompt-get'),
+        answerPrompt: (choice) => ipcRenderer.invoke('hellmc:error-prompt-answer', choice)
     },
     updater: {
         check: () => ipcRenderer.invoke('hellmc:updater-check'),

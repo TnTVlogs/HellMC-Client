@@ -117,10 +117,22 @@ const ca: Messages = {
     acceptLabel: "He llegit i accepto els Termes d'ús i la Política de privacitat.",
     telemetryTitle: "Ajuda a millorar HellMC (opcional)",
     telemetryHelp: "Comparteix dades d'ús mínimes i anònimes: un identificador aleatori, la versió de l'app, el sistema operatiu i si s'ha fet servir el launcher. Sense nom, sense guardar la IP, sense dades del joc. Ho pots canviar després a Configuració.",
+    errorReportTitle: "Envia informes d'errors automàticament (opcional)",
+    errorReportHelp: "Si HellMC falla, envia un informe d'error net: el text de l'error, la versió de l'app, el sistema operatiu i les últimes línies del registre, sense rutes, noms, tokens ni IP desada. No porta cap identificador tret que també comparteixis dades d'ús. Ho pots canviar després a Configuració.",
     continue: "Continua",
     quit: "Surt",
     updated: "Hem actualitzat els termes i la política de privacitat. Revisa'ls per continuar.",
     notOfficial: "HellMC Client no està afiliat, avalat ni patrocinat per Mojang Studios ni per Microsoft. Minecraft és una marca registrada de Mojang Synergies AB."
+  },
+  errorPrompt: {
+    title: "HellMC s'ha tancat amb un error",
+    body: "L'última vegada HellMC s'ha tancat per un error. Vols enviar un informe anònim per ajudar a corregir-lo? No s'envia res si no ho tries.",
+    send: "Envia l'informe",
+    skip: "No l'enviïs",
+    never: "No ho tornis a preguntar",
+    show: "Veure què s'envia",
+    hide: "Amaga el que s'envia",
+    previewLabel: "Informe exacte que s'enviaria"
   },
   boot: {
     updateRequired: {
@@ -261,7 +273,9 @@ const ca: Messages = {
       onGameStartMinimize: "Minimitza",
       onGameStartClose: "Tanca el launcher",
       telemetry: "Comparteix dades d’ús anònimes",
-      telemetryHelp: "Mínimes i anònimes. Ajuda a millorar HellMC."
+      telemetryHelp: "Mínimes i anònimes. Ajuda a millorar HellMC.",
+      errorReports: "Envia informes d'errors automàticament",
+      errorReportsHelp: "Nets i anònims. Sense això, se't pregunta abans d'enviar cap informe."
     },
     updates: {
       download: "Descarrega l'actualització",

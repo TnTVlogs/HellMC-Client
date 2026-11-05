@@ -117,10 +117,22 @@ export interface Messages {
     acceptLabel: string,
     telemetryTitle: string,
     telemetryHelp: string,
+    errorReportTitle: string,
+    errorReportHelp: string,
     continue: string,
     quit: string,
     updated: string,
     notOfficial: string
+  },
+  errorPrompt: {
+    title: string,
+    body: string,
+    send: string,
+    skip: string,
+    never: string,
+    show: string,
+    hide: string,
+    previewLabel: string
   },
   boot: {
     updateRequired: {
@@ -261,7 +273,9 @@ export interface Messages {
       onGameStartMinimize: string,
       onGameStartClose: string,
       telemetry: string,
-      telemetryHelp: string
+      telemetryHelp: string,
+      errorReports: string,
+      errorReportsHelp: string
     }
     updates: {
       download: string
@@ -696,10 +710,22 @@ const en: Messages = {
     acceptLabel: "I have read and accept the Terms of use and the Privacy policy.",
     telemetryTitle: "Help improve HellMC (optional)",
     telemetryHelp: "Share minimal anonymous usage data: a random ID, app version, operating system and whether the launcher was used. No name, no IP stored, no game data. You can change this later in Settings.",
+    errorReportTitle: "Send error reports automatically (optional)",
+    errorReportHelp: "If HellMC crashes, it sends a cleaned error report: error text, app version, operating system and the last log lines, with no paths, names, tokens or IP stored. It carries no ID unless you also share usage data. You can change this later in Settings.",
     continue: "Continue",
     quit: "Quit",
     updated: "We have updated our terms and privacy policy. Please review them to continue.",
     notOfficial: "HellMC Client is not affiliated with, endorsed or sponsored by Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Synergies AB."
+  },
+  errorPrompt: {
+    title: "HellMC closed with an error",
+    body: "Last time HellMC closed because of an error. Do you want to send an anonymous report to help fix it? Nothing is sent unless you choose to.",
+    send: "Send report",
+    skip: "Don't send",
+    never: "Don't ask again",
+    show: "See what is sent",
+    hide: "Hide what is sent",
+    previewLabel: "Exact report that would be sent"
   },
   boot: {
     updateRequired: {
@@ -840,7 +866,9 @@ const en: Messages = {
       onGameStartMinimize: "Minimize",
       onGameStartClose: "Close launcher",
       telemetry: "Share anonymous usage data",
-      telemetryHelp: "Minimal and anonymous. Helps improve HellMC."
+      telemetryHelp: "Minimal and anonymous. Helps improve HellMC.",
+      errorReports: "Send error reports automatically",
+      errorReportsHelp: "Cleaned and anonymous. Without this, you are asked before sending any report."
     },
     updates: {
       download: 'Download the update',
