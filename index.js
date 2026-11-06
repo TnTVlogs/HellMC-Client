@@ -1165,6 +1165,40 @@ const runtime = RuntimeManager.create({
     clientVersion: app.getVersion()
 })
 
+// ── Relay de HellMC (docs/pendents/plans/09-relay-i-auth.md) ──────────────────────────────────
+// Abans de cada partida s'autentica amb el relay i s'escriu `<instància>/hellmc-relay.json` perquè el runtime el trobi.
+// Només comptes Microsoft, amb el relay activat (per defecte) i els termes acceptats; si no, s'esborra qualsevol sessió antiga.
+// Mai bloqueja ni fa fallar el llançament.
+const RelayAuth = require('./app/assets/js/relayauth').create({
+    fetchFn: (...args) => fetch(...args),
+    dataDir: app.getPath('userData'),
+    relayBase: process.env.HELLMC_RELAY_URL || undefined,
+    log: (msg) => devLog(msg)
+})
+async function prepareRelay(gameDir) {
+    try {
+        const account = ConfigManager.getSelectedAccount()
+        const enabled = ConfigManager.getUiConfig().relay !== false && ConfigManager.getLegal().termsAcceptedVersion != null
+        if (!enabled || account == null || account.type !== 'microsoft') {
+            RelayAuth.clear(gameDir)
+            return false
+        }
+        // Tot el procés (3 peticions) com a molt 8 s: un relay lent no pot endarrerir el joc; sense sessió, sense relay.
+        let timer
+        const cap = new Promise((resolve) => { timer = setTimeout(() => resolve(false), 8000) })
+        try {
+            const ok = await Promise.race([RelayAuth.prepare(gameDir, account), cap])
+            if (!ok) RelayAuth.clear(gameDir)
+            return ok
+        } finally {
+            clearTimeout(timer)
+        }
+    } catch (err) {
+        devLog(`relay: ${err && err.message}`)
+        return false
+    }
+}
+
 // ── Armari (docs/client-cosmetics/17-armari-i-seleccio.md) ───────────────────────────────────
 // El launcher escriu `<userData>/wardrobe/equipped.json` i el catàleg local; el joc ho llegeix. Per compte (uuid).
 const WardrobeManager = require('./app/assets/js/wardrobemanager')
@@ -1443,6 +1477,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         devLog(`servers.dat: ${serversDatResult.status}${serversDatResult.reason ? ` (${serversDatResult.reason})` : ''}`)
 
         writePresenceConfig(gameDir, distro.rawDistribution, server, selectedVersion.rawVersion)
+        await step(prepareRelay(gameDir))
         void CatalogSync.sync()                       // el joc llegeix la caché de l'Armari: posa-la al dia sense endarrerir el llançament
 
         // Només hi pot haver els jars del runtime que la distribució declara (el runtime carrega tots els de la carpeta de mòduls).

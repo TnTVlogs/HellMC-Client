@@ -94,6 +94,7 @@ const UI_KEYS = {
     language: (v) => ['en', 'es', 'ca'].includes(v),
     devMode: (v) => typeof v === 'boolean',
     discordPresence: (v) => typeof v === 'boolean',
+    relay: (v) => typeof v === 'boolean',
     hardwareAcceleration: (v) => typeof v === 'boolean',
     onGameStart: (v) => ['keep', 'minimize', 'close'].includes(v)
 }

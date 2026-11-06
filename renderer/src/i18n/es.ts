@@ -265,6 +265,8 @@ const es: Messages = {
       devModeHint: 'Haz clic varias veces en el número de versión en Acerca de para revelar esto.',
       discordPresence: "Mostrar actividad en Discord",
       discordPresenceHelp: "Muestra en tu perfil de Discord a qué juegas.",
+      relay: "Conectar con otros usuarios de HellMC",
+      relayHelp: "Permite ver la insignia de HellMC entre los jugadores que también usan el cliente. Solo se envía tu UUID, tu nombre, la dirección del servidor donde juegas y la lista de jugadores, y solo la ven los usuarios del mismo servidor.",
       hardwareAcceleration: "Aceleración por hardware",
       hardwareAccelerationHelp: "Interfaz más fluida en la mayoría de ordenadores. Desactívala si ves fallos visuales. Se aplica al reiniciar.",
       onGameStart: "Al iniciar el juego",

@@ -10,6 +10,7 @@ import {
   language, setLanguage, type Language,
   devMode, setDevMode, devModeRevealed,
   discordPresence, setDiscordPresence,
+  relay, setRelay,
   hardwareAcceleration, setHardwareAcceleration,
   onGameStart, setOnGameStart, type OnGameStart
 } from '../../stores/ui'
@@ -76,6 +77,10 @@ export function LauncherSection() {
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.discordPresence')}</b><span>{t('settings.launcher.discordPresenceHelp')}</span></div>
           <Toggle checked={discordPresence.value} onChange={setDiscordPresence} label={t('settings.launcher.discordPresence')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.relay')}</b><span>{t('settings.launcher.relayHelp')}</span></div>
+          <Toggle checked={relay.value} onChange={setRelay} label={t('settings.launcher.relay')} />
         </div>
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.hardwareAcceleration')}</b><span>{t('settings.launcher.hardwareAccelerationHelp')}</span></div>

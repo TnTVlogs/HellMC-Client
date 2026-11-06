@@ -20,6 +20,8 @@ export interface ClientConfig {
     devMode: boolean
     /** D9: Rich Presence de Discord (activat per defecte). */
     discordPresence: boolean
+    /** Relay de HellMC: veure la insígnia dels altres usuaris al mateix servidor (activat per defecte). */
+    relay: boolean
     /** D14: acceleració per maquinari; s'aplica en reiniciar. */
     hardwareAcceleration: boolean
     /** D13: què fa el launcher quan s'inicia el joc. */

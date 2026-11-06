@@ -14,6 +14,7 @@ const path = require('path')
 const DISTRIBUTION_FORMAT = 2
 
 const INSTANCE_FOLDER = 'hellmc-runtime'
+const RELAY_SESSION_FILE = 'hellmc-relay.json' // = relayauth.SESSION_FILE
 
 /**
  * @param {object} options
@@ -87,8 +88,11 @@ function create({ dataDir, clientVersion, devRuntimeDir = null, env = process.en
     function jvmArgs({ minecraftVersion, gameDir }) {
         const found = env.HELLMC_NO_RUNTIME === '1' ? null : locate(gameDir)
         if (found == null || typeof clientVersion !== 'string' || clientVersion === '') return []
+        // Sessió del relay (relayauth.js): només si el launcher l'ha escrit per a aquesta partida; el token mai va a la línia d'ordres.
+        const relayFile = path.join(gameDir, RELAY_SESSION_FILE)
         return [
             `-javaagent:${found.agentJar}`,
+            ...(fs.existsSync(relayFile) ? [`-Dhellmc.relay=${relayFile}`] : []),
             `-Dhellmc.client.version=${clientVersion}`,
             `-Dhellmc.distribution.format=${DISTRIBUTION_FORMAT}`,
             `-Dhellmc.mc.version=${minecraftVersion}`,

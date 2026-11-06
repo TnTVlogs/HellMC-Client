@@ -136,6 +136,8 @@ const DEFAULT_CONFIG = {
         devMode: false,
         // D9: Rich Presence de Discord activat per defecte, amb interruptor.
         discordPresence: true,
+        // Relay de HellMC (plans/09): veure la insígnia dels altres usuaris del client al mateix servidor. Activat per defecte, amb interruptor.
+        relay: true,
         // D14: acceleració per maquinari (decisió de l'usuari; només s'aplica en reiniciar).
         hardwareAcceleration: true,
         // D13: què fa el launcher quan s'inicia el joc: 'keep' | 'minimize' | 'close'.
