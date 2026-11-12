@@ -252,8 +252,7 @@ async function validateSelectedOfflineAccount() {
  * @returns {Promise.<'ok'|'offline'|'invalid'>} 'offline' = could not reach the servers
  * (never delete the account); 'invalid' = the servers refused the credentials.
  */
-async function validateSelectedMicrosoftAccount() {
-    const current = ConfigManager.getSelectedAccount()
+async function validateMicrosoftAccount(current) {
     const now = new Date().getTime()
 
     // Proactive refresh: check if token expires within 30 minutes.
@@ -357,13 +356,30 @@ const inflightValidation = new Map()
 exports.validateSelectedStatus = async function () {
     const current = ConfigManager.getSelectedAccount()
     if (current == null) return 'invalid'
+    return await validateAccountObject(current)
+}
 
+/**
+ * Igual que `validateSelectedStatus` però per a un compte concret (uuid): serveix per renovar el token d'una partida en curs
+ * encara que l'usuari hagi canviat el compte seleccionat. Comparteix `inflightValidation` (mai dos refrescos alhora del mateix compte).
+ *
+ * @param {string} uuid
+ * @returns {Promise.<'ok'|'offline'|'invalid'>}
+ */
+exports.validateAccountStatus = async function (uuid) {
+    const current = ConfigManager.getAuthAccount(uuid)
+    if (current == null) return 'invalid'
+    return await validateAccountObject(current)
+}
+
+async function validateAccountObject(current) {
     if (current.type !== 'microsoft') {
         return await validateSelectedOfflineAccount()
     }
     let pending = inflightValidation.get(current.uuid)
     if (pending == null) {
-        pending = validateSelectedMicrosoftAccount().finally(() => inflightValidation.delete(current.uuid))
+        // L'objecte es rellegeix dins de la validació: un refresc anterior pot haver canviat els tokens.
+        pending = validateMicrosoftAccount(ConfigManager.getAuthAccount(current.uuid) ?? current).finally(() => inflightValidation.delete(current.uuid))
         inflightValidation.set(current.uuid, pending)
     }
     return await pending

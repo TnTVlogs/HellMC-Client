@@ -26,6 +26,7 @@ export const devMode = signal<boolean>(false)
 /** D9/D14/D13: ajustos nous del Launcher. */
 export const discordPresence = signal<boolean>(true)
 export const relay = signal<boolean>(true)
+export const renewToken = signal<boolean>(true)
 export const hardwareAcceleration = signal<boolean>(true)
 export const onGameStart = signal<OnGameStart>('keep')
 /** Només de sessió (mai `config.json`): un cop clicada la versió prou vegades a Sobre, el
@@ -58,6 +59,7 @@ export async function loadUiConfig(): Promise<void> {
   devMode.value = config.ui.devMode
   discordPresence.value = config.ui.discordPresence !== false
   relay.value = config.ui.relay !== false
+  renewToken.value = config.ui.renewToken !== false
   hardwareAcceleration.value = config.ui.hardwareAcceleration !== false
   onGameStart.value = config.ui.onGameStart ?? 'keep'
   loaded = true
@@ -77,6 +79,7 @@ function persist(): void {
       devMode: devMode.value,
       discordPresence: discordPresence.value,
       relay: relay.value,
+      renewToken: renewToken.value,
       hardwareAcceleration: hardwareAcceleration.value,
       onGameStart: onGameStart.value
     }
@@ -115,6 +118,11 @@ export function setDiscordPresence(next: boolean): void {
 
 export function setRelay(next: boolean): void {
   relay.value = next
+  persist()
+}
+
+export function setRenewToken(next: boolean): void {
+  renewToken.value = next
   persist()
 }
 

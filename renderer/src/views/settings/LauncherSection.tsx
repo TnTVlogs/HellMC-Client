@@ -11,6 +11,7 @@ import {
   devMode, setDevMode, devModeRevealed,
   discordPresence, setDiscordPresence,
   relay, setRelay,
+  renewToken, setRenewToken,
   hardwareAcceleration, setHardwareAcceleration,
   onGameStart, setOnGameStart, type OnGameStart
 } from '../../stores/ui'
@@ -81,6 +82,10 @@ export function LauncherSection() {
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.relay')}</b><span>{t('settings.launcher.relayHelp')}</span></div>
           <Toggle checked={relay.value} onChange={setRelay} label={t('settings.launcher.relay')} />
+        </div>
+        <div class="set-row">
+          <div class="l"><b>{t('settings.launcher.renewToken')}</b><span>{t('settings.launcher.renewTokenHelp')}</span></div>
+          <Toggle checked={renewToken.value} onChange={setRenewToken} label={t('settings.launcher.renewToken')} />
         </div>
         <div class="set-row">
           <div class="l"><b>{t('settings.launcher.hardwareAcceleration')}</b><span>{t('settings.launcher.hardwareAccelerationHelp')}</span></div>

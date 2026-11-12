@@ -138,6 +138,8 @@ const DEFAULT_CONFIG = {
         discordPresence: true,
         // Relay de HellMC (plans/09): veure la insígnia dels altres usuaris del client al mateix servidor. Activat per defecte, amb interruptor.
         relay: true,
+        // Renovar el token de Minecraft durant la partida (plans/10): el launcher ha de seguir obert.
+        renewToken: true,
         // D14: acceleració per maquinari (decisió de l'usuari; només s'aplica en reiniciar).
         hardwareAcceleration: true,
         // D13: què fa el launcher quan s'inicia el joc: 'keep' | 'minimize' | 'close'.

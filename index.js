@@ -1199,6 +1199,15 @@ async function prepareRelay(gameDir) {
     }
 }
 
+// ── Autorenovació del token de Minecraft durant la partida (docs/pendents/plans/10-autorenovacio-de-tokens.md) ──
+// Mentre el joc és obert, el launcher refresca el compte d'AQUELLA partida i deixa el token nou a `<instància>/hellmc-session.json`;
+// l'agent del joc (`-Dhellmc.session`) el posa al lloc. Si el launcher es tanca en iniciar el joc (`onGameStart = 'close'`) no hi ha renovació.
+const SessionRenew = require('./app/assets/js/sessionrenew').create({
+    refresh: (uuid) => AuthManager.validateAccountStatus(uuid),
+    getAccount: (uuid) => ConfigManager.getAuthAccount(uuid),
+    log: (msg) => devLog(msg)
+})
+
 // ── Armari (docs/client-cosmetics/17-armari-i-seleccio.md) ───────────────────────────────────
 // El launcher escriu `<userData>/wardrobe/equipped.json` i el catàleg local; el joc ho llegeix. Per compte (uuid).
 const WardrobeManager = require('./app/assets/js/wardrobemanager')
@@ -1488,8 +1497,10 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         if (prunedRuntime.length > 0) devLog(`runtime: esborrats ${prunedRuntime.length} jar(s) antic(s)`)
 
         throwIfCancelled()
+        SessionRenew.clear(gameDir)                   // cap token residual d'una partida anterior: el joc no ha de poder llegir-lo en arrencar
         const pb = new ProcessBuilder(selectedVersion, versionData, modLoaderData, account, app.getVersion(), server, runtime)
         const proc = pb.build()
+        const renewal = account.type === 'microsoft' && ConfigManager.getUiConfig().renewToken !== false ? SessionRenew.watch(gameDir, account.uuid) : null
         runningInstances.set(key, { id: key, versionId: target.versionId, serverId: target.serverId, startedAt: Date.now(), proc })
         broadcastInstances()
         syncMenuRpc()
@@ -1499,6 +1510,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         const onProcEnd = (exitCode, signal) => {
             if (ended) return
             ended = true
+            if (renewal != null) renewal.stop()
             runningInstances.delete(key)
             broadcastInstances()
             syncMenuRpc()
@@ -1531,6 +1543,7 @@ ipcMain.handle('hellmc:launch-start', async (event, target) => {
         proc.on('error', (spawnErr) => {
             devLog(`spawn error: ${spawnErr.message}`)
             ended = true
+            if (renewal != null) renewal.stop()
             runningInstances.delete(key)
             broadcastInstances()
             syncMenuRpc()

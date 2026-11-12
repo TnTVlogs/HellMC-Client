@@ -15,6 +15,7 @@ const DISTRIBUTION_FORMAT = 2
 
 const INSTANCE_FOLDER = 'hellmc-runtime'
 const RELAY_SESSION_FILE = 'hellmc-relay.json' // = relayauth.SESSION_FILE
+const SESSION_FILE = 'hellmc-session.json' // = sessionrenew.SESSION_FILE
 
 /**
  * @param {object} options
@@ -93,6 +94,8 @@ function create({ dataDir, clientVersion, devRuntimeDir = null, env = process.en
         return [
             `-javaagent:${found.agentJar}`,
             ...(fs.existsSync(relayFile) ? [`-Dhellmc.relay=${relayFile}`] : []),
+            // Token de Minecraft renovat pel launcher (sessionrenew.js): el fitxer només existeix si hi ha un token nou; l'agent el vigila.
+            `-Dhellmc.session=${path.join(gameDir, SESSION_FILE)}`,
             `-Dhellmc.client.version=${clientVersion}`,
             `-Dhellmc.distribution.format=${DISTRIBUTION_FORMAT}`,
             `-Dhellmc.mc.version=${minecraftVersion}`,

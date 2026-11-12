@@ -22,6 +22,8 @@ export interface ClientConfig {
     discordPresence: boolean
     /** Relay de HellMC: veure la insígnia dels altres usuaris al mateix servidor (activat per defecte). */
     relay: boolean
+    /** Renovar el token de Minecraft durant la partida (el launcher ha de seguir obert). */
+    renewToken: boolean
     /** D14: acceleració per maquinari; s'aplica en reiniciar. */
     hardwareAcceleration: boolean
     /** D13: què fa el launcher quan s'inicia el joc. */

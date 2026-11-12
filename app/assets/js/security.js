@@ -95,6 +95,7 @@ const UI_KEYS = {
     devMode: (v) => typeof v === 'boolean',
     discordPresence: (v) => typeof v === 'boolean',
     relay: (v) => typeof v === 'boolean',
+    renewToken: (v) => typeof v === 'boolean',
     hardwareAcceleration: (v) => typeof v === 'boolean',
     onGameStart: (v) => ['keep', 'minimize', 'close'].includes(v)
 }
