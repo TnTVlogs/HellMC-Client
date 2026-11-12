@@ -268,7 +268,7 @@ const es: Messages = {
       renewToken: "Renovar la sesión durante la partida",
       renewTokenHelp: "Evita tener que reiniciar el juego cuando caduca la sesión de Minecraft (cada ~24 h). El launcher debe seguir abierto: no funciona si la opción «Al iniciar el juego» es «Cerrar el launcher».",
       relay: "Conectar con otros usuarios de HellMC",
-      relayHelp: "Permite ver la insignia de HellMC entre los jugadores que también usan el cliente. Solo se envía tu UUID, tu nombre, la dirección del servidor donde juegas y la lista de jugadores, y solo la ven los usuarios del mismo servidor.",
+      relayHelp: "Permite que los jugadores que también usan el cliente vean tu insignia de HellMC, los cosméticos que llevas y los emotes que haces. Se envía tu UUID, tu nombre, la dirección del servidor donde juegas, la lista de jugadores, los cosméticos equipados y los emotes, y solo lo ven los usuarios del mismo servidor.",
       hardwareAcceleration: "Aceleración por hardware",
       hardwareAccelerationHelp: "Interfaz más fluida en la mayoría de ordenadores. Desactívala si ves fallos visuales. Se aplica al reiniciar.",
       onGameStart: "Al iniciar el juego",

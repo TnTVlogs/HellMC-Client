@@ -268,7 +268,7 @@ const ca: Messages = {
       renewToken: "Renova la sessió durant la partida",
       renewTokenHelp: "Evita haver de reiniciar el joc quan la sessió de Minecraft caduca (cada ~24 h). Cal que el launcher segueixi obert: no funciona si l’opció «En iniciar el joc» és «Tanca el launcher».",
       relay: "Connecta amb altres usuaris de HellMC",
-      relayHelp: "Permet veure’t la insígnia de HellMC entre els jugadors que també usen el client. Només s’envia el teu UUID, el teu nom, l’adreça del servidor on jugues i la llista de jugadors, i només la veuen els usuaris del mateix servidor.",
+      relayHelp: "Permet que els jugadors que també usen el client et vegin la insígnia de HellMC, els cosmètics que portes i els emotes que fas. S’envia el teu UUID, el teu nom, l’adreça del servidor on jugues, la llista de jugadors, els cosmètics equipats i els emotes, i només ho veuen els usuaris del mateix servidor.",
       hardwareAcceleration: "Acceleració per maquinari",
       hardwareAccelerationHelp: "Interfície més fluida a la majoria d’ordinadors. Desactiva-la si veus errors visuals. S’aplica en reiniciar.",
       onGameStart: "En iniciar el joc",

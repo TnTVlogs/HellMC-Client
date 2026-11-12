@@ -865,7 +865,7 @@ const en: Messages = {
       renewToken: "Renew the session while playing",
       renewTokenHelp: "Avoids having to restart the game when the Minecraft session expires (about every 24 h). The launcher must stay open: it does not work if the “When the game starts” option is “Close launcher”.",
       relay: "Connect with other HellMC users",
-      relayHelp: "Lets players who also use the client see your HellMC badge. Only your UUID, your name, the address of the server you play on and the list of players are sent, and only users on the same server can see you.",
+      relayHelp: "Lets players who also use the client see your HellMC badge, the cosmetics you wear and the emotes you perform. Your UUID, your name, the address of the server you play on, the list of players, your equipped cosmetics and your emotes are sent, and only users on the same server can see them.",
       hardwareAcceleration: "Hardware acceleration",
       hardwareAccelerationHelp: "Smoother interface on most computers. Turn it off if you see glitches. Applies after restarting.",
       onGameStart: "When the game starts",
