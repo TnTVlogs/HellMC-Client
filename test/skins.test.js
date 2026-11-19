@@ -176,6 +176,56 @@ async function main() {
     } finally {
         fs.rmSync(dir, { recursive: true, force: true })
     }
+    // -- skin d'un amic (caché de 24 h al disc, perfil public de Mojang, sense token) --
+    {
+        const fdir = fs.mkdtempSync(path.join(os.tmpdir(), 'hellmc-friendskin-'))
+        try {
+            const FRIEND = 'abcdefabcdefabcdefabcdefabcdefab'
+            const calls = []
+            let sessionDown = false
+            const textureUrl = 'https://textures.minecraft.net/texture/friendtex'
+            const value = Buffer.from(JSON.stringify({ textures: { SKIN: { url: textureUrl } } })).toString('base64')
+            const fetchFn = async (url) => {
+                calls.push(url)
+                if (url.includes('/session/minecraft/profile/')) {
+                    if (sessionDown) return json(500, {})
+                    return json(200, { id: FRIEND, properties: [{ name: 'textures', value }] })
+                }
+                if (url === textureUrl) return json(200, {})
+                return json(404, {})
+            }
+            let tokenAsked = 0
+            const svc = create({ fetchFn, getToken: async () => { tokenAsked++; return 'tok' }, libraryDir: path.join(fdir, 'skins') })
+
+            assert.equal(await svc.friendSkin('no-uuid'), null)
+            assert.equal(await svc.friendSkin('../x'), null)
+            const first = await svc.friendSkin(FRIEND)
+            assert.ok(Buffer.isBuffer(first) && first.length > 0, 'baixa la skin publica')
+            assert.equal(tokenAsked, 0, 'no fa servir el token del compte')
+            assert.equal(calls.filter((u) => u.includes('/session/minecraft/profile/')).length, 1)
+
+            // fresca (< 24 h): no torna a tocar la xarxa, ni amb Mojang caigut
+            const n = calls.length
+            sessionDown = true
+            assert.deepEqual(await svc.friendSkin(FRIEND), first)
+            assert.equal(calls.length, n, 'cache fresca: cap peticio')
+
+            // vella (> 24 h) i Mojang caigut: serveix la darrera que va veure, sense llancar
+            const cached = path.join(fdir, 'skins', 'cache', `skin-${FRIEND}.png`)
+            const old = new Date(Date.now() - 25 * 3600 * 1000)
+            fs.utimesSync(cached, old, old)
+            assert.deepEqual(await svc.friendSkin(FRIEND), first, 'sense Mojang, serveix la darrera vista')
+            // ... i no reintenta Mojang a cada crida (retrocés de 10 min)
+            const m = calls.filter((u) => u.includes('/session/minecraft/profile/')).length
+            await svc.friendSkin(FRIEND)
+            assert.equal(calls.filter((u) => u.includes('/session/minecraft/profile/')).length, m, 'retroces despres d\'una fallada')
+            // un amic desconegut sense res a la caché ni a les APIs: null, sense llancar
+            assert.equal(await svc.friendSkin('0123456789abcdef0123456789abcdef'), null)
+        } finally {
+            fs.rmSync(fdir, { recursive: true, force: true })
+        }
+    }
+
     console.log('skins: all OK')
 }
 main().catch((err) => { console.error(err); process.exit(1) })

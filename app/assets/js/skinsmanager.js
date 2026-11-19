@@ -289,6 +289,56 @@ function create({ fetchFn, getToken, libraryDir }) {
         return viaApi
     }
 
+    /** Una skin d'un amic es considera fresca tant de temps; passat això es torna a consultar a Mojang (la skin pot haver canviat). */
+    const FRIEND_TTL_MS = 24 * 3600 * 1000
+    /** UUID que Mojang no ha servit fa poc: no es torna a provar abans d'això (no martellejar el servidor). */
+    const friendMiss = new Map()
+
+    /**
+     * Skin PÚBLICA d'un altre jugador (un amic), pel seu UUID: la desada si té menys de 24 h, si no el perfil públic del servidor de
+     * sessions de Mojang, i com a últim recurs la darrera vista o una API pública. PNG net, o `null`. Mai llança. La caché és al disc
+     * (`skin-<uuid>.png`), així que reiniciar el launcher no repeteix res.
+     */
+    async function friendSkin(uuid) {
+        const key = normUuid(uuid)
+        if (key == null) return null
+        const file = accountSkinFile(key)
+        try {
+            if (Date.now() - fs.statSync(file).mtimeMs < FRIEND_TTL_MS) {
+                const fresh = cacheRead(file)
+                if (fresh != null) return parsePng(fresh).data
+            }
+        } catch {
+            // no n'hi ha o és malmesa: es consulta
+        }
+        if ((friendMiss.get(key) ?? 0) < Date.now()) {
+            try {
+                const response = await request(`${SESSION_SERVER}/session/minecraft/profile/${key}`, { method: 'GET' }, { timeoutMs: 8000 })
+                const profile = await response.json()
+                const prop = (profile.properties || []).find((p) => p.name === 'textures')
+                const textures = prop == null ? {} : JSON.parse(Buffer.from(prop.value, 'base64').toString('utf8')).textures || {}
+                if (textures.SKIN != null && isTextureUrl(textures.SKIN.url)) return (await fetchTexture(textures.SKIN.url, { accountUuid: key })).buffer
+            } catch {
+                friendMiss.set(key, Date.now() + 10 * 60 * 1000)
+            }
+        }
+        const stale = cacheRead(file)
+        if (stale != null) {
+            try {
+                return parsePng(stale).data
+            } catch {
+                // desada malmesa: es descarta
+            }
+        }
+        try {
+            const viaApi = await fetchSkinFromApi(key)
+            if (viaApi != null) cacheWrite(file, viaApi)
+            return viaApi
+        } catch {
+            return null
+        }
+    }
+
     /** Skin i capa públiques d'un jugador pel seu nom (per importar). */
     async function lookupByName(name) {
         if (!isValidMinecraftName(name)) throw new SkinsError('INVALID_NAME')
@@ -414,7 +464,7 @@ function create({ fetchFn, getToken, libraryDir }) {
     }
 
     return {
-        getProfile, setSkinFromPng, setActiveCape, fetchTexture, fetchSkinFromApi, accountSkin, lookupByName,
+        getProfile, setSkinFromPng, setActiveCape, fetchTexture, fetchSkinFromApi, accountSkin, friendSkin, lookupByName,
         listLibrary, addToLibrary, removeFromLibrary, renameInLibrary, setVariantInLibrary, readLibraryPng, setLocalSelection
     }
 }

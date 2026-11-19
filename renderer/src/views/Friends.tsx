@@ -56,10 +56,11 @@ function ExtLink({ href, children }: { href: string; children: string }) {
   return <a href={href} onClick={(e) => { e.preventDefault(); void hellmc.system.openExternal(href) }}>{children}</a>
 }
 
-function Person({ p, children }: { p: SocialPerson; children: preact.ComponentChildren }) {
+/** `skin={false}` (bloquejats): només la inicial, sense consultar la skin a Mojang. */
+function Person({ p, children, skin = true }: { p: SocialPerson; children: preact.ComponentChildren; skin?: boolean }) {
   return (
     <div class="friend-row">
-      <Avatar name={p.name} uuid={p.uuid} />
+      <Avatar name={p.name} uuid={skin ? p.uuid : undefined} />
       <div class="friend-main"><b>{p.name}</b></div>
       <div class="friend-actions">{children}</div>
     </div>
@@ -192,7 +193,7 @@ export function Friends() {
             <div class="friends-block">
               <h3>{t('friends.blocked')}</h3>
               {s.blocked.map((p) => (
-                <Person key={p.uuid} p={p}>
+                <Person key={p.uuid} p={p} skin={false}>
                   <Button size="sm" variant="ghost" disabled={busy} onClick={() => void socialAct('unblock', { uuid: p.uuid })}>{t('friends.unblock')}</Button>
                 </Person>
               ))}

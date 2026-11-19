@@ -1101,6 +1101,11 @@ ipcMain.handle('hellmc:skins-profile', () => skinsGuard(async () => {
 // Skin que representa un compte (per al cap de l'avatar): offline → la seleccionada en local; Microsoft → la real,
 // la darrera vista o una API pública. PNG com a data URL, o null (el renderer mostra Steve).
 ipcMain.handle('hellmc:skins-avatar', (_event, uuid) => skinsGuard(async () => {
+    // Un amic (conegut pel relay, mai un UUID qualsevol): la seva skin pública, amb caché al disc.
+    if (typeof uuid === 'string' && ConfigManager.getAuthAccount(uuid) == null && socialKnownUuids().has(uuid)) {
+        const buffer = await skins.friendSkin(uuid)
+        return buffer != null ? `data:image/png;base64,${buffer.toString('base64')}` : null
+    }
     const account = typeof uuid === 'string' ? ConfigManager.getAuthAccount(uuid) : null
     if (account == null || account.uuid !== uuid) return null
     if (account.type !== 'microsoft') {
@@ -1236,7 +1241,7 @@ const SocialClient = require('./app/assets/js/socialclient').create({
     wanted: socialWanted,
     url: `${(process.env.HELLMC_RELAY_URL || DEFAULT_RELAY_BASE).replace(/\/+$/, '').replace(/^http/, 'ws')}/ws`,
     WebSocketImpl: globalThis.WebSocket,
-    onState: (state) => socialSend('hellmc:social-state', state),
+    onState: (state) => { socialSend('hellmc:social-state', state); FriendAvatars.sync(socialFaceUuids(state)) },
     // L'estat real és el del relay: Amics pot haver-se activat (o pausat) des del joc; el launcher ho segueix.
     onRemote: (enabled) => {
         const on = ConfigManager.getUiConfig().social === true
@@ -1248,6 +1253,19 @@ const SocialClient = require('./app/assets/js/socialclient').create({
 })
 // Sense consentiment local, només es connecta (uns segons) per saber si Amics s'ha activat des del joc; igual que el runtime, requereix el relay activat.
 const socialCanProbe = () => ConfigManager.getUiConfig().relay !== false && ConfigManager.getLegal().termsAcceptedVersion != null && socialAccount() != null
+// Skins dels amics: el launcher les baixa (amb caché de 24 h al disc) i les deixa a `<wardrobe>/avatars/<uuid>.png` perquè el menú del joc les mostri
+// sense fer cap petició. Només es baixen les dels amics, sol·licituds rebudes i enviades (mai les dels bloquejats) i s'esborren les que ja no cal.
+const FriendAvatars = require('./app/assets/js/friendavatars').create({
+    getSkin: (uuid) => skins.friendSkin(uuid),
+    dir: path.join(app.getPath('userData'), 'wardrobe', 'avatars'),
+    log: (msg) => devLog(msg)
+})
+const socialFaceUuids = (state) => (state.enabled ? [...state.friends, ...state.incoming, ...state.outgoing].map((p) => p.uuid) : [])
+/** UUID que el relay ha donat a aquest compte (amics, sol·licituds, bloquejats): els únics dels quals el renderer pot demanar la skin. */
+function socialKnownUuids() {
+    const s = SocialClient.getState()
+    return new Set([...s.friends, ...s.incoming, ...s.outgoing, ...s.blocked].map((p) => p.uuid))
+}
 let socialUuid = null
 /** Arrenca, atura o reinicia la connexió segons l'ajust i el compte seleccionat. Mai llança. */
 function socialSync() {
