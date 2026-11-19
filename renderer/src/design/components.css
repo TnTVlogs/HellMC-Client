@@ -543,3 +543,21 @@ button.select-btn[aria-expanded="true"] > svg { transform: rotate(180deg); }
   button.select-btn > svg { transition: none; }
 }
 :root[data-perf="low"] .toast, :root[data-perf="low"] .tooltip, :root[data-perf="low"] .select-list { animation: none; }
+
+/* Amics (plans/11) */
+.friends-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: var(--space-4); align-items: start; }
+@media (max-width: 960px) { .friends-grid { grid-template-columns: 1fr; } }
+.friends-col { display: grid; gap: var(--space-3); }
+.friends-col h3 { font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 600; margin-top: var(--space-2); }
+.friends-block { display: grid; gap: var(--space-2); }
+.friend-add { display: flex; gap: var(--space-2); }
+.friend-add .field { flex: 1; min-width: 0; }
+.friend-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.friend-row:last-child { border-bottom: 0; }
+.friend-main { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.friend-main .muted { display: inline-flex; align-items: center; gap: 6px; }
+.friend-actions { display: inline-flex; gap: var(--space-1); }
+.friend-code { display: flex; align-items: center; gap: var(--space-3); }
+.friend-code code { font-size: var(--fs-lg); letter-spacing: .12em; font-weight: 600; }
+.friend-setting { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.friend-data { display: flex; flex-wrap: wrap; gap: var(--space-2); }

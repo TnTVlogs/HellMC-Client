@@ -9,6 +9,7 @@ import { VersionDetail } from './views/VersionDetail'
 import { News } from './views/News'
 import { Appearance } from './views/Appearance'
 import { Wardrobe } from './views/Wardrobe'
+import { Friends } from './views/Friends'
 import { Loading, NeedNetwork, UpdateRequired } from './views/Boot'
 import { Welcome } from './views/Welcome'
 import { Terms } from './views/Terms'
@@ -48,6 +49,9 @@ export function App() {
       break
     case 'wardrobe':
       view = <Wardrobe />
+      break
+    case 'friends':
+      view = <Friends />
       break
     case 'settings':
       view = <Settings />

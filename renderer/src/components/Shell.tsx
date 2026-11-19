@@ -1,6 +1,6 @@
 import type { ComponentChildren, JSX } from 'preact'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { Gamepad2, Globe, Home, Layers, Newspaper, Plus, Server, Settings, Shirt, Sparkles, type LucideIcon } from 'lucide-preact'
+import { Gamepad2, Globe, Home, Layers, Newspaper, Plus, Server, Settings, Shirt, Sparkles, Users, type LucideIcon } from 'lucide-preact'
 import { navigate, route, type RouteName } from '../router'
 import { t } from '../i18n'
 import { hellmc } from '../api'
@@ -23,7 +23,7 @@ import { sidebarCollapsed } from '../stores/ui'
 import { accounts, selectedAccount, selectAccount, loadAccounts } from '../stores/account'
 import { activeLaunch } from '../stores/launch'
 
-type NavKey = 'nav.home' | 'nav.servers' | 'nav.versions' | 'nav.news' | 'nav.appearance' | 'nav.wardrobe'
+type NavKey = 'nav.home' | 'nav.servers' | 'nav.versions' | 'nav.news' | 'nav.appearance' | 'nav.wardrobe' | 'nav.friends'
 
 // Icones: Lucide (ISC, `lucide-preact`, 08 §7). La barra compacta (< 960 px) només en mostra la
 // icona; l'etiqueta queda com a `title`/`aria-label`.
@@ -33,7 +33,8 @@ const NAV_ITEMS: { name: RouteName; labelKey: NavKey; Icon: LucideIcon }[] = [
   { name: 'versions', labelKey: 'nav.versions', Icon: Layers },
   { name: 'news', labelKey: 'nav.news', Icon: Newspaper },
   { name: 'appearance', labelKey: 'nav.appearance', Icon: Shirt },
-  { name: 'wardrobe', labelKey: 'nav.wardrobe', Icon: Sparkles }
+  { name: 'wardrobe', labelKey: 'nav.wardrobe', Icon: Sparkles },
+  { name: 'friends', labelKey: 'nav.friends', Icon: Users }
 ]
 
 const LINKS = { discord: 'https://discord.gg/yScnSw7cFt', website: 'https://hellmcclient.sergidalmau.dev' }

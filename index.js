@@ -919,7 +919,7 @@ function syncMenuRpc() {
         DiscordWrapper.shutdownRPC()
     }
 }
-app.on('will-quit', () => DiscordWrapper.shutdownRPC())
+app.on('will-quit', () => { DiscordWrapper.shutdownRPC(); SocialClient.stop() })
 
 // ── 2.1: distribució (real, `DistroAPI`) ─────────────────────────────────────────────────────
 ipcMain.handle('hellmc:distro-get', async () => {
@@ -984,6 +984,7 @@ ipcMain.handle('hellmc:auth-accounts', () => {
 ipcMain.handle('hellmc:auth-select', (_event, uuid) => {
     ConfigManager.setSelectedAccount(uuid)
     ConfigManager.save()
+    socialSync()
 })
 ipcMain.handle('hellmc:auth-add-offline', async (_event, username) => {
     if (!Security.isValidOfflineName(username)) throw new Error('INVALID_USERNAME')
@@ -1000,6 +1001,7 @@ ipcMain.handle('hellmc:auth-add-microsoft', async (_event, code) => {
         const verifier = pendingMsftLogin?.verifier
         pendingMsftLogin = null
         const account = await AuthManager.addMicrosoftAccount(code, verifier)
+        socialSync()
         return normalizeAccount(account)
     } catch (err) {
         // `AuthManager` rebutja amb `{code, network}` (no un `Error`): per IPC arribaria com
@@ -1018,6 +1020,7 @@ ipcMain.handle('hellmc:auth-remove', async (_event, uuid) => {
     } else {
         await AuthManager.removeMojangAccount(uuid)
     }
+    socialSync()
 })
 ipcMain.handle('hellmc:auth-validate', async () => {
     if (ConfigManager.getSelectedAccount() == null) return { status: 'invalid' }
@@ -1207,6 +1210,76 @@ const SessionRenew = require('./app/assets/js/sessionrenew').create({
     getAccount: (uuid) => ConfigManager.getAuthAccount(uuid),
     log: (msg) => devLog(msg)
 })
+
+// ── Amics (docs/pendents/plans/11-social-f4.md) ───────────────────────────────────────────────
+// Connexió al relay des del launcher, sense el joc obert. Només si l'usuari ho ha activat (`ui.social`, amb el seu consentiment al
+// renderer), té els termes acceptats i el compte seleccionat és Microsoft. L'estat no es desa: es reenvia al renderer a cada canvi.
+const { DEFAULT_RELAY_BASE } = require('./app/assets/js/relayauth')
+const socialSend = (channel, payload) => {
+    try { if (win != null && !win.isDestroyed()) win.webContents.send(channel, payload) } catch { /* finestra tancant-se */ }
+}
+function socialAccount() {
+    const account = ConfigManager.getSelectedAccount()
+    return account != null && account.type === 'microsoft' ? account : null
+}
+function socialWanted() {
+    return ConfigManager.getUiConfig().social === true && ConfigManager.getLegal().termsAcceptedVersion != null && socialAccount() != null
+}
+const SocialClient = require('./app/assets/js/socialclient').create({
+    authenticate: async () => {
+        const account = socialAccount()
+        if (account == null) return null
+        // El token d'accés pot haver caducat: es refresca abans (mateixa via que la renovació durant la partida).
+        if ((await AuthManager.validateAccountStatus(account.uuid)) !== 'ok') return null
+        return RelayAuth.authenticate(ConfigManager.getAuthAccount(account.uuid))
+    },
+    wanted: socialWanted,
+    url: `${(process.env.HELLMC_RELAY_URL || DEFAULT_RELAY_BASE).replace(/\/+$/, '').replace(/^http/, 'ws')}/ws`,
+    WebSocketImpl: globalThis.WebSocket,
+    onState: (state) => socialSend('hellmc:social-state', state),
+    onEvent: (event) => socialSend('hellmc:social-event', event),
+    log: (msg) => devLog(msg)
+})
+let socialUuid = null
+/** Arrenca, atura o reinicia la connexió segons l'ajust i el compte seleccionat. Mai llança. */
+function socialSync() {
+    try {
+        const account = socialAccount()
+        const uuid = account != null ? account.uuid : null
+        if (SocialClient.isRunning() && uuid !== socialUuid) SocialClient.stop()
+        socialUuid = uuid
+        if (socialWanted()) SocialClient.start()
+        else if (SocialClient.isRunning()) SocialClient.stop()
+    } catch (err) {
+        devLog(`social: ${err && err.message}`)
+    }
+}
+const socialSnapshot = () => ({
+    consent: ConfigManager.getUiConfig().social === true,
+    available: socialAccount() != null,
+    state: SocialClient.getState()
+})
+ipcMain.handle('hellmc:social-state', () => socialSnapshot())
+ipcMain.handle('hellmc:social-enable', (_event, value) => {
+    if (typeof value !== 'boolean') throw new Error('SOCIAL_ERROR:INVALID')
+    if (value && socialAccount() == null) throw new Error('SOCIAL_ERROR:NO_MICROSOFT')
+    ConfigManager.setUiConfig({ social: value })
+    ConfigManager.save()
+    if (value) socialSync()
+    else SocialClient.pause()
+    return socialSnapshot()
+})
+ipcMain.handle('hellmc:social-act', async (_event, op, payload) => {
+    const result = await SocialClient.act(op, payload)
+    if (op === 'delete' && result === 'ok') {
+        // Dades esborrades: Amics queda desactivat (si no, en reconnectar es tornaria a crear el perfil).
+        ConfigManager.setUiConfig({ social: false })
+        ConfigManager.save()
+        SocialClient.stop()
+    }
+    return result
+})
+app.on('ready', () => { setTimeout(socialSync, 2000) })
 
 // ── Armari (docs/client-cosmetics/17-armari-i-seleccio.md) ───────────────────────────────────
 // El launcher escriu `<userData>/wardrobe/equipped.json` i el catàleg local; el joc ho llegeix. Per compte (uuid).

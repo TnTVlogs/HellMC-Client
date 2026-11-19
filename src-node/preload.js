@@ -36,6 +36,8 @@ const javaDownloadProgressEmitter = makeEmitter()
 const maximizeChangeEmitter = makeEmitter()
 const updaterEventEmitter = makeEmitter()
 const instancesChangeEmitter = makeEmitter()
+const socialStateEmitter = makeEmitter()
+const socialEventEmitter = makeEmitter()
 
 ipcRenderer.on('hellmc:window-maximize-changed', (_event, maximized) => {
     maximizeChangeEmitter.emit(maximized)
@@ -51,6 +53,12 @@ ipcRenderer.on('hellmc:java-download-progress', (_event, versionId, progress) =>
 })
 ipcRenderer.on('hellmc:instances-changed', (_event, instances) => {
     instancesChangeEmitter.emit(instances)
+})
+ipcRenderer.on('hellmc:social-state', (_event, state) => {
+    socialStateEmitter.emit(state)
+})
+ipcRenderer.on('hellmc:social-event', (_event, event) => {
+    socialEventEmitter.emit(event)
 })
 ipcRenderer.on('hellmc:updater-event', (_event, updaterEvent) => {
     updaterEventEmitter.emit(updaterEvent)
@@ -122,6 +130,13 @@ const hellmcApi = {
         apply: (id) => ipcRenderer.invoke('hellmc:skins-apply', id),
         clearLocal: () => ipcRenderer.invoke('hellmc:skins-clear-local'),
         setCape: (capeId) => ipcRenderer.invoke('hellmc:skins-set-cape', capeId)
+    },
+    social: {
+        state: () => ipcRenderer.invoke('hellmc:social-state'),
+        enable: (value) => ipcRenderer.invoke('hellmc:social-enable', value),
+        act: (op, payload) => ipcRenderer.invoke('hellmc:social-act', op, payload),
+        onState: (cb) => socialStateEmitter.subscribe(cb),
+        onEvent: (cb) => socialEventEmitter.subscribe(cb)
     },
     wardrobe: {
         state: () => ipcRenderer.invoke('hellmc:wardrobe-state'),

@@ -9,6 +9,7 @@ export interface Messages {
     news: string
     appearance: string
     wardrobe: string
+    friends: string
     settings: string
     discord: string
     website: string
@@ -472,6 +473,90 @@ export interface Messages {
     confirmForceClose: string
     cancel: string
   },
+  friends: {
+    subtitle: string
+    needMicrosoft: string
+    consentTitle: string
+    consentIntro: string
+    consentPoint1: string
+    consentPoint2: string
+    consentPoint3: string
+    consentPoint4: string
+    consentTerms: string
+    consentAccept: string
+    connecting: string
+    error: {
+      auth: string
+      network: string
+      version: string
+    }
+    listTitle: string
+    none: string
+    add: string
+    addTitle: string
+    addPlaceholder: string
+    invalidQuery: string
+    requests: string
+    accept: string
+    decline: string
+    sent: string
+    cancel: string
+    blocked: string
+    unblock: string
+    remove: string
+    block: string
+    blockTitle: string
+    blockMessage: string
+    yourCode: string
+    copy: string
+    copied: string
+    codeHelp: string
+    settingsTitle: string
+    status: string
+    statusOnline: string
+    statusBusy: string
+    statusInvisible: string
+    hideServer: string
+    allowRequests: string
+    dataTitle: string
+    dataHelp: string
+    pause: string
+    export: string
+    exported: string
+    delete: string
+    deleteTitle: string
+    deleteMessage: string
+    offline: string
+    online: string
+    busy: string
+    playingOn: string
+    privateServer: string
+    result: {
+      sent: string
+      accepted: string
+      not_found: string
+      self: string
+      blocked: string
+      exists: string
+      limit: string
+      closed: string
+      disabled: string
+      full: string
+      ok: string
+    }
+    errors: {
+      OFFLINE: string
+      INVALID: string
+      TIMEOUT: string
+      NO_MICROSOFT: string
+      UNKNOWN: string
+    }
+    events: {
+      request: string
+      accepted: string
+      online: string
+    }
+  }
   wardrobe: {
     subtitle: string
     tabCosmetics: string
@@ -606,6 +691,7 @@ const en: Messages = {
     news: 'News',
     appearance: 'Appearance',
     wardrobe: 'Wardrobe',
+    friends: 'Friends',
     settings: 'Settings',
     discord: 'Discord',
     website: 'Website'
@@ -1068,6 +1154,90 @@ const en: Messages = {
     confirmMessage: 'This will immediately close {version}. Any unsaved progress in that game will be lost.',
     confirmForceClose: 'Yes, force close',
     cancel: 'Cancel'
+  },
+  friends: {
+    subtitle: 'See which friends are playing and where. Only for Microsoft accounts.',
+    needMicrosoft: 'Friends only works with a Microsoft account. Offline accounts do not take part.',
+    consentTitle: 'Turn on Friends',
+    consentIntro: 'Play together: Friends puts your HellMC crew in one list.',
+    consentPoint1: 'See who is online and which server they are playing on.',
+    consentPoint2: 'Add friends by name or with a friend code that survives name changes.',
+    consentPoint3: 'Choose your status (online, busy or invisible) and hide your server whenever you want.',
+    consentPoint4: 'Get a heads-up when a friend sends a request or comes online. No chat, no noise.',
+    consentTerms: 'I accept the privacy policy for Friends (section "Friends and status"). I can pause or delete my data at any time.',
+    consentAccept: 'Turn on Friends',
+    connecting: 'Connecting to HellMC…',
+    error: {
+      auth: 'Could not sign in to the HellMC relay. Check your Microsoft session; it will retry.',
+      network: 'Could not reach the HellMC relay. It will retry.',
+      version: 'This client version is too old for Friends. Update the client.'
+    },
+    listTitle: 'Friends',
+    none: 'You have no friends yet. Add one by name or friend code.',
+    add: 'Add',
+    addTitle: 'Add a friend',
+    addPlaceholder: 'Player name or friend code',
+    invalidQuery: 'Enter a valid player name (up to 16 letters, numbers or _) or an 8-character friend code.',
+    requests: 'Requests',
+    accept: 'Accept',
+    decline: 'Decline',
+    sent: 'Sent requests',
+    cancel: 'Cancel',
+    blocked: 'Blocked',
+    unblock: 'Unblock',
+    remove: 'Remove friend',
+    block: 'Block',
+    blockTitle: 'Block {name}?',
+    blockMessage: 'They will no longer be able to send you requests, and the friendship (if any) will be removed. They will not be told.',
+    yourCode: 'Your friend code',
+    copy: 'Copy',
+    copied: 'Copied',
+    codeHelp: 'Share it so someone can add you even if you change your name.',
+    settingsTitle: 'Preferences',
+    status: 'Status',
+    statusOnline: 'Online',
+    statusBusy: 'Busy',
+    statusInvisible: 'Invisible',
+    hideServer: 'Hide the server I play on',
+    allowRequests: 'Allow friend requests',
+    dataTitle: 'Your data',
+    dataHelp: 'Pausing hides you and keeps your data. Deleting removes your profile, friendships and blocks from the relay, and turns Friends off.',
+    pause: 'Pause Friends',
+    export: 'Export my data',
+    exported: 'Data exported',
+    delete: 'Delete my data',
+    deleteTitle: 'Delete your Friends data?',
+    deleteMessage: 'Your profile, friendships and blocks will be erased from the relay, and your friends will lose you from their list. This cannot be undone.',
+    offline: 'Offline',
+    online: 'Online',
+    busy: 'Busy',
+    playingOn: 'Playing on {server}',
+    privateServer: 'Playing on a private server',
+    result: {
+      sent: 'Request sent.',
+      accepted: 'You are now friends.',
+      not_found: 'No user found with that name or code (they must have turned on Friends).',
+      self: 'That is you.',
+      blocked: 'You have blocked this user. Unblock them first.',
+      exists: 'You are already friends or a request is pending.',
+      limit: 'Too many requests today. Try again tomorrow.',
+      closed: 'This user is not accepting requests.',
+      disabled: 'Friends is not turned on.',
+      full: 'The friends list is full.',
+      ok: 'Done.'
+    },
+    errors: {
+      OFFLINE: 'Not connected to the HellMC relay.',
+      INVALID: 'Invalid request.',
+      TIMEOUT: 'The relay did not respond in time.',
+      NO_MICROSOFT: 'Friends needs a Microsoft account.',
+      UNKNOWN: 'Something went wrong.'
+    },
+    events: {
+      request: '{name} sent you a friend request',
+      accepted: '{name} is now your friend',
+      online: '{name} is online'
+    }
   },
   wardrobe: {
     subtitle: 'Cosmetics and emotes you wear in game',

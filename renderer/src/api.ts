@@ -115,6 +115,41 @@ export interface WardrobeSettings { hideOthers: boolean; maxDistance: number; au
 export interface WardrobeEquipped { cosmetics: Record<WardrobeSlot, string | null>; emotes: (string | null)[]; settings: WardrobeSettings }
 export interface WardrobeState { catalog: WardrobeItem[]; equipped: WardrobeEquipped }
 
+// Amics (docs/pendents/plans/11-social-f4.md). L'estat és una còpia del que diu el relay; el procés principal el reenvia a cada canvi.
+export type SocialStatus = 'online' | 'busy' | 'invisible'
+export interface SocialFriend {
+  uuid: string
+  name: string
+  online: boolean
+  /** `offline` quan és desconnectat o invisible. */
+  status: SocialStatus | 'offline'
+  /** Nom de domini del servidor on juga (si no l'amaga). */
+  server?: string
+  /** Juga en un servidor amb IP numèrica: es mostra «servidor privat». */
+  serverPrivate?: boolean
+}
+export interface SocialPerson { uuid: string; name: string }
+export interface SocialMe { enabled: boolean; code: string; status: SocialStatus; hideServer: boolean; allowRequests: 'all' | 'none' }
+export interface SocialState {
+  /** off: desactivat · connecting · online · error. */
+  phase: 'off' | 'connecting' | 'online' | 'error'
+  enabled: boolean
+  me: SocialMe | null
+  friends: SocialFriend[]
+  incoming: SocialPerson[]
+  outgoing: SocialPerson[]
+  blocked: SocialPerson[]
+  error: 'auth' | 'network' | 'version' | null
+}
+export interface SocialSnapshot {
+  /** L'usuari ha activat Amics (amb consentiment). */
+  consent: boolean
+  /** El compte seleccionat és Microsoft (els comptes sense connexió no hi participen). */
+  available: boolean
+  state: SocialState
+}
+export interface SocialEvent { kind: 'request' | 'accepted' | 'online'; uuid: string; name: string }
+
 export type AuthStatus = 'ok' | 'offline' | 'invalid'
 
 export interface LaunchProgress {
@@ -286,6 +321,14 @@ export interface HellMCApi {
     apply(id: string): Promise<{ scope: 'mojang' | 'local' }>
     clearLocal(): Promise<void>
     setCape(capeId: string | null): Promise<MojangProfile>
+  }
+  /** Amics: connexió al relay des del launcher (plans/11). `act` retorna el resultat del relay (`sent`, `not_found`…), les dades exportades o `'ok'`. */
+  social: {
+    state(): Promise<SocialSnapshot>
+    enable(value: boolean): Promise<SocialSnapshot>
+    act(op: string, payload?: Record<string, unknown>): Promise<unknown>
+    onState(cb: (state: SocialState) => void): () => void
+    onEvent(cb: (event: SocialEvent) => void): () => void
   }
   wardrobe: {
     state(): Promise<WardrobeState>

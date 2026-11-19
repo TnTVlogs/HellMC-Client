@@ -140,6 +140,8 @@ const DEFAULT_CONFIG = {
         relay: true,
         // Renovar el token de Minecraft durant la partida (plans/10): el launcher ha de seguir obert.
         renewToken: true,
+        // Amics (plans/11): desactivat per defecte; només s'activa amb el consentiment de l'usuari (renderer).
+        social: false,
         // D14: acceleració per maquinari (decisió de l'usuari; només s'aplica en reiniciar).
         hardwareAcceleration: true,
         // D13: què fa el launcher quan s'inicia el joc: 'keep' | 'minimize' | 'close'.

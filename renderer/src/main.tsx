@@ -10,6 +10,7 @@ import { loadInstances } from './stores/instances'
 import { loadArchive } from './stores/news'
 import { loadLegal } from './stores/legal'
 import { initNetwork } from './stores/network'
+import { initSocial } from './stores/social'
 import './design/tokens.css'
 import './design/base.css'
 import './design/components.css'
@@ -48,3 +49,4 @@ void loadLegal().catch(logFailure('loadLegal'))
 void loadInstances().catch(logFailure('loadInstances'))
 void loadArchive().catch(logFailure('loadArchive'))
 initNetwork()
+void initSocial().catch(logFailure('initSocial'))
