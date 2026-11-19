@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { Ban, Check, Copy, Download, Info, Pause, Trash2, UserMinus, UserPlus, X } from 'lucide-preact'
 import { t } from '../i18n'
 import { hellmc, type SocialFriend, type SocialPerson, type SocialStatus } from '../api'
@@ -11,7 +11,7 @@ import { Toggle } from '../components/Toggle'
 import { Banner, Avatar, StatusDot } from '../components/ui'
 import { showToast } from '../stores/toasts'
 import { selectedAccount } from '../stores/account'
-import { social, socialAct, socialAvailable, socialBusy, socialConsent, socialError, setSocialEnabled, setSocialStatus } from '../stores/social'
+import { probeSocial, social, socialAct, socialAvailable, socialBusy, socialConsent, socialError, setSocialEnabled, setSocialStatus } from '../stores/social'
 
 // docs/pendents/plans/11-social-f4.md i docs/client-cosmetics/10-mod-social.md: llista d'amics, estat, sol·licituds i dades pròpies.
 // Tot és opt-in: la primera vegada es mostra l'avís de privacitat i només es connecta al relay quan l'usuari l'accepta.
@@ -74,10 +74,11 @@ export function Friends() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<SocialPerson | null>(null)
   const [copied, setCopied] = useState(false)
+  useEffect(() => { void probeSocial() }, [])
 
   async function add() {
     const q = query.trim()
-    const payload = CODE_RE.test(q) ? { code: q.toUpperCase() } : NAME_RE.test(q) ? { name: q } : null
+    const payload = CODE_RE.test(q) || NAME_RE.test(q) ? { query: q } : null
     if (payload == null) { showToast(t('friends.invalidQuery'), { tone: 'warn' }); return }
     const result = await socialAct('add', payload)
     if (typeof result === 'string') {

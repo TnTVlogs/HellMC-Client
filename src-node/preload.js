@@ -134,6 +134,7 @@ const hellmcApi = {
     social: {
         state: () => ipcRenderer.invoke('hellmc:social-state'),
         enable: (value) => ipcRenderer.invoke('hellmc:social-enable', value),
+        probe: () => ipcRenderer.invoke('hellmc:social-probe'),
         act: (op, payload) => ipcRenderer.invoke('hellmc:social-act', op, payload),
         onState: (cb) => socialStateEmitter.subscribe(cb),
         onEvent: (cb) => socialEventEmitter.subscribe(cb)

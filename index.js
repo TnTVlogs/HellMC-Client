@@ -641,7 +641,7 @@ ipcMain.handle('hellmc:open-lgpl-license', () => openBundledFile('LICENSE-LGPL-3
 // O2: carpeta de logs i informe de diagnòstic (sense credencials: `AppLog.tailFile` redacta) per demanar suport.
 // D15/D8: termes, política de privacitat i consentiment de telemetria (separat). `CURRENT_TERMS_VERSION` puja quan canvien
 // els textos: tothom torna a veure la pantalla (sense login si ja hi ha sessió).
-const CURRENT_TERMS_VERSION = 1
+const CURRENT_TERMS_VERSION = 2
 // Telemetria opt-in (docs/web-i-telemetria): l'identificador anònim mai surt del procés principal.
 const Telemetry = require('./app/assets/js/telemetry').create({
     getLegal: () => ConfigManager.getLegal(),
@@ -1237,9 +1237,17 @@ const SocialClient = require('./app/assets/js/socialclient').create({
     url: `${(process.env.HELLMC_RELAY_URL || DEFAULT_RELAY_BASE).replace(/\/+$/, '').replace(/^http/, 'ws')}/ws`,
     WebSocketImpl: globalThis.WebSocket,
     onState: (state) => socialSend('hellmc:social-state', state),
+    // L'estat real és el del relay: Amics pot haver-se activat (o pausat) des del joc; el launcher ho segueix.
+    onRemote: (enabled) => {
+        const on = ConfigManager.getUiConfig().social === true
+        if (enabled && !on) { ConfigManager.setUiConfig({ social: true }); ConfigManager.save() }
+        else if (!enabled && on && !SocialClient.isEnabling()) { ConfigManager.setUiConfig({ social: false }); ConfigManager.save(); setTimeout(() => SocialClient.stop(), 0) }
+    },
     onEvent: (event) => socialSend('hellmc:social-event', event),
     log: (msg) => devLog(msg)
 })
+// Sense consentiment local, només es connecta (uns segons) per saber si Amics s'ha activat des del joc; igual que el runtime, requereix el relay activat.
+const socialCanProbe = () => ConfigManager.getUiConfig().relay !== false && ConfigManager.getLegal().termsAcceptedVersion != null && socialAccount() != null
 let socialUuid = null
 /** Arrenca, atura o reinicia la connexió segons l'ajust i el compte seleccionat. Mai llança. */
 function socialSync() {
@@ -1249,6 +1257,7 @@ function socialSync() {
         if (SocialClient.isRunning() && uuid !== socialUuid) SocialClient.stop()
         socialUuid = uuid
         if (socialWanted()) SocialClient.start()
+        else if (socialCanProbe()) SocialClient.start({ probe: true })
         else if (SocialClient.isRunning()) SocialClient.stop()
     } catch (err) {
         devLog(`social: ${err && err.message}`)
@@ -1265,10 +1274,16 @@ ipcMain.handle('hellmc:social-enable', (_event, value) => {
     if (value && socialAccount() == null) throw new Error('SOCIAL_ERROR:NO_MICROSOFT')
     ConfigManager.setUiConfig({ social: value })
     ConfigManager.save()
-    if (value) socialSync()
-    else SocialClient.pause()
+    if (value) {
+        socialSync()
+        SocialClient.enable()    // després de socialSync: aquest pot reiniciar la connexió i esborraria la petició
+    } else {
+        SocialClient.pause()
+    }
     return socialSnapshot()
 })
+// El renderer ho demana en obrir la pestanya Amics: torna a mirar si s'ha activat des del joc (no fa res si ja hi ha connexió).
+ipcMain.handle('hellmc:social-probe', () => { socialSync(); return socialSnapshot() })
 ipcMain.handle('hellmc:social-act', async (_event, op, payload) => {
     const result = await SocialClient.act(op, payload)
     if (op === 'delete' && result === 'ok') {

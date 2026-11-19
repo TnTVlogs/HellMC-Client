@@ -326,6 +326,8 @@ export interface HellMCApi {
   social: {
     state(): Promise<SocialSnapshot>
     enable(value: boolean): Promise<SocialSnapshot>
+    /** Torna a mirar si Amics s'ha activat des del joc. */
+    probe(): Promise<SocialSnapshot>
     act(op: string, payload?: Record<string, unknown>): Promise<unknown>
     onState(cb: (state: SocialState) => void): () => void
     onEvent(cb: (event: SocialEvent) => void): () => void

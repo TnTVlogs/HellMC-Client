@@ -43,7 +43,8 @@ let started = false
 export async function initSocial(): Promise<void> {
   if (!started) {
     started = true
-    hellmc.social.onState((state) => { social.value = state })
+    // Si el relay diu que Amics és activat (p. ex. des del joc), el consentiment ja existeix.
+    hellmc.social.onState((state) => { social.value = state; if (state.enabled) socialConsent.value = true })
     hellmc.social.onEvent(onEvent)
   }
   try {
@@ -52,6 +53,15 @@ export async function initSocial(): Promise<void> {
     console.error('[renderer] social state failed', err)
   } finally {
     socialLoaded.value = true
+  }
+}
+
+/** Mira si Amics s'ha activat des del joc (en obrir la pestanya). */
+export async function probeSocial(): Promise<void> {
+  try {
+    applySnapshot(await hellmc.social.probe())
+  } catch (err) {
+    console.error('[renderer] social probe failed', err)
   }
 }
 

@@ -23,6 +23,8 @@ function buildMessage(op, p) {
     p = p != null && typeof p === 'object' ? p : {}
     switch (op) {
         case 'add':
+            // `query`: cerca única (el relay prova codi i després nom; un nom de 8 caràcters pot semblar un codi).
+            if (isShort(p.query, 16)) return { t: 'friend_add', q: p.query }
             if (isShort(p.code, 16)) return { t: 'friend_add', code: p.code }
             if (isShort(p.name, 16)) return { t: 'friend_add', name: p.name }
             return null
@@ -60,7 +62,7 @@ const EMPTY = () => ({ phase: 'off', enabled: false, me: null, friends: [], inco
  * @param {(event: object) => void} [deps.onEvent] `{kind:'request'|'accepted'|'online', uuid, name}`
  * @param {number[]} [deps.backoffMs]
  */
-function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, onEvent = () => {}, now = Date.now, backoffMs = BACKOFF_MS, log = () => {} }) {
+function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, onEvent = () => {}, onRemote = () => {}, now = Date.now, backoffMs = BACKOFF_MS, probeMs = 6000, log = () => {} }) {
     let state = EMPTY()
     let ws = null
     let session = null // { token, expiresAt }
@@ -70,6 +72,11 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
     let running = false
     let lastRefresh = 0
     let generation = 0
+    /** Sense consentiment local: només es connecta per saber si Amics s'ha activat des del joc (i desa res). */
+    let probing = false
+    let probeTimer = null
+    /** L'usuari acaba d'acceptar a la interfície: s'envia `social_enable` en estar en línia. */
+    let pendingEnable = false
     /** Esperes d'una resposta concreta: clau → [{resolve, timer}] */
     const waiting = new Map()
 
@@ -119,7 +126,7 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
 
     async function connect() {
         if (!running) return
-        if (!wanted()) return stop()
+        if (!wanted() && !probing) return stop()
         setState({ phase: 'connecting', error: null })
         try {
             if (session == null || session.expiresAt - now() < 60000) session = await authenticate()
@@ -157,11 +164,21 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
                     ready = true
                     attempt = 0
                     setState({ phase: 'online', error: null })
-                    raw({ t: 'social_enable', value: true })
+                    // Mai s'activa Amics sol: l'estat real és el del relay (pot haver-se activat o pausat des del joc).
                     raw({ t: 'friends_get' })
+                    if (pendingEnable) raw({ t: 'social_enable', value: true })
                     startTimers()
+                    if (probing) {
+                        clearTimeout(probeTimer)
+                        probeTimer = setTimeout(() => { if (probing && !state.enabled) stop() }, probeMs)
+                        if (probeTimer.unref) probeTimer.unref()
+                    }
                     break
-                case 'friends':
+                case 'friends': {
+                    const enabled = msg.me?.enabled === true
+                    if (enabled) pendingEnable = false
+                    if (enabled && probing) { probing = false; clearTimeout(probeTimer) }
+                    try { onRemote(enabled) } catch { /* res */ }
                     setState({
                         enabled: msg.me?.enabled === true,
                         me: msg.me?.enabled === true ? msg.me : null,
@@ -171,6 +188,7 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
                         blocked: Array.isArray(msg.blocked) ? msg.blocked : []
                     })
                     break
+                }
                 case 'friend_result':
                     if (typeof msg.op === 'string') wake(msg.op, msg.result)
                     break
@@ -221,9 +239,15 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
         timers = [hb, rf]
     }
 
-    /** Arrenca la connexió (si l'usuari ho ha activat i hi ha compte Microsoft). Idempotent. */
-    function start() {
-        if (running || !wanted()) return
+    /**
+     * Arrenca la connexió (si l'usuari ho ha activat i hi ha compte Microsoft). Idempotent. Amb `probe` i sense consentiment local, es connecta
+     * només per saber si Amics s'ha activat des del joc: si no és així, es tanca sol als pocs segons.
+     */
+    function start({ probe = false } = {}) {
+        if (running) return
+        const consent = wanted()
+        if (!consent && !probe) return
+        probing = !consent
         generation++
         running = true
         attempt = 0
@@ -233,6 +257,9 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
     /** Tanca la connexió i deixa l'estat buit (Amics desactivat, canvi de compte, sortida). No esborra res al relay. */
     function stop() {
         running = false
+        probing = false
+        pendingEnable = false
+        clearTimeout(probeTimer)
         clearTimeout(reconnectTimer)
         clearTimers()
         session = null
@@ -273,7 +300,14 @@ function create({ authenticate, wanted, url, WebSocketImpl, onState = () => {}, 
         return result
     }
 
-    return { start, stop, pause, act, getState, isRunning: () => running }
+    /** L'usuari ha acceptat Amics a la interfície: s'activa al relay (ara, o quan hi hagi connexió). */
+    function enable() {
+        pendingEnable = true
+        probing = false
+        if (ws && ws.readyState === 1 && state.phase === 'online') raw({ t: 'social_enable', value: true })
+    }
+
+    return { start, stop, pause, enable, act, getState, isRunning: () => running, isEnabling: () => pendingEnable }
 }
 
 module.exports = { create, buildMessage, BACKOFF_MS }
