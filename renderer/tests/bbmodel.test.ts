@@ -47,6 +47,19 @@ describe('bbmodel', () => {
     expect(mid[0]).toBeCloseTo((-90 * Math.PI) / 180 / 2, 1)   // rx = −rx_bb en radians (ROT_SIGN)
     expect(Number.isNaN(mid[3])).toBe(true)                    // sense canal de posició
   })
+  it('un emote que no fa bucle no torna al primer fotograma al final (parpelleig); un bucle sí que tanca', () => {
+    const anim = (loop: string) => JSON.stringify({
+      animations: [{ name: 'x', length: 1, loop, animators: { x: { name: 'right_arm', keyframes: [
+        { channel: 'rotation', time: 0, interpolation: 'linear', data_points: [{ x: 0, y: 0, z: 0 }] },
+        { channel: 'rotation', time: 1, interpolation: 'linear', data_points: [{ x: 90, y: 0, z: 0 }] }] } } }]
+    })
+    const [once] = parseEmotes(anim('once'))
+    const track = once.tracks.rightArm!
+    expect(track.frames.at(-1)![0]).toBeCloseTo(1, 6)                       // l'últim fotograma és la durada exacta
+    for (const t of [0.97, 0.99, 0.999]) expect(evalTrack(track, t, once.period)[0]).toBeLessThan(-1.2)   // segueix cap a la pose final (−90° ≈ −1,57), no torna a 0
+    const [loop] = parseEmotes(anim('loop'))
+    expect(loop.tracks.rightArm!.frames.at(-1)![0]).toBeLessThan(1)         // el bucle manté n fotogrames: l'últim torna al primer
+  })
   const pirate = join(assets, 'cosmetics', 'minecraft-pirate-hat.bbmodel')
   it.skipIf(!existsSync(pirate))('el barret pirata de prova es llegeix', () => {
     const c = parseCosmetic(readFileSync(pirate, 'utf8'), 'head', [0, 32, 0], 2)

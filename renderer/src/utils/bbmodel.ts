@@ -168,20 +168,25 @@ export function parseEmotes(json: string): EmoteSpec[] {
     const anim = obj(a)
     const length = num(anim.length, 0)
     if (!(length > 0 && length <= MAX_SECONDS)) throw new Error(`durada invàlida: ${length}`)
+    const looped = str(anim.loop, 'once') === 'loop'
     const tracks: EmoteSpec['tracks'] = {}
     for (const animatorObj of Object.values(obj(anim.animators))) {
       const animator = obj(animatorObj)
       const key = boneKey(str(animator.name, ''))
       if (BONE_PIVOT[key] == null) continue
-      const track = sampleTrack(arr(animator.keyframes), length)
+      const track = sampleTrack(arr(animator.keyframes), length, looped)
       if (track != null) tracks[canonical(key)] = track
     }
-    const play = str(anim.loop, 'once') === 'loop' ? length * Math.max(1, Math.ceil(4 / length)) : length
+    const play = looped ? length * Math.max(1, Math.ceil(4 / length)) : length
     return { name: str(anim.name, 'emote'), duration: play, period: length, tracks }
   })
 }
 
-function sampleTrack(keyframes: unknown[], length: number): EmoteTrack | null {
+/**
+ * Un bucle mostreja `n` fotogrames (l'últim torna al primer: el tancament és suau); un emote d'una sola vegada en mostreja `n + 1` fins a la
+ * durada exacta, perquè l'última fracció de segon es mantingui a la pose final i no s'interpoli cap al primer fotograma (parpelleig al final).
+ */
+function sampleTrack(keyframes: unknown[], length: number, looped: boolean): EmoteTrack | null {
   const channels: Record<string, Key[]> = {}
   let count = 0
   for (const k of keyframes) {
@@ -200,7 +205,7 @@ function sampleTrack(keyframes: unknown[], length: number): EmoteTrack | null {
   for (const list of Object.values(channels)) list.sort((a, b) => a.time - b.time)
   const n = Math.max(2, Math.round(length / SAMPLE_DT))
   const frames: number[][] = []
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < (looped ? n : n + 1); i++) {
     const t = (length * i) / n
     const rot = sampleChannel(channels.rotation, t)
     const pos = sampleChannel(channels.position, t)
