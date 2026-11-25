@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import { Ban, Check, Copy, Download, Info, Pause, Trash2, UserMinus, UserPlus, X } from 'lucide-preact'
+import { Ban, Check, Copy, Info, UserMinus, UserPlus, X } from 'lucide-preact'
 import { t } from '../i18n'
 import { hellmc, type SocialFriend, type SocialPerson, type SocialStatus } from '../api'
 import { legalLink } from '../links'
@@ -72,7 +72,6 @@ export function Friends() {
   const busy = socialBusy.value
   const account = selectedAccount.value
   const [query, setQuery] = useState('')
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmBlock, setConfirmBlock] = useState<SocialPerson | null>(null)
   const [copied, setCopied] = useState(false)
   useEffect(() => { void probeSocial() }, [])
@@ -86,19 +85,6 @@ export function Friends() {
       showToast(t(`friends.result.${result}`), { tone: result === 'sent' || result === 'accepted' ? 'ok' : 'warn' })
       if (result === 'sent' || result === 'accepted') setQuery('')
     }
-  }
-
-  async function exportData() {
-    const data = await socialAct('export')
-    if (data == null || typeof data !== 'object') return
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'hellmc-amics.json'
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(url), 5000)
-    showToast(t('friends.exported'), { tone: 'ok' })
   }
 
   async function copyCode(code: string) {
@@ -225,21 +211,9 @@ export function Friends() {
               </div>
             </>
           )}
-
-          <h3>{t('friends.dataTitle')}</h3>
-          <p class="muted small">{t('friends.dataHelp')}</p>
-          <div class="friend-data">
-            <Button size="sm" disabled={busy} onClick={() => void setSocialEnabled(false)}><Pause size={16} /> {t('friends.pause')}</Button>
-            <Button size="sm" disabled={busy || s.phase !== 'online'} onClick={() => void exportData()}><Download size={16} /> {t('friends.export')}</Button>
-            <Button size="sm" variant="danger" disabled={busy || s.phase !== 'online'} onClick={() => setConfirmDelete(true)}><Trash2 size={16} /> {t('friends.delete')}</Button>
-          </div>
         </section>
       </div>
 
-      {confirmDelete && (
-        <ConfirmDialog title={t('friends.deleteTitle')} message={t('friends.deleteMessage')} confirmLabel={t('friends.delete')} cancelLabel={t('friends.cancel')}
-          onCancel={() => setConfirmDelete(false)} onConfirm={() => { setConfirmDelete(false); void socialAct('delete') }} />
-      )}
       {confirmBlock != null && (
         <ConfirmDialog title={t('friends.blockTitle', { name: confirmBlock.name })} message={t('friends.blockMessage')} confirmLabel={t('friends.block')} cancelLabel={t('friends.cancel')}
           onCancel={() => setConfirmBlock(null)} onConfirm={() => { const p = confirmBlock; setConfirmBlock(null); void socialAct('block', { uuid: p.uuid }) }} />

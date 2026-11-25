@@ -6,14 +6,16 @@ import { JavaSection } from './settings/JavaSection'
 import { LauncherSection } from './settings/LauncherSection'
 import { UpdatesSection } from './settings/UpdatesSection'
 import { AboutSection } from './settings/AboutSection'
+import { FriendsSection } from './settings/FriendsSection'
 
-type SectionId = 'account' | 'game' | 'java' | 'launcher' | 'updates' | 'about'
+type SectionId = 'account' | 'game' | 'java' | 'launcher' | 'friends' | 'updates' | 'about'
 
 const SECTIONS: { id: SectionId; labelKey: `settings.nav.${SectionId}` }[] = [
   { id: 'account', labelKey: 'settings.nav.account' },
   { id: 'game', labelKey: 'settings.nav.game' },
   { id: 'java', labelKey: 'settings.nav.java' },
   { id: 'launcher', labelKey: 'settings.nav.launcher' },
+  { id: 'friends', labelKey: 'settings.nav.friends' },
   { id: 'updates', labelKey: 'settings.nav.updates' },
   { id: 'about', labelKey: 'settings.nav.about' }
 ]
@@ -39,6 +41,7 @@ export function Settings() {
           {active === 'game' && <GameSection />}
           {active === 'java' && <JavaSection />}
           {active === 'launcher' && <LauncherSection />}
+          {active === 'friends' && <FriendsSection />}
           {active === 'updates' && <UpdatesSection />}
           {active === 'about' && <AboutSection />}
         </div>

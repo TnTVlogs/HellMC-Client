@@ -110,6 +110,9 @@ async function createShared(): Promise<Shared> {
   const skinGroup = viewer.playerObject.skin
   const neck = new three.Group()
   skinGroup.add(neck)
+  // Capa i èlitres pengen del jugador, no del cos: sense això es queden quietes mentre un emote gira el tors. Penjades del coll (el mateix grup que els
+  // cosmètics del cos, que ja segueix la pose del tors) acompanyen el cos; en repòs el coll és la identitat i res canvia.
+  neck.add(viewer.playerObject.cape, viewer.playerObject.elytra)
   const rig: PlayerRig = {
     head: skinGroup.head, body: skinGroup.body, rightArm: skinGroup.rightArm, leftArm: skinGroup.leftArm,
     rightLeg: skinGroup.rightLeg, leftLeg: skinGroup.leftLeg, neck

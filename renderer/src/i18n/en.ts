@@ -189,6 +189,7 @@ export interface Messages {
       game: string
       java: string
       launcher: string
+      friends: string
       updates: string
       about: string
     }
@@ -484,6 +485,7 @@ export interface Messages {
     consentPoint4: string
     consentTerms: string
     consentAccept: string
+    settingsOff: string
     connecting: string
     error: {
       auth: string
@@ -871,6 +873,7 @@ const en: Messages = {
       game: 'Game',
       java: 'Java',
       launcher: 'Launcher',
+      friends: 'Friends',
       updates: 'Updates',
       about: 'About'
     },
@@ -1166,6 +1169,7 @@ const en: Messages = {
     consentPoint4: 'Get a heads-up when a friend sends a request or comes online. No chat, no noise.',
     consentTerms: 'I accept the privacy policy for Friends (section "Friends and status"). I can pause or delete my data at any time.',
     consentAccept: 'Turn on Friends',
+    settingsOff: 'Friends is off. Turn it on in the Friends tab to manage its data.',
     connecting: 'Connecting to HellMC…',
     error: {
       auth: 'Could not sign in to the HellMC relay. Check your Microsoft session; it will retry.',

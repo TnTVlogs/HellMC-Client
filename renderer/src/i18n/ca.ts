@@ -189,6 +189,7 @@ const ca: Messages = {
       game: 'Joc',
       java: 'Java',
       launcher: 'Launcher',
+      friends: 'Amics',
       updates: 'Actualitzacions',
       about: 'Sobre'
     },
@@ -484,6 +485,7 @@ const ca: Messages = {
     consentPoint4: 'Rep un avís quan un amic t’envia una sol·licitud o es connecta. Sense xat, sense soroll.',
     consentTerms: 'Accepto la política de privacitat d’Amics (apartat «Amics i estat»). Puc pausar o esborrar les meves dades quan vulgui.',
     consentAccept: 'Activa Amics',
+    settingsOff: 'Amics està desactivat. Activa’l a la pestanya Amics per gestionar-ne les dades.',
     connecting: 'Connectant amb HellMC…',
     error: {
       auth: 'No s’ha pogut iniciar sessió al relay de HellMC. Revisa la teva sessió de Microsoft; es reintentarà.',

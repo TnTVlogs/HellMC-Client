@@ -189,6 +189,7 @@ const es: Messages = {
       game: 'Juego',
       java: 'Java',
       launcher: 'Launcher',
+      friends: 'Amigos',
       updates: 'Actualizaciones',
       about: 'Acerca de'
     },
@@ -484,6 +485,7 @@ const es: Messages = {
     consentPoint4: 'Recibe un aviso cuando un amigo te envíe una solicitud o se conecte. Sin chat, sin ruido.',
     consentTerms: 'Acepto la política de privacidad de Amigos (apartado «Amigos y estado»). Puedo pausar o borrar mis datos cuando quiera.',
     consentAccept: 'Activar Amigos',
+    settingsOff: 'Amigos está desactivado. Actívalo en la pestaña Amigos para gestionar sus datos.',
     connecting: 'Conectando con HellMC…',
     error: {
       auth: 'No se ha podido iniciar sesión en el relay de HellMC. Revisa tu sesión de Microsoft; se reintentará.',
